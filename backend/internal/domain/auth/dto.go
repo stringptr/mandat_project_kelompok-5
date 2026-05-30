@@ -1,7 +1,11 @@
 package auth
+
 import (
 	"time"
+
+	"github.com/gofrs/uuid/v5"
 )
+
 type RegisterRequest struct {
 	Email            string    `json:"email"           validate:"required,email"`
 	Password         string    `json:"password"        validate:"required,max=255"`
@@ -15,4 +19,21 @@ type RegisterRequest struct {
 	IDPekerjaan      *int32    `json:"id_pekerjaan,omitempty"    validate:"min=1"`
 	IDPendapatan     *int32    `json:"id_pendapatan,omitempty"   validate:"min=1"`
 	JumlahTanggungan *int32    `json:"jumlah_tanggungan,omitempty" validate:"min=0"`
+}
+type LoginResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int64  `json:"expires_in"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
+
+type AuthResponse struct {
+	AccessToken           string `json:"access_token"`
+	RefreshToken          string `json:"refresh_token"`
+	AccessTokenExpiresIn  int64  `json:"access_token_expires_in"`
+	RefreshTokenExpiresIn int64  `json:"refresh_token_expires_in"`
 }

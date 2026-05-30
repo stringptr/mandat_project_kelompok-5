@@ -10,6 +10,7 @@ import (
 	v1 "github.com/stringptr/SiGizi/backend/internal/api/v1"
 	"github.com/stringptr/SiGizi/backend/internal/config"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
+	"github.com/stringptr/SiGizi/backend/internal/middleware"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
@@ -49,6 +50,7 @@ func main() {
 	rConfig.Transformers = []huma.Transformer{httputils.UnifiedTransformer}
 
 	api := humachi.New(r, rConfig)
+	api.UseMiddleware(middleware.RealIPMiddleware())
 
 	r.Get("/docs/scalar", func(w http.ResponseWriter, r *http.Request) {
 		// Please also refer to the "DocsRendererScalar" renderer code inside api.go on what to return here

@@ -16,7 +16,7 @@ type Notifikasi struct {
 	IDUser         int32
 	Judul          string
 	Pesan          *string
-	TipeNotifikasi *string
+	TipeNotifikasi TipeNotifikasi
 	StatusBaca     bool
 	TanggalKirim   time.Time
 }

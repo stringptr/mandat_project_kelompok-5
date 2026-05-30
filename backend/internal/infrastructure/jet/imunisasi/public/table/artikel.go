@@ -80,7 +80,7 @@ func newArtikelTableImpl(schemaName, tableName, alias string) artikelTable {
 		UpdatedAtColumn      = postgres.TimestampzColumn("updated_at")
 		allColumns           = postgres.ColumnList{IDArtikelColumn, JudulColumn, IsiArtikelColumn, KategoriColumn, StatusArtikelColumn, IDPenulisColumn, IDVerifikatorColumn, TanggalPublishColumn, CreatedAtColumn, UpdatedAtColumn}
 		mutableColumns       = postgres.ColumnList{JudulColumn, IsiArtikelColumn, KategoriColumn, StatusArtikelColumn, IDPenulisColumn, IDVerifikatorColumn, TanggalPublishColumn, CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns       = postgres.ColumnList{IDArtikelColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns       = postgres.ColumnList{IDArtikelColumn, StatusArtikelColumn, CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return artikelTable{

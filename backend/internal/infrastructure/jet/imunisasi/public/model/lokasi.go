@@ -10,6 +10,6 @@ package model
 type Lokasi struct {
 	IDLokasi   int32 `sql:"primary_key"`
 	NamaLokasi string
-	TipeLokasi string
+	TipeLokasi TipeLokasi
 	BagianDari *int32
 }

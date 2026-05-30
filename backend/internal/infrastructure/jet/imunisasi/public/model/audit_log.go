@@ -9,12 +9,24 @@ package model
 
 import (
 	"time"
+
+	"github.com/gofrs/uuid/v5"
 )
 
 type AuditLog struct {
 	IDLog          int32 `sql:"primary_key"`
+	TipeAktor      *TipeAktor
 	IDUser         *int32
-	Aktivitas      *string
+	IDUserSession  *uuid.UUID
+	TipeAktivitas  *TipeAktivitas
+	Berhasil       *bool
+	Endpoint       *string
+	TableName      *string
+	RecordID       *string
+	OldValue       *string
+	NewValue       *string
+	Detail         *string
 	IPAddress      *string
+	UserAgent      *string
 	WaktuAktivitas time.Time
 }

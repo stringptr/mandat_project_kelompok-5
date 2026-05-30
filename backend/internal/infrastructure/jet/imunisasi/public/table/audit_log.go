@@ -18,9 +18,19 @@ type auditLogTable struct {
 
 	// Columns
 	IDLog          postgres.ColumnInteger
+	TipeAktor      postgres.ColumnString
 	IDUser         postgres.ColumnInteger
-	Aktivitas      postgres.ColumnString
+	IDUserSession  postgres.ColumnString
+	TipeAktivitas  postgres.ColumnString
+	Berhasil       postgres.ColumnBool
+	Endpoint       postgres.ColumnString
+	TableName_     postgres.ColumnString
+	RecordID       postgres.ColumnString
+	OldValue       postgres.ColumnString
+	NewValue       postgres.ColumnString
+	Detail         postgres.ColumnString
 	IPAddress      postgres.ColumnString
+	UserAgent      postgres.ColumnString
 	WaktuAktivitas postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
@@ -64,12 +74,22 @@ func newAuditLogTable(schemaName, tableName, alias string) *AuditLogTable {
 func newAuditLogTableImpl(schemaName, tableName, alias string) auditLogTable {
 	var (
 		IDLogColumn          = postgres.IntegerColumn("id_log")
+		TipeAktorColumn      = postgres.StringColumn("tipe_aktor")
 		IDUserColumn         = postgres.IntegerColumn("id_user")
-		AktivitasColumn      = postgres.StringColumn("aktivitas")
+		IDUserSessionColumn  = postgres.StringColumn("id_user_session")
+		TipeAktivitasColumn  = postgres.StringColumn("tipe_aktivitas")
+		BerhasilColumn       = postgres.BoolColumn("berhasil")
+		EndpointColumn       = postgres.StringColumn("endpoint")
+		TableName_Column     = postgres.StringColumn("table_name")
+		RecordIDColumn       = postgres.StringColumn("record_id")
+		OldValueColumn       = postgres.StringColumn("old_value")
+		NewValueColumn       = postgres.StringColumn("new_value")
+		DetailColumn         = postgres.StringColumn("detail")
 		IPAddressColumn      = postgres.StringColumn("ip_address")
+		UserAgentColumn      = postgres.StringColumn("user_agent")
 		WaktuAktivitasColumn = postgres.TimestampzColumn("waktu_aktivitas")
-		allColumns           = postgres.ColumnList{IDLogColumn, IDUserColumn, AktivitasColumn, IPAddressColumn, WaktuAktivitasColumn}
-		mutableColumns       = postgres.ColumnList{IDUserColumn, AktivitasColumn, IPAddressColumn, WaktuAktivitasColumn}
+		allColumns           = postgres.ColumnList{IDLogColumn, TipeAktorColumn, IDUserColumn, IDUserSessionColumn, TipeAktivitasColumn, BerhasilColumn, EndpointColumn, TableName_Column, RecordIDColumn, OldValueColumn, NewValueColumn, DetailColumn, IPAddressColumn, UserAgentColumn, WaktuAktivitasColumn}
+		mutableColumns       = postgres.ColumnList{TipeAktorColumn, IDUserColumn, IDUserSessionColumn, TipeAktivitasColumn, BerhasilColumn, EndpointColumn, TableName_Column, RecordIDColumn, OldValueColumn, NewValueColumn, DetailColumn, IPAddressColumn, UserAgentColumn, WaktuAktivitasColumn}
 		defaultColumns       = postgres.ColumnList{IDLogColumn, WaktuAktivitasColumn}
 	)
 
@@ -78,9 +98,19 @@ func newAuditLogTableImpl(schemaName, tableName, alias string) auditLogTable {
 
 		//Columns
 		IDLog:          IDLogColumn,
+		TipeAktor:      TipeAktorColumn,
 		IDUser:         IDUserColumn,
-		Aktivitas:      AktivitasColumn,
+		IDUserSession:  IDUserSessionColumn,
+		TipeAktivitas:  TipeAktivitasColumn,
+		Berhasil:       BerhasilColumn,
+		Endpoint:       EndpointColumn,
+		TableName_:     TableName_Column,
+		RecordID:       RecordIDColumn,
+		OldValue:       OldValueColumn,
+		NewValue:       NewValueColumn,
+		Detail:         DetailColumn,
 		IPAddress:      IPAddressColumn,
+		UserAgent:      UserAgentColumn,
 		WaktuAktivitas: WaktuAktivitasColumn,
 
 		AllColumns:     allColumns,

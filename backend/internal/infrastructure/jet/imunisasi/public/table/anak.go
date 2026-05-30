@@ -17,18 +17,15 @@ type anakTable struct {
 	postgres.Table
 
 	// Columns
-	IDPasien          postgres.ColumnInteger
-	IDIbuHamil        postgres.ColumnInteger
-	IDWali            postgres.ColumnInteger
-	NamaAnak          postgres.ColumnString
-	Nik               postgres.ColumnString
-	TanggalLahir      postgres.ColumnDate
-	JenisKelamin      postgres.ColumnString
-	BeratLahir        postgres.ColumnFloat
-	PanjangLahir      postgres.ColumnFloat
-	HubunganDenganIbu postgres.ColumnString
-	CreatedAt         postgres.ColumnTimestampz
-	UpdatedAt         postgres.ColumnTimestampz
+	IDPasien           postgres.ColumnInteger
+	IDIbuHamil         postgres.ColumnInteger
+	IDWali             postgres.ColumnInteger
+	NamaAnak           postgres.ColumnString
+	BeratLahir         postgres.ColumnFloat
+	PanjangLahir       postgres.ColumnFloat
+	HubunganDenganWali postgres.ColumnString
+	CreatedAt          postgres.ColumnTimestampz
+	UpdatedAt          postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -70,39 +67,33 @@ func newAnakTable(schemaName, tableName, alias string) *AnakTable {
 
 func newAnakTableImpl(schemaName, tableName, alias string) anakTable {
 	var (
-		IDPasienColumn          = postgres.IntegerColumn("id_pasien")
-		IDIbuHamilColumn        = postgres.IntegerColumn("id_ibu_hamil")
-		IDWaliColumn            = postgres.IntegerColumn("id_wali")
-		NamaAnakColumn          = postgres.StringColumn("nama_anak")
-		NikColumn               = postgres.StringColumn("nik")
-		TanggalLahirColumn      = postgres.DateColumn("tanggal_lahir")
-		JenisKelaminColumn      = postgres.StringColumn("jenis_kelamin")
-		BeratLahirColumn        = postgres.FloatColumn("berat_lahir")
-		PanjangLahirColumn      = postgres.FloatColumn("panjang_lahir")
-		HubunganDenganIbuColumn = postgres.StringColumn("hubungan_dengan_ibu")
-		CreatedAtColumn         = postgres.TimestampzColumn("created_at")
-		UpdatedAtColumn         = postgres.TimestampzColumn("updated_at")
-		allColumns              = postgres.ColumnList{IDPasienColumn, IDIbuHamilColumn, IDWaliColumn, NamaAnakColumn, NikColumn, TanggalLahirColumn, JenisKelaminColumn, BeratLahirColumn, PanjangLahirColumn, HubunganDenganIbuColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns          = postgres.ColumnList{IDIbuHamilColumn, IDWaliColumn, NamaAnakColumn, NikColumn, TanggalLahirColumn, JenisKelaminColumn, BeratLahirColumn, PanjangLahirColumn, HubunganDenganIbuColumn, CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns          = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn}
+		IDPasienColumn           = postgres.IntegerColumn("id_pasien")
+		IDIbuHamilColumn         = postgres.IntegerColumn("id_ibu_hamil")
+		IDWaliColumn             = postgres.IntegerColumn("id_wali")
+		NamaAnakColumn           = postgres.StringColumn("nama_anak")
+		BeratLahirColumn         = postgres.FloatColumn("berat_lahir")
+		PanjangLahirColumn       = postgres.FloatColumn("panjang_lahir")
+		HubunganDenganWaliColumn = postgres.StringColumn("hubungan_dengan_wali")
+		CreatedAtColumn          = postgres.TimestampzColumn("created_at")
+		UpdatedAtColumn          = postgres.TimestampzColumn("updated_at")
+		allColumns               = postgres.ColumnList{IDPasienColumn, IDIbuHamilColumn, IDWaliColumn, NamaAnakColumn, BeratLahirColumn, PanjangLahirColumn, HubunganDenganWaliColumn, CreatedAtColumn, UpdatedAtColumn}
+		mutableColumns           = postgres.ColumnList{IDIbuHamilColumn, IDWaliColumn, NamaAnakColumn, BeratLahirColumn, PanjangLahirColumn, HubunganDenganWaliColumn, CreatedAtColumn, UpdatedAtColumn}
+		defaultColumns           = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn}
 	)
 
 	return anakTable{
 		Table: postgres.NewTable(schemaName, tableName, alias, allColumns...),
 
 		//Columns
-		IDPasien:          IDPasienColumn,
-		IDIbuHamil:        IDIbuHamilColumn,
-		IDWali:            IDWaliColumn,
-		NamaAnak:          NamaAnakColumn,
-		Nik:               NikColumn,
-		TanggalLahir:      TanggalLahirColumn,
-		JenisKelamin:      JenisKelaminColumn,
-		BeratLahir:        BeratLahirColumn,
-		PanjangLahir:      PanjangLahirColumn,
-		HubunganDenganIbu: HubunganDenganIbuColumn,
-		CreatedAt:         CreatedAtColumn,
-		UpdatedAt:         UpdatedAtColumn,
+		IDPasien:           IDPasienColumn,
+		IDIbuHamil:         IDIbuHamilColumn,
+		IDWali:             IDWaliColumn,
+		NamaAnak:           NamaAnakColumn,
+		BeratLahir:         BeratLahirColumn,
+		PanjangLahir:       PanjangLahirColumn,
+		HubunganDenganWali: HubunganDenganWaliColumn,
+		CreatedAt:          CreatedAtColumn,
+		UpdatedAt:          UpdatedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

@@ -21,7 +21,7 @@ type userAccountTable struct {
 	Email            postgres.ColumnString
 	Password         postgres.ColumnString
 	NoHp             postgres.ColumnString
-	StatusVerifikasi postgres.ColumnBool
+	StatusVerifikasi postgres.ColumnString
 	Nama             postgres.ColumnString
 	Nik              postgres.ColumnString
 	JenisKelamin     postgres.ColumnString
@@ -78,7 +78,7 @@ func newUserAccountTableImpl(schemaName, tableName, alias string) userAccountTab
 		EmailColumn            = postgres.StringColumn("email")
 		PasswordColumn         = postgres.StringColumn("password")
 		NoHpColumn             = postgres.StringColumn("no_hp")
-		StatusVerifikasiColumn = postgres.BoolColumn("status_verifikasi")
+		StatusVerifikasiColumn = postgres.StringColumn("status_verifikasi")
 		NamaColumn             = postgres.StringColumn("nama")
 		NikColumn              = postgres.StringColumn("nik")
 		JenisKelaminColumn     = postgres.StringColumn("jenis_kelamin")

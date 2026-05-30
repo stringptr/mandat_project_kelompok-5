@@ -17,7 +17,7 @@ type JadwalImunisasi struct {
 	NamaVaksin       string
 	TanggalJadwal    time.Time
 	TanggalRealisasi *time.Time
-	StatusImunisasi  string
+	StatusImunisasi  StatusImunisasi
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }

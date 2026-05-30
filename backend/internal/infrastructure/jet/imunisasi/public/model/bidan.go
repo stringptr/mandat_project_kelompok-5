@@ -14,7 +14,7 @@ import (
 type Bidan struct {
 	IDUser       int32 `sql:"primary_key"`
 	NoStr        string
-	WilayahKerja *int32
+	WilayahKerja int32
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

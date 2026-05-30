@@ -16,7 +16,7 @@ type Artikel struct {
 	Judul          string
 	IsiArtikel     string
 	Kategori       *string
-	StatusArtikel  *string
+	StatusArtikel  StatusArtikel
 	IDPenulis      int32
 	IDVerifikator  *int32
 	TanggalPublish *time.Time

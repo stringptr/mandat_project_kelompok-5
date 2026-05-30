@@ -13,16 +13,13 @@ import (
 )
 
 type Anak struct {
-	IDPasien          int32 `sql:"primary_key"`
-	IDIbuHamil        int32
-	IDWali            int32
-	NamaAnak          string
-	Nik               string
-	TanggalLahir      time.Time
-	JenisKelamin      string
-	BeratLahir        *decimal.Decimal
-	PanjangLahir      *decimal.Decimal
-	HubunganDenganIbu *string
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	IDPasien           int32 `sql:"primary_key"`
+	IDIbuHamil         *int32
+	IDWali             int32
+	NamaAnak           string
+	BeratLahir         decimal.Decimal
+	PanjangLahir       decimal.Decimal
+	HubunganDenganWali HubunganDenganWali
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }

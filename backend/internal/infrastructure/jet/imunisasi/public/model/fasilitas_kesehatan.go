@@ -14,8 +14,8 @@ import (
 type FasilitasKesehatan struct {
 	IDFaskes   int32 `sql:"primary_key"`
 	NamaFaskes string
-	TipeFaskes string
-	IDLokasi   *int32
+	TipeFaskes TipeFaskes
+	IDLokasi   int32
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }

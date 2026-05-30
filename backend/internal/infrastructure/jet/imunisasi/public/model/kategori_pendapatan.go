@@ -14,6 +14,6 @@ import (
 type KategoriPendapatan struct {
 	IDPendapatan       int32 `sql:"primary_key"`
 	KategoriPendapatan string
-	PendapatanMin      *decimal.Decimal
-	PendapatanMax      *decimal.Decimal
+	PendapatanMin      decimal.Decimal
+	PendapatanMax      decimal.Decimal
 }

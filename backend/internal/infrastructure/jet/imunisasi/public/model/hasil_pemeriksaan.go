@@ -16,12 +16,12 @@ type HasilPemeriksaan struct {
 	IDHasilPemeriksaan int32 `sql:"primary_key"`
 	IDPetugasInput     int32
 	IDJadwalImunisasi  int32
-	BeratBadan         *decimal.Decimal
-	TinggiBadan        *decimal.Decimal
-	LingkarKepala      *decimal.Decimal
-	TekananDarah       *string
-	StatusStunting     *string
-	StatusGizi         *string
+	BeratBadan         decimal.Decimal
+	TinggiBadan        decimal.Decimal
+	LingkarKepala      decimal.Decimal
+	TekananDarah       string
+	StatusStunting     StatusStunting
+	StatusGizi         StatusGizi
 	Catatan            *string
 	CreatedAt          time.Time
 	UpdatedAt          time.Time

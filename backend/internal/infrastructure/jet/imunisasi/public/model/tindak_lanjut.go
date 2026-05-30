@@ -17,8 +17,8 @@ type TindakLanjut struct {
 	IDBidan            int32
 	CatatanMedis       *string
 	Rekomendasi        *string
-	JadwalKontrol      *time.Time
-	StatusPasien       *string
+	JadwalKontrol      time.Time
+	StatusPasien       StatusPasien
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 }

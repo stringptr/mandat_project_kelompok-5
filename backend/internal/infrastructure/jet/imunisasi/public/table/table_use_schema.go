@@ -31,4 +31,5 @@ func UseSchema(schema string) {
 	Rujukan = Rujukan.FromSchema(schema)
 	TindakLanjut = TindakLanjut.FromSchema(schema)
 	UserAccount = UserAccount.FromSchema(schema)
+	UserSession = UserSession.FromSchema(schema)
 }

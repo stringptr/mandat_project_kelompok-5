@@ -16,8 +16,8 @@ type IbuHamil struct {
 	IDPasien        int32
 	HamilKe         int32
 	BulanMulaiHamil time.Time
-	Hpht            *time.Time
-	StatusKehamilan *string
+	Hpht            time.Time
+	StatusKehamilan StatusKehamilan
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }

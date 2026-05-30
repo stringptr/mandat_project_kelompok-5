@@ -14,9 +14,9 @@ import (
 type Rujukan struct {
 	IDRujukan      int32 `sql:"primary_key"`
 	IDTindakLanjut int32
-	AlasanRujukan  *string
+	AlasanRujukan  string
 	TanggalRujukan time.Time
-	StatusRujukan  *string
+	StatusRujukan  StatusRujukan
 	IDFaskes       int32
 	CreatedAt      time.Time
 	UpdatedAt      time.Time

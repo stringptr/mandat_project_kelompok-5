@@ -10,5 +10,5 @@ package model
 type Pekerjaan struct {
 	IDPekerjaan   int32 `sql:"primary_key"`
 	NamaPekerjaan string
-	Sektor        *string
+	Sektor        Sektor
 }

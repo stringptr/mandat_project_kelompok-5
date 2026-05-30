@@ -15,13 +15,13 @@ type UserAccount struct {
 	IDUser           int32 `sql:"primary_key"`
 	Email            string
 	Password         string
-	NoHp             *string
-	StatusVerifikasi bool
+	NoHp             string
+	StatusVerifikasi StatusVerifikasi
 	Nama             string
-	Nik              *string
-	JenisKelamin     *string
-	TanggalLahir     *time.Time
-	IDLokasi         *int32
+	Nik              string
+	JenisKelamin     JenisKelamin
+	TanggalLahir     time.Time
+	IDLokasi         int32
 	IDPendidikan     *int32
 	IDPekerjaan      *int32
 	IDPendapatan     *int32

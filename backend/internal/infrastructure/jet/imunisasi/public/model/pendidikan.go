@@ -10,6 +10,6 @@ package model
 type Pendidikan struct {
 	IDPendidikan   int32 `sql:"primary_key"`
 	NamaPendidikan string
-	Jenjang        *string
-	LamaTahun      *int32
+	Jenjang        string
+	LamaTahun      int32
 }

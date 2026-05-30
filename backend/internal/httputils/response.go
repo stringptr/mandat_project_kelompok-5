@@ -16,6 +16,14 @@ type APIResponse[T any] struct {
 	Title   string      `json:"title,omitempty"`
 }
 
+type APIResponseOutput[T any] struct {
+	Body APIResponse[T]
+}
+
+type APIRequestInput[T any] struct {
+	Body T
+}
+
 func (APIResponse[T]) isUnified() {}
 
 type unifiedMarker interface {

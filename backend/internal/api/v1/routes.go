@@ -26,6 +26,7 @@ func RegisterRoutes(api huma.API, r chi.Router, pool *pgxpool.Pool, cfg *config.
 	authHandler := auth.NewHandler(authService)
 
 	huma.Post(api, "/auth/register", authHandler.Register)
+	huma.Post(api, "/auth/login", authHandler.Login)
 
 	authAccess := huma.NewGroup(api, "")
 	authRefresh := huma.NewGroup(api, "")

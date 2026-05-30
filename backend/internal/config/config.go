@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 type Config struct {
@@ -10,6 +11,7 @@ type Config struct {
 	Port           string
 	CORSOrigins    []string
 	DBMasterConfig PostgresConfig
+	AuthConfig     AuthConfig
 }
 
 type PostgresConfig struct {
@@ -19,6 +21,11 @@ type PostgresConfig struct {
 	Password string
 	DBName   string
 	SSLMode  string
+}
+
+type AuthConfig struct {
+	JWTSecret       string
+	AccessTokenTTL  time.Duration
 }
 
 func Load() *Config {
@@ -32,6 +39,9 @@ func Load() *Config {
 	dbUser := getEnv("MASTER_USER", "postgres")
 	dbPass := getEnv("MASTER_PASSWORD", "postgres")
 
+
+	jwtSecret := getEnv("JWT_SECRET", "abcdefghijklmnopqrstuvwxyz")
+
 	return &Config{
 		Host:        serverHost,
 		Port:        serverPort,
@@ -43,6 +53,11 @@ func Load() *Config {
 			Password: dbPass,
 			DBName:   dbName,
 			SSLMode:  "disable",
+		},
+		AuthConfig: AuthConfig{
+			JWTSecret:       jwtSecret,
+			AccessTokenTTL:  30 * time.Minute,
+			RefreshTokenTTL: 7 * 24 * time.Hour,
 		},
 	}
 }

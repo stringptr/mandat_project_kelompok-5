@@ -22,8 +22,11 @@ func GetAccessClaim(ctx context.Context) *jwtutils.Claim {
 }
 
 func GetRefreshToken(ctx context.Context) uuid.UUID {
-	claims, _ := ctx.Value(RefreshKey).(uuid.UUID)
-	return claims
+	claimsRaw := ctx.Value(RefreshKey)
+	if claims, ok := claimsRaw.(uuid.UUID); ok {
+		return claims
+	}
+	return uuid.Nil
 }
 
 func ReadCookie(ctx huma.Context, name string) (*http.Cookie, error) {

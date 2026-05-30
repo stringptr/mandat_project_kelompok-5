@@ -8,5 +8,4 @@ import (
 
 type Service interface {
 	GetAll(ctx context.Context) ([]*model.UserAccount, error)
-	Register(ctx context.Context, dataDTO *RegisterRequestDTO) error
 }

@@ -4,16 +4,16 @@ import (
 	"context"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
+	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 )
 
 type Handler struct {
-	Service userAccount.Service
+	Service userAccountDomain.Service
 }
 
-func NewHandler(Service userAccount.Service) *Handler {
+func NewHandler(Service userAccountDomain.Service) *Handler {
 	return &Handler{Service: Service}
 }
 
@@ -28,21 +28,4 @@ func (h *Handler) GetAll(ctx context.Context, input *struct{}) (*GetAllResponse,
 	}
 
 	return &GetAllResponse{Body: httputils.OK(userAccounts)}, nil
-}
-
-type RegisterInput struct {
-	Body *userAccount.RegisterRequestDTO
-}
-
-type RegisterResponse struct {
-	Body httputils.APIResponse[any]
-}
-
-func (h *Handler) Register(ctx context.Context, input *RegisterInput) (*RegisterResponse, error) {
-	err := h.Service.Register(ctx, input.Body)
-	if err != nil {
-		return nil, huma.Error400BadRequest("Registration Failed", err)
-	}
-
-	return &RegisterResponse{Body: httputils.Created[any](nil)}, nil
 }

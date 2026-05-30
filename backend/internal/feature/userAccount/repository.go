@@ -8,6 +8,7 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 	. "github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/table"
 
+	"github.com/go-jet/jet/v2/postgres"
 	. "github.com/go-jet/jet/v2/postgres"
 
 	"github.com/go-jet/jet/v2/pgxV5"
@@ -21,6 +22,8 @@ type Repo struct {
 func NewRepo(db *pgxpool.Pool) *Repo {
 	return &Repo{db: db}
 }
+
+var MutableNonDefaultColumns postgres.ColumnList = UserAccount.MutableColumns.Except(UserAccount.DefaultColumns)
 
 func (r *Repo) GetByID(ctx context.Context, IDUser int32) (*model.UserAccount, error) {
 	var user []*model.UserAccount
@@ -41,6 +44,9 @@ func (r *Repo) GetByNIK(ctx context.Context, NIK string) (*model.UserAccount, er
 	err := pgxV5.Query(ctx, stmt, r.db, &user)
 	if err != nil {
 		return nil, err
+	}
+	if len(user) == 0 {
+		return nil, nil
 	}
 
 	return user[0], nil
@@ -74,7 +80,7 @@ func (r *Repo) GetAll(ctx context.Context) ([]*model.UserAccount, error) {
 }
 
 func (r *Repo) Create(ctx context.Context, userAccModel *model.UserAccount) error {
-	stmt := UserAccount.INSERT(UserAccount.AllColumns).MODEL(userAccModel)
+	stmt := UserAccount.INSERT(MutableNonDefaultColumns).MODEL(userAccModel)
 	res, err := pgxV5.Exec(ctx, stmt, r.db)
 	if err != nil {
 		return err

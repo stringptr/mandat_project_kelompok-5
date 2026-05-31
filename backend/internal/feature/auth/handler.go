@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"github.com/danielgtaylor/huma/v2"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
@@ -29,6 +30,15 @@ func (h *Handler) Register(ctx context.Context, input *httputils.APIRequestInput
 	}
 
 	return &httputils.APIResponseOutput[any]{Body: httputils.Created[any](nil)}, nil
+}
+
+func (h *Handler) Me(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*jwtutils.Claim], error) {
+	accessCookie := httputils.GetAccessClaim(ctx)
+	if accessCookie == nil {
+		return nil, huma.Error401Unauthorized("Please login first.", errors.New("no access token"))
+	}
+
+	return &httputils.APIResponseOutput[*jwtutils.Claim]{Body: httputils.OK(accessCookie)}, nil
 }
 
 func (h *Handler) Login(ctx context.Context, input *httputils.APIRequestInput[*authDomain.LoginRequest]) (*AuthOutput, error) {

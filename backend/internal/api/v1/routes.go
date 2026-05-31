@@ -43,4 +43,6 @@ func RegisterRoutes(api huma.API, r chi.Router, pool *pgxpool.Pool, cfg *config.
 	bidanGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN"))
 	kaderGroup.UseMiddleware(middleware.RequireRole(authAccess, "KADER"))
 	dinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "DINKES"))
+
+	huma.Get(userGroup, "/me", authHandler.Me)
 }

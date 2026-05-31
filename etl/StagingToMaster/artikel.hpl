@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <pipeline>
   <info>
-    <name>anak</name>
+    <name>artikel</name>
     <name_sync_with_filename>Y</name_sync_with_filename>
     <description/>
     <extended_description/>
@@ -13,9 +13,9 @@
     <transform_performance_capturing_delay>1000</transform_performance_capturing_delay>
     <transform_performance_capturing_size_limit>100</transform_performance_capturing_size_limit>
     <created_user>-</created_user>
-    <created_date>2026/05/23 03:18:46.859</created_date>
+    <created_date>2026/05/31 03:56:51.423</created_date>
     <modified_user>-</modified_user>
-    <modified_date>2026/05/23 03:18:46.859</modified_date>
+    <modified_date>2026/05/31 03:56:51.423</modified_date>
   </info>
   <notepads>
     <notepad>
@@ -32,8 +32,8 @@
       <fontitalic>N</fontitalic>
       <fontsize>-1</fontsize>
       <height>20</height>
-      <xloc>352</xloc>
-      <yloc>224</yloc>
+      <xloc>384</xloc>
+      <yloc>208</yloc>
       <width>20</width>
     </notepad>
     <notepad>
@@ -50,14 +50,74 @@
       <fontitalic>N</fontitalic>
       <fontsize>-1</fontsize>
       <height>20</height>
-      <xloc>352</xloc>
-      <yloc>208</yloc>
+      <xloc>384</xloc>
+      <yloc>192</yloc>
+      <width>20</width>
+    </notepad>
+    <notepad>
+      <backgroundcolorblue>251</backgroundcolorblue>
+      <backgroundcolorgreen>232</backgroundcolorgreen>
+      <backgroundcolorred>201</backgroundcolorred>
+      <bordercolorblue>90</bordercolorblue>
+      <bordercolorgreen>58</bordercolorgreen>
+      <bordercolorred>14</bordercolorred>
+      <fontbold>N</fontbold>
+      <fontcolorblue>90</fontcolorblue>
+      <fontcolorgreen>58</fontcolorgreen>
+      <fontcolorred>14</fontcolorred>
+      <fontitalic>N</fontitalic>
+      <fontsize>-1</fontsize>
+      <height>20</height>
+      <xloc>241</xloc>
+      <yloc>216</yloc>
+      <note>SELECT
+    id_artikel,
+    judul,
+    isi_artikel,
+    kategori,
+    status_artikel,
+    id_penulis,
+    id_verifikator,
+    tanggal_publish,
+    created_at,
+    updated_at
+FROM dbo.artikel</note>
+      <width>20</width>
+    </notepad>
+    <notepad>
+      <backgroundcolorblue>251</backgroundcolorblue>
+      <backgroundcolorgreen>232</backgroundcolorgreen>
+      <backgroundcolorred>201</backgroundcolorred>
+      <bordercolorblue>90</bordercolorblue>
+      <bordercolorgreen>58</bordercolorgreen>
+      <bordercolorred>14</bordercolorred>
+      <fontbold>N</fontbold>
+      <fontcolorblue>90</fontcolorblue>
+      <fontcolorgreen>58</fontcolorgreen>
+      <fontcolorred>14</fontcolorred>
+      <fontitalic>N</fontitalic>
+      <fontsize>-1</fontsize>
+      <height>20</height>
+      <xloc>241</xloc>
+      <yloc>216</yloc>
+      <note>SELECT
+    id_artikel,
+    judul,
+    isi_artikel,
+    kategori,
+    status_artikel,
+    id_penulis,
+    id_verifikator,
+    tanggal_publish,
+    created_at,
+    updated_at
+FROM dbo.artikel</note>
       <width>20</width>
     </notepad>
   </notepads>
   <order>
     <hop>
-      <from>anak Staging</from>
+      <from>artikel Staging</from>
       <to>JavaScript</to>
       <enabled>Y</enabled>
     </hop>
@@ -68,7 +128,7 @@
     </hop>
   </order>
   <transform>
-    <name>anak Staging</name>
+    <name>artikel Staging</name>
     <type>TableInput</type>
     <description/>
     <distribute>Y</distribute>
@@ -82,21 +142,22 @@
     <execute_each_row>N</execute_each_row>
     <limit>0</limit>
     <sql>SELECT
-    id_pasien,
-    id_ibu_hamil,
-    id_wali,
-    nama_anak,
-    berat_lahir,
-    panjang_lahir,
-    hubungan_dengan_wali,
+    id_artikel,
+    judul,
+    isi_artikel,
+    kategori,
+    status_artikel,
+    id_penulis,
+    id_verifikator,
+    tanggal_publish,
     created_at,
     updated_at
-FROM dbo.anak</sql>
+FROM dbo.artikel</sql>
     <variables_active>N</variables_active>
     <attributes/>
     <GUI>
-      <xloc>208</xloc>
-      <yloc>192</yloc>
+      <xloc>240</xloc>
+      <yloc>176</yloc>
     </GUI>
   </transform>
   <transform>
@@ -121,25 +182,24 @@ function esc(v){
 }
 
 sql =
-"INSERT INTO public.anak (" +
-"id_pasien,id_ibu_hamil,id_wali,nama_anak,berat_lahir,panjang_lahir,hubungan_dengan_wali,created_at,updated_at" +
+"INSERT INTO public.artikel (" +
+"id_artikel,judul,isi_artikel,kategori,status_artikel,id_penulis,id_verifikator,tanggal_publish,created_at,updated_at" +
 ") VALUES (" +
-id_pasien + "," +
-(id_ibu_hamil==null?"NULL":id_ibu_hamil) + "," +
-id_wali + "," +
-"'" + esc(nama_anak) + "'," +
-berat_lahir + "," +
-panjang_lahir + "," +
-"'" + esc(hubungan_dengan_wali) + "'::hubungan_dengan_wali," +
+id_artikel + "," +
+"'" + esc(judul) + "'," +
+"'" + esc(isi_artikel) + "'," +
+(kategori==null?"NULL":"'" + esc(kategori) + "'") + "," +
+"'" + esc(status_artikel) + "'::status_artikel," +
+id_penulis + "," +
+(id_verifikator==null?"NULL":id_verifikator) + "," +
+(tanggal_publish==null?"NULL":"'" + tanggal_publish + "'") + "," +
 "'" + created_at + "'," +
 "'" + updated_at + "'" +
-") ON CONFLICT (id_pasien) DO UPDATE SET " +
-"id_ibu_hamil=EXCLUDED.id_ibu_hamil," +
-"id_wali=EXCLUDED.id_wali," +
-"nama_anak=EXCLUDED.nama_anak," +
-"berat_lahir=EXCLUDED.berat_lahir," +
-"panjang_lahir=EXCLUDED.panjang_lahir," +
-"hubungan_dengan_wali=EXCLUDED.hubungan_dengan_wali";</jsScript_script>
+") ON CONFLICT (id_artikel) DO UPDATE SET " +
+"judul=EXCLUDED.judul," +
+"isi_artikel=EXCLUDED.isi_artikel," +
+"kategori=EXCLUDED.kategori," +
+"status_artikel=EXCLUDED.status_artikel";</jsScript_script>
       </jsScript>
     </jsScripts>
     <fields>
@@ -147,15 +207,15 @@ panjang_lahir + "," +
         <name>sql</name>
         <rename>sql</rename>
         <type>String</type>
-        <length>1000</length>
+        <length>2000</length>
         <precision>-1</precision>
         <replace>N</replace>
       </field>
     </fields>
     <attributes/>
     <GUI>
-      <xloc>336</xloc>
-      <yloc>192</yloc>
+      <xloc>368</xloc>
+      <yloc>176</yloc>
     </GUI>
   </transform>
   <transform>
@@ -176,8 +236,8 @@ panjang_lahir + "," +
     <sql_field>sql</sql_field>
     <attributes/>
     <GUI>
-      <xloc>480</xloc>
-      <yloc>192</yloc>
+      <xloc>512</xloc>
+      <yloc>176</yloc>
     </GUI>
   </transform>
   <transform_error_handling>

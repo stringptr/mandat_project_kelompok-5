@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <pipeline>
   <info>
-    <name>anak</name>
+    <name>notifikasi</name>
     <name_sync_with_filename>Y</name_sync_with_filename>
     <description/>
     <extended_description/>
@@ -13,9 +13,9 @@
     <transform_performance_capturing_delay>1000</transform_performance_capturing_delay>
     <transform_performance_capturing_size_limit>100</transform_performance_capturing_size_limit>
     <created_user>-</created_user>
-    <created_date>2026/05/23 03:18:46.859</created_date>
+    <created_date>2026/05/31 07:45:49.784</created_date>
     <modified_user>-</modified_user>
-    <modified_date>2026/05/23 03:18:46.859</modified_date>
+    <modified_date>2026/05/31 07:45:49.784</modified_date>
   </info>
   <notepads>
     <notepad>
@@ -33,7 +33,7 @@
       <fontsize>-1</fontsize>
       <height>20</height>
       <xloc>352</xloc>
-      <yloc>224</yloc>
+      <yloc>160</yloc>
       <width>20</width>
     </notepad>
     <notepad>
@@ -51,113 +51,22 @@
       <fontsize>-1</fontsize>
       <height>20</height>
       <xloc>352</xloc>
-      <yloc>208</yloc>
+      <yloc>144</yloc>
       <width>20</width>
     </notepad>
   </notepads>
   <order>
     <hop>
-      <from>anak Staging</from>
-      <to>JavaScript</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
       <from>JavaScript</from>
       <to>Execute row SQL script</to>
       <enabled>Y</enabled>
     </hop>
+    <hop>
+      <from>notifikasi Staging</from>
+      <to>JavaScript</to>
+      <enabled>Y</enabled>
+    </hop>
   </order>
-  <transform>
-    <name>anak Staging</name>
-    <type>TableInput</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <connection>Staging</connection>
-    <execute_each_row>N</execute_each_row>
-    <limit>0</limit>
-    <sql>SELECT
-    id_pasien,
-    id_ibu_hamil,
-    id_wali,
-    nama_anak,
-    berat_lahir,
-    panjang_lahir,
-    hubungan_dengan_wali,
-    created_at,
-    updated_at
-FROM dbo.anak</sql>
-    <variables_active>N</variables_active>
-    <attributes/>
-    <GUI>
-      <xloc>208</xloc>
-      <yloc>192</yloc>
-    </GUI>
-  </transform>
-  <transform>
-    <name>JavaScript</name>
-    <type>ScriptValueMod</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <optimizationLevel>9</optimizationLevel>
-    <jsScripts>
-      <jsScript>
-        <jsScript_type>0</jsScript_type>
-        <jsScript_name>Script 1</jsScript_name>
-        <jsScript_script>//Script here
-function esc(v){
-  return v == null ? "" : String(v).replace(/'/g,"''").trim();
-}
-
-sql =
-"INSERT INTO public.anak (" +
-"id_pasien,id_ibu_hamil,id_wali,nama_anak,berat_lahir,panjang_lahir,hubungan_dengan_wali,created_at,updated_at" +
-") VALUES (" +
-id_pasien + "," +
-(id_ibu_hamil==null?"NULL":id_ibu_hamil) + "," +
-id_wali + "," +
-"'" + esc(nama_anak) + "'," +
-berat_lahir + "," +
-panjang_lahir + "," +
-"'" + esc(hubungan_dengan_wali) + "'::hubungan_dengan_wali," +
-"'" + created_at + "'," +
-"'" + updated_at + "'" +
-") ON CONFLICT (id_pasien) DO UPDATE SET " +
-"id_ibu_hamil=EXCLUDED.id_ibu_hamil," +
-"id_wali=EXCLUDED.id_wali," +
-"nama_anak=EXCLUDED.nama_anak," +
-"berat_lahir=EXCLUDED.berat_lahir," +
-"panjang_lahir=EXCLUDED.panjang_lahir," +
-"hubungan_dengan_wali=EXCLUDED.hubungan_dengan_wali";</jsScript_script>
-      </jsScript>
-    </jsScripts>
-    <fields>
-      <field>
-        <name>sql</name>
-        <rename>sql</rename>
-        <type>String</type>
-        <length>1000</length>
-        <precision>-1</precision>
-        <replace>N</replace>
-      </field>
-    </fields>
-    <attributes/>
-    <GUI>
-      <xloc>336</xloc>
-      <yloc>192</yloc>
-    </GUI>
-  </transform>
   <transform>
     <name>Execute row SQL script</name>
     <type>ExecSqlRow</type>
@@ -177,7 +86,113 @@ panjang_lahir + "," +
     <attributes/>
     <GUI>
       <xloc>480</xloc>
-      <yloc>192</yloc>
+      <yloc>128</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>JavaScript</name>
+    <type>ScriptValueMod</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <optimizationLevel>9</optimizationLevel>
+    <jsScripts>
+      <jsScript>
+        <jsScript_type>0</jsScript_type>
+        <jsScript_name>Script 1</jsScript_name>
+        <jsScript_script>//Script here
+var judulFix = judul;
+if (judulFix != null) {
+  judulFix = judulFix.replace(/'/g, "''");
+}
+
+var pesanFix = pesan;
+if (pesanFix != null) {
+  pesanFix = pesanFix.replace(/'/g, "''");
+}
+
+var tipeFix = tipe_notifikasi;
+if (tipeFix != null) {
+  tipeFix = tipeFix.trim();
+}
+
+var statusFix = status_baca;
+
+if (statusFix == null) {
+  statusFix = "FALSE";
+} else {
+  statusFix = (statusFix.toString().toLowerCase() == "true") ? "TRUE" : "FALSE";
+}
+
+sql =
+"INSERT INTO public.notifikasi (" +
+"id_notifikasi,id_user,judul,pesan,tipe_notifikasi,status_baca,tanggal_kirim" +
+") VALUES (" +
+id_notifikasi + "," +
+id_user + "," +
+"'" + judulFix + "'," +
+(pesanFix == null ? "NULL" : "'" + pesanFix + "'") + "," +
+"'" + tipeFix + "'::tipe_notifikasi," +
+statusFix + "," +
+"'" + tanggal_kirim + "'" +
+") ON CONFLICT (id_notifikasi) DO UPDATE SET " +
+"id_user=EXCLUDED.id_user," +
+"judul=EXCLUDED.judul," +
+"pesan=EXCLUDED.pesan," +
+"tipe_notifikasi=EXCLUDED.tipe_notifikasi," +
+"status_baca=EXCLUDED.status_baca," +
+"tanggal_kirim=EXCLUDED.tanggal_kirim";</jsScript_script>
+      </jsScript>
+    </jsScripts>
+    <fields>
+      <field>
+        <name>sql</name>
+        <rename>sql</rename>
+        <type>String</type>
+        <length>1000</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+    </fields>
+    <attributes/>
+    <GUI>
+      <xloc>336</xloc>
+      <yloc>128</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>notifikasi Staging</name>
+    <type>TableInput</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>Staging</connection>
+    <execute_each_row>N</execute_each_row>
+    <limit>0</limit>
+    <sql>SELECT
+    id_notifikasi,
+    id_user,
+    judul,
+    pesan,
+    tipe_notifikasi,
+    status_baca,
+    tanggal_kirim
+FROM dbo.notifikasi</sql>
+    <variables_active>N</variables_active>
+    <attributes/>
+    <GUI>
+      <xloc>208</xloc>
+      <yloc>128</yloc>
     </GUI>
   </transform>
   <transform_error_handling>

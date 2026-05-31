@@ -84,14 +84,5 @@ func main() {
 	v1Group := huma.NewGroup(api, "/v1")
 	v1.RegisterRoutes(v1Group, r, pool, cfg)
 
-	huma.Get(api, "/", func(ctx context.Context, input *struct{}) (*struct {
-		Body httputils.APIResponse[struct{ Thing string }]
-	}, error,
-	) {
-		return &struct {
-			Body httputils.APIResponse[struct{ Thing string }]
-		}{Body: httputils.OK(struct{ Thing string }{Thing: "thing"})}, nil
-	})
-
 	http.ListenAndServe(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port), api.Adapter())
 }

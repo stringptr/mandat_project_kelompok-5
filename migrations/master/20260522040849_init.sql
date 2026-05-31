@@ -55,14 +55,14 @@ CREATE TYPE jenis_kelamin AS ENUM ('Laki-Laki', 'Perempuan');
 CREATE TYPE status_verifikasi AS ENUM ('Pending', 'Aktif', 'Ditolak');
 CREATE TABLE user_account (
    id_user SERIAL PRIMARY KEY,
-   email VARCHAR(255) NOT NULL UNIQUE,
+   email VARCHAR(255) NOT NULL,
    password VARCHAR(255) NOT NULL,
    no_hp VARCHAR(20) NOT NULL,
    status_verifikasi status_verifikasi NOT NULL DEFAULT 'Pending',
    nama VARCHAR(255) NOT NULL,
-   nik CHAR(16) UNIQUE NOT NULL
+   nik CHAR(16) NOT NULL
        CHECK (nik ~ '^[0-9]{16}$'),
-    jenis_kelamin jenis_kelamin NOT NULL,
+   jenis_kelamin jenis_kelamin NOT NULL,
    tanggal_lahir DATE NOT NULL,
    id_lokasi INT NOT NULL,
    id_pendidikan INT,
@@ -70,8 +70,11 @@ CREATE TABLE user_account (
    id_pendapatan INT,
    jumlah_tanggungan INT
        CHECK (jumlah_tanggungan >= 0),
+   akun_ke INT NOT NULL DEFAULT 1,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   UNIQUE (nik, akun_ke),
+   UNIQUE (email, nik),
    CONSTRAINT fk_user_lokasi
        FOREIGN KEY (id_lokasi)
        REFERENCES lokasi(id_lokasi)
@@ -407,6 +410,7 @@ CREATE TABLE user_session (
    id_user INT NOT NULL,
    status_session status_session NOT NULL DEFAULT 'AKTIF',
    ip_address INET,
+   expired_at TIMESTAMPTZ NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '7 day'),
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT fk_audit_user
@@ -563,54 +567,24 @@ EXECUTE FUNCTION update_updated_at_column();
 
 -- +goose Down
 
-DROP TRIGGER IF EXISTS trg_rujukan_updated_at ON rujukan;
-DROP TRIGGER IF EXISTS trg_tindak_lanjut_updated_at ON tindak_lanjut;
-DROP TRIGGER IF EXISTS trg_hasil_pemeriksaan_updated_at ON hasil_pemeriksaan;
-DROP TRIGGER IF EXISTS trg_artikel_updated_at ON artikel;
-DROP TRIGGER IF EXISTS trg_jadwal_imunisasi_updated_at ON jadwal_imunisasi;
-DROP TRIGGER IF EXISTS trg_anak_updated_at ON anak;
-DROP TRIGGER IF EXISTS trg_ibu_hamil_updated_at ON ibu_hamil;
-DROP TRIGGER IF EXISTS trg_fasilitas_kesehatan_updated_at ON fasilitas_kesehatan;
-DROP TRIGGER IF EXISTS trg_pasien_updated_at ON pasien;
-DROP TRIGGER IF EXISTS trg_kader_posyandu_updated_at ON kader_posyandu;
-DROP TRIGGER IF EXISTS trg_posyandu_updated_at ON posyandu;
-DROP TRIGGER IF EXISTS trg_bidan_updated_at ON bidan;
-DROP TRIGGER IF EXISTS trg_dinas_kesehatan_updated_at ON dinas_kesehatan;
-DROP TRIGGER IF EXISTS trg_user_account_updated_at ON user_account;
-DROP FUNCTION IF EXISTS update_updated_at_column();
-DROP TABLE IF EXISTS audit_log CASCADE;
-DROP TABLE IF EXISTS notifikasi CASCADE;
-DROP TABLE IF EXISTS rujukan CASCADE;
-DROP TABLE IF EXISTS tindak_lanjut CASCADE;
-DROP TABLE IF EXISTS hasil_pemeriksaan CASCADE;
-DROP TABLE IF EXISTS artikel CASCADE;
-DROP TABLE IF EXISTS jadwal_imunisasi CASCADE;
-DROP TABLE IF EXISTS anak CASCADE;
-DROP TABLE IF EXISTS ibu_hamil CASCADE;
-DROP TABLE IF EXISTS kategori_pendapatan CASCADE;
-DROP TABLE IF EXISTS pekerjaan CASCADE;
-DROP TABLE IF EXISTS pendidikan CASCADE;
-DROP TABLE IF EXISTS pasien CASCADE;
-DROP TABLE IF EXISTS fasilitas_kesehatan CASCADE;
-DROP TABLE IF EXISTS kader_posyandu CASCADE;
-DROP TABLE IF EXISTS posyandu CASCADE;
-DROP TABLE IF EXISTS bidan CASCADE;
-DROP TABLE IF EXISTS dinas_kesehatan CASCADE;
-DROP TABLE IF EXISTS user_account CASCADE;
-DROP TABLE IF EXISTS lokasi CASCADE;
-DROP TYPE IF EXISTS tipe_aktivitas;
-DROP TYPE IF EXISTS tipe_identifier_aktor;
-DROP TYPE IF EXISTS tipe_aktor;
-DROP TYPE IF EXISTS tipe_notifikasi;
-DROP TYPE IF EXISTS status_rujukan;
-DROP TYPE IF EXISTS status_pasien;
-DROP TYPE IF EXISTS status_gizi;
-DROP TYPE IF EXISTS status_stunting;
-DROP TYPE IF EXISTS status_artikel;
-DROP TYPE IF EXISTS status_imunisasi;
-DROP TYPE IF EXISTS hubungan_dengan_wali;
-DROP TYPE IF EXISTS status_kehamilan;
-DROP TYPE IF EXISTS sektor;
-DROP TYPE IF EXISTS tipe_faskes;
-DROP TYPE IF EXISTS jenis_kelamin;
-DROP TYPE IF EXISTS tipe_lokasi;
+TRUNCATE TABLE audit_log;
+TRUNCATE TABLE user_session;
+TRUNCATE TABLE notifikasi;
+TRUNCATE TABLE rujukan;
+TRUNCATE TABLE tindak_lanjut;
+TRUNCATE TABLE hasil_pemeriksaan;
+TRUNCATE TABLE artikel;
+TRUNCATE TABLE jadwal_imunisasi;
+TRUNCATE TABLE anak;
+TRUNCATE TABLE ibu_hamil;
+TRUNCATE TABLE kategori_pendapatan;
+TRUNCATE TABLE pekerjaan;
+TRUNCATE TABLE pendidikan;
+TRUNCATE TABLE fasilitas_kesehatan;
+TRUNCATE TABLE pasien;
+TRUNCATE TABLE kader_posyandu;
+TRUNCATE TABLE posyandu;
+TRUNCATE TABLE bidan;
+TRUNCATE TABLE dinas_kesehatan;
+TRUNCATE TABLE user_account;
+TRUNCATE TABLE lokasi;

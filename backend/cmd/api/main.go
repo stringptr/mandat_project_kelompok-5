@@ -17,12 +17,24 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
 	cfg := config.Load()
-	pool, err := pgxpool.New(context.Background(), cfg.DBMasterConfig.DSN())
+	config, _ := pgxpool.ParseConfig(cfg.DBMasterConfig.DSN())
+	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		conn.TypeMap().RegisterType(&pgtype.Type{
+			Name:  "inet",
+			OID:   pgtype.InetOID,
+			Codec: &pgtype.TextCodec{},
+		})
+		return nil
+	}
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
 		log.Fatalf("unable to connect to database: %v", err)
 	}

@@ -22,6 +22,7 @@ type RegisterRequest struct {
 	IDPendapatan     *int32    `json:"id_pendapatan,omitempty"   validate:"min=1"`
 	JumlahTanggungan *int32    `json:"jumlah_tanggungan,omitempty" validate:"min=0"`
 }
+
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
@@ -41,6 +42,11 @@ type AuthResponse struct {
 }
 
 type AuthOutput struct {
-	Body            httputils.APIResponse[*AuthResponse]
-	SetAccessCookie []http.Cookie `header:"Set-Cookie"`
+	Body      httputils.APIResponse[*AuthResponse]
+	SetCookie []http.Cookie `header:"Set-Cookie"`
+}
+
+type LogoutOutput struct {
+	Body      httputils.APIResponse[any]
+	SetCookie []http.Cookie `header:"Set-Cookie"`
 }

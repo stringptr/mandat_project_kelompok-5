@@ -13,10 +13,10 @@ import (
 )
 
 type Handler struct {
-	Service *Service
+	Service authDomain.Service
 }
 
-func NewHandler(service *Service) *Handler {
+func NewHandler(service authDomain.Service) *Handler {
 	return &Handler{Service: service}
 }
 
@@ -70,8 +70,8 @@ func (h *Handler) Login(ctx context.Context, input *httputils.APIRequestInput[*a
 	)
 
 	return &authDomain.AuthOutput{
-		Body:            httputils.OK(res),
-		SetAccessCookie: returnCookie,
+		Body:      httputils.OK(res),
+		SetCookie: returnCookie,
 	}, nil
 }
 
@@ -105,7 +105,7 @@ func (h *Handler) Refresh(ctx context.Context, input *struct{}) (*authDomain.Aut
 			Value:    res.RefreshToken.String(),
 			Expires:  time.Now().Add(time.Duration(res.RefreshTokenExpiresIn) * time.Second),
 			MaxAge:   int(res.RefreshTokenExpiresIn),
-			Path:     "api/v1/auth/refresh",
+			Path:     "/api/v1/auth/refresh",
 			Secure:   false,
 			HttpOnly: true,
 			SameSite: http.SameSiteStrictMode,
@@ -113,7 +113,40 @@ func (h *Handler) Refresh(ctx context.Context, input *struct{}) (*authDomain.Aut
 	)
 
 	return &authDomain.AuthOutput{
-		Body:            httputils.OK(res),
-		SetAccessCookie: returnCookie,
+		Body:      httputils.OK(res),
+		SetCookie: returnCookie,
 	}, nil
+}
+
+func (h *Handler) Logout(ctx context.Context, input *struct{}) (*authDomain.LogoutOutput, error) {
+	refreshToken := httputils.GetRefreshToken(ctx)
+	err := h.Service.Logout(ctx, refreshToken)
+	if err != nil {
+		return nil, huma.Error400BadRequest(err.Error(), err)
+	}
+
+	var returnCookie []http.Cookie
+	returnCookie = append(returnCookie,
+		http.Cookie{
+			Name:     "access_token",
+			Value:    "",
+			Expires:  time.Unix(0, 0),
+			MaxAge:   -1,
+			Path:     "/",
+			Secure:   false,
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		},
+		http.Cookie{
+			Name:     "refresh_token",
+			Value:    "",
+			Expires:  time.Unix(0, 0),
+			MaxAge:   -1,
+			Path:     "/api/v1/auth/refresh",
+			Secure:   false,
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		},
+	)
+	return &authDomain.LogoutOutput{Body: httputils.OK[any](nil), SetCookie: returnCookie}, nil
 }

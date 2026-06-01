@@ -207,3 +207,16 @@ func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string
 		RefreshTokenExpiresIn: int64(s.cfg.RefreshTokenTTL.Seconds()),
 	}, nil
 }
+
+func (s *Service) Logout(ctx context.Context, refreshToken uuid.UUID) error {
+	session, err := s.sessionRepo.GetByID(ctx, refreshToken)
+	if err != nil {
+		return authDomain.ErrSessionNotFound
+	}
+	if session == nil {
+		return authDomain.ErrSessionNotFound
+	}
+	session.StatusSession = model.StatusSession_Dicabut
+
+	return s.sessionRepo.Update(ctx, session)
+}

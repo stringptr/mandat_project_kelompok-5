@@ -43,5 +43,8 @@ func RegisterRoutes(api huma.API, r chi.Router, pool *pgxpool.Pool, cfg *config.
 	dinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "DINKES"))
 
 	huma.Post(authRefresh, "/auth/refresh", authHandler.Refresh)
+	huma.Post(authRefresh, "/auth/logout", authHandler.Logout)
+
 	huma.Get(userGroup, "/me", authHandler.Me)
+
 }

@@ -1,9 +1,11 @@
 package auth
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
+	"github.com/stringptr/SiGizi/backend/internal/httputils"
 )
 
 type RegisterRequest struct {
@@ -32,8 +34,13 @@ type LoginRequest struct {
 }
 
 type AuthResponse struct {
-	AccessToken           string `json:"access_token"`
-	RefreshToken          string `json:"refresh_token"`
-	AccessTokenExpiresIn  int64  `json:"access_token_expires_in"`
-	RefreshTokenExpiresIn int64  `json:"refresh_token_expires_in"`
+	AccessToken           string    `json:"access_token"`
+	RefreshToken          uuid.UUID `json:"refresh_token"`
+	AccessTokenExpiresIn  int64     `json:"access_token_expires_in"`
+	RefreshTokenExpiresIn int64     `json:"refresh_token_expires_in"`
+}
+
+type AuthOutput struct {
+	Body            httputils.APIResponse[*AuthResponse]
+	SetAccessCookie []http.Cookie `header:"Set-Cookie"`
 }

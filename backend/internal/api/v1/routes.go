@@ -15,8 +15,6 @@ import (
 
 func RegisterRoutes(api huma.API, r chi.Router, pool *pgxpool.Pool, cfg *config.Config) {
 	userAccountRepo := userAccount.NewRepo(pool)
-	userAccountService := userAccount.NewService(userAccountRepo)
-	userAccountHandler := userAccount.NewHandler(userAccountService)
 
 	jwtUtil := jwtutils.New(cfg.AuthConfig.JWTSecret)
 	userSessionRepo := userSession.NewRepo(pool)
@@ -44,5 +42,6 @@ func RegisterRoutes(api huma.API, r chi.Router, pool *pgxpool.Pool, cfg *config.
 	kaderGroup.UseMiddleware(middleware.RequireRole(authAccess, "KADER"))
 	dinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "DINKES"))
 
+	huma.Post(authRefresh, "/auth/refresh", authHandler.Refresh)
 	huma.Get(userGroup, "/me", authHandler.Me)
 }

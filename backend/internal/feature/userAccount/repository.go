@@ -8,7 +8,6 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 	. "github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/table"
 
-	"github.com/go-jet/jet/v2/postgres"
 	. "github.com/go-jet/jet/v2/postgres"
 
 	"github.com/go-jet/jet/v2/pgxV5"
@@ -23,7 +22,7 @@ func NewRepo(db *pgxpool.Pool) *Repo {
 	return &Repo{db: db}
 }
 
-var MutableNonDefaultColumns postgres.ColumnList = UserAccount.MutableColumns.Except(UserAccount.DefaultColumns)
+var MutableNonDefaultColumns ColumnList = UserAccount.MutableColumns.Except(UserAccount.DefaultColumns)
 
 func (r *Repo) GetByID(ctx context.Context, IDUser int32) (*model.UserAccount, error) {
 	var user []*model.UserAccount
@@ -32,6 +31,9 @@ func (r *Repo) GetByID(ctx context.Context, IDUser int32) (*model.UserAccount, e
 	err := pgxV5.Query(ctx, stmt, r.db, &user)
 	if err != nil {
 		return nil, err
+	}
+	if len(user) == 0 {
+		return nil, nil
 	}
 
 	return user[0], nil

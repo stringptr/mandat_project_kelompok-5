@@ -26,6 +26,7 @@ type PostgresConfig struct {
 type AuthConfig struct {
 	JWTSecret       string
 	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
 }
 
 func Load() *Config {
@@ -38,7 +39,6 @@ func Load() *Config {
 	dbName := getEnv("MASTER_DB", "imunisasi")
 	dbUser := getEnv("MASTER_USER", "postgres")
 	dbPass := getEnv("MASTER_PASSWORD", "postgres")
-
 
 	jwtSecret := getEnv("JWT_SECRET", "abcdefghijklmnopqrstuvwxyz")
 

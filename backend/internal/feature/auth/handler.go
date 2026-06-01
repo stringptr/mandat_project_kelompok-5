@@ -3,6 +3,9 @@ package auth
 import (
 	"context"
 	"errors"
+	"net/http"
+	"time"
+
 	"github.com/danielgtaylor/huma/v2"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
@@ -15,12 +18,6 @@ type Handler struct {
 
 func NewHandler(service *Service) *Handler {
 	return &Handler{Service: service}
-}
-
-type AuthOutput struct {
-	Body             httputils.APIResponse[*authDomain.AuthResponse]
-	SetAccessCookie  http.Cookie `header:"Set-Cookie"`
-	SetRefreshCookie http.Cookie `header:"Set-Cookie"`
 }
 
 func (h *Handler) Register(ctx context.Context, input *httputils.APIRequestInput[*authDomain.RegisterRequest]) (*httputils.APIResponseOutput[any], error) {
@@ -41,34 +38,82 @@ func (h *Handler) Me(ctx context.Context, input *struct{}) (*httputils.APIRespon
 	return &httputils.APIResponseOutput[*jwtutils.Claim]{Body: httputils.OK(accessCookie)}, nil
 }
 
-func (h *Handler) Login(ctx context.Context, input *httputils.APIRequestInput[*authDomain.LoginRequest]) (*AuthOutput, error) {
+func (h *Handler) Login(ctx context.Context, input *httputils.APIRequestInput[*authDomain.LoginRequest]) (*authDomain.AuthOutput, error) {
 	ip := httputils.GetRealIP(ctx)
-	resp, err := h.Service.Login(ctx, input.Body, ip)
+	res, err := h.Service.Login(ctx, input.Body, ip)
 	if err != nil {
 		return nil, huma.Error401Unauthorized(err.Error(), err)
 	}
 
-	return &AuthOutput{
-		Body: httputils.OK(resp),
-		SetAccessCookie: http.Cookie{
+	var returnCookie []http.Cookie
+	returnCookie = append(returnCookie,
+		http.Cookie{
 			Name:     "access_token",
-			Value:    resp.AccessToken,
-			Expires:  time.Now().Add(time.Duration(resp.AccessTokenExpiresIn) * time.Second),
-			MaxAge:   int(resp.AccessTokenExpiresIn),
+			Value:    res.AccessToken,
+			Expires:  time.Now().Add(time.Duration(res.AccessTokenExpiresIn) * time.Second),
+			MaxAge:   int(res.AccessTokenExpiresIn),
 			Path:     "/",
 			Secure:   false,
 			HttpOnly: true,
 			SameSite: http.SameSiteStrictMode,
 		},
-		SetRefreshCookie: http.Cookie{
+		http.Cookie{
 			Name:     "refresh_token",
-			Value:    resp.RefreshToken,
-			Expires:  time.Now().Add(time.Duration(resp.RefreshTokenExpiresIn) * time.Second),
-			MaxAge:   int(resp.RefreshTokenExpiresIn),
-			Path:     "/auth/refresh",
+			Value:    res.RefreshToken.String(),
+			Expires:  time.Now().Add(time.Duration(res.RefreshTokenExpiresIn) * time.Second),
+			MaxAge:   int(res.RefreshTokenExpiresIn),
+			Path:     "api/v1/auth/refresh",
 			Secure:   false,
 			HttpOnly: true,
 			SameSite: http.SameSiteStrictMode,
 		},
+	)
+
+	return &authDomain.AuthOutput{
+		Body:            httputils.OK(res),
+		SetAccessCookie: returnCookie,
+	}, nil
+}
+
+func (h *Handler) Refresh(ctx context.Context, input *struct{}) (*authDomain.AuthOutput, error) {
+	ip := httputils.GetRealIP(ctx)
+	refreshToken := httputils.GetRefreshToken(ctx)
+
+	res, err := h.Service.Refresh(ctx, refreshToken, ip)
+	if err != nil {
+		switch err {
+		case authDomain.ErrSessionNotFound, authDomain.ErrSessionExpired, authDomain.ErrSessionInactive:
+			return nil, huma.Error401Unauthorized(err.Error(), err)
+		default:
+			return nil, huma.Error500InternalServerError("internal server error", err)
+		}
+	}
+	var returnCookie []http.Cookie
+	returnCookie = append(returnCookie,
+		http.Cookie{
+			Name:     "access_token",
+			Value:    res.AccessToken,
+			Expires:  time.Now().Add(time.Duration(res.AccessTokenExpiresIn) * time.Second),
+			MaxAge:   int(res.AccessTokenExpiresIn),
+			Path:     "/",
+			Secure:   false,
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		},
+		http.Cookie{
+			Name:     "refresh_token",
+			Value:    res.RefreshToken.String(),
+			Expires:  time.Now().Add(time.Duration(res.RefreshTokenExpiresIn) * time.Second),
+			MaxAge:   int(res.RefreshTokenExpiresIn),
+			Path:     "api/v1/auth/refresh",
+			Secure:   false,
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		},
+	)
+
+	return &authDomain.AuthOutput{
+		Body:            httputils.OK(res),
+		SetAccessCookie: returnCookie,
 	}, nil
 }

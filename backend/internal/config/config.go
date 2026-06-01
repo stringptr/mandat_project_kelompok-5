@@ -11,6 +11,7 @@ type Config struct {
 	Port           string
 	CORSOrigins    []string
 	DBMasterConfig PostgresConfig
+	NATSConfig     NATSConfig
 	AuthConfig     AuthConfig
 }
 
@@ -21,6 +22,11 @@ type PostgresConfig struct {
 	Password string
 	DBName   string
 	SSLMode  string
+}
+
+type NATSConfig struct {
+	natsHost string
+	natsPort string
 }
 
 type AuthConfig struct {
@@ -40,6 +46,9 @@ func Load() *Config {
 	dbUser := getEnv("MASTER_USER", "postgres")
 	dbPass := getEnv("MASTER_PASSWORD", "postgres")
 
+	natsHost := getEnv("NATS_HOST", "message-system")
+	natsPort := getEnv("NATS_PORT", "4222")
+
 	jwtSecret := getEnv("JWT_SECRET", "abcdefghijklmnopqrstuvwxyz")
 
 	return &Config{
@@ -54,6 +63,10 @@ func Load() *Config {
 			DBName:   dbName,
 			SSLMode:  "disable",
 		},
+		NATSConfig: NATSConfig{
+			natsHost: natsHost,
+			natsPort: natsPort,
+		},
 		AuthConfig: AuthConfig{
 			JWTSecret:       jwtSecret,
 			AccessTokenTTL:  30 * time.Minute,
@@ -66,6 +79,10 @@ func (c *PostgresConfig) DSN() string {
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		c.User, c.Password, c.Host, c.Port, c.DBName, c.SSLMode)
+}
+
+func (c *NATSConfig) NATSURL() string {
+	return fmt.Sprintf("nats://%s:%s", c.natsHost, c.natsPort)
 }
 
 func (c *Config) Server() (string, string) {

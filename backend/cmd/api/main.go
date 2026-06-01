@@ -9,6 +9,7 @@ import (
 
 	v1 "github.com/stringptr/SiGizi/backend/internal/api/v1"
 	"github.com/stringptr/SiGizi/backend/internal/config"
+	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
 	"github.com/stringptr/SiGizi/backend/internal/feature/auth"
 	"github.com/stringptr/SiGizi/backend/internal/feature/userAccount"
 	"github.com/stringptr/SiGizi/backend/internal/feature/userSession"
@@ -72,7 +73,9 @@ func main() {
 	rConfig.Servers = []*huma.Server{
 		{URL: "/api"},
 	}
-	rConfig.Transformers = []huma.Transformer{httputils.UnifiedTransformer}
+	rConfig.Transformers = []huma.Transformer{
+		httputils.NewUnifiedTransformer(authDomain.MapValidationError),
+	}
 
 	api := humachi.New(r, rConfig)
 	api.UseMiddleware(middleware.RealIPMiddleware())

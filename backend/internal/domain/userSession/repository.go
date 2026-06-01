@@ -10,6 +10,5 @@ import (
 type Repo interface {
 	GetByID(ctx context.Context, sessionID uuid.UUID) (*model.UserSession, error)
 	Create(ctx context.Context, sessionModel *model.UserSession) error
-	UpdateStatus(ctx context.Context, sessionID uuid.UUID, sessionStatus model.StatusSession) error
-	Update(ctx context.Context, sessionID uuid.UUID, sessionModel *model.UserSession) error
+	Update(ctx context.Context, sessionModel *model.UserSession) error
 }

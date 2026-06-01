@@ -3,6 +3,9 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/gofrs/uuid/v5"
 	"github.com/jinzhu/copier"
 	"github.com/stringptr/SiGizi/backend/internal/config"
@@ -82,6 +85,10 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 		return nil, authDomain.ErrInvalidCredentials
 	}
 
+	if user.StatusVerifikasi == model.StatusVerifikasi_Pending {
+		return nil, userAccountDomain.ErrStatusVerifikasiPending
+	}
+
 	roles, err := s.authRepo.GetRoles(ctx, user.IDUser)
 	if err != nil {
 		return nil, fmt.Errorf("get roles: %w", err)
@@ -121,7 +128,81 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 
 	return &authDomain.AuthResponse{
 		AccessToken:           accessToken,
-		RefreshToken:          session.IDSession.String(),
+		RefreshToken:          session.IDSession,
+		AccessTokenExpiresIn:  int64(s.cfg.AccessTokenTTL.Seconds()),
+		RefreshTokenExpiresIn: int64(s.cfg.RefreshTokenTTL.Seconds()),
+	}, nil
+}
+
+func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string) (*authDomain.AuthResponse, error) {
+	log.Print(refreshToken)
+	session, err := s.sessionRepo.GetByID(ctx, refreshToken)
+	if err != nil {
+		log.Print(err)
+		return nil, authDomain.ErrSessionNotFound
+	}
+	if session == nil {
+		return nil, authDomain.ErrSessionNotFound
+	}
+
+	if session.StatusSession != model.StatusSession_Aktif {
+		return nil, authDomain.ErrSessionInactive
+	}
+
+	session.StatusSession = model.StatusSession_Dicabut
+	err = s.sessionRepo.Update(ctx, session)
+	if err != nil {
+		return nil, fmt.Errorf("invalidate session: %w", err)
+	}
+
+	user, err := s.userRepo.GetByID(ctx, session.IDUser)
+	if err != nil {
+		return nil, fmt.Errorf("get user: %w", err)
+	}
+	if user == nil {
+		return nil, authDomain.ErrInvalidCredentials
+	}
+
+	roles, err := s.authRepo.GetRoles(ctx, user.IDUser)
+	if err != nil {
+		return nil, fmt.Errorf("get roles: %w", err)
+	}
+
+	claim := jwtutils.Claim{
+		IDUser: user.IDUser,
+		Roles:  roles,
+		Email:  user.Email,
+		NIK:    user.Nik,
+	}
+
+	newUUID, err := uuid.NewV7()
+	if err != nil {
+		return nil, fmt.Errorf("UUID generation: %w", err)
+	}
+
+	refreshTokenExpireDate := time.Now().Add(s.cfg.RefreshTokenTTL)
+	session = &model.UserSession{
+		IDSession:     newUUID,
+		IDUser:        user.IDUser,
+		StatusSession: model.StatusSession_Aktif,
+		IPAddress:     &ip,
+		ExpiredAt:     refreshTokenExpireDate,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+	}
+	err = s.sessionRepo.Create(ctx, session)
+	if err != nil {
+		return nil, fmt.Errorf("create session: %w", err)
+	}
+
+	accessToken, err := s.jwt.EncodeWithTTL(claim, s.cfg.AccessTokenTTL)
+	if err != nil {
+		return nil, fmt.Errorf("encode token: %w", err)
+	}
+
+	return &authDomain.AuthResponse{
+		AccessToken:           accessToken,
+		RefreshToken:          session.IDSession,
 		AccessTokenExpiresIn:  int64(s.cfg.AccessTokenTTL.Seconds()),
 		RefreshTokenExpiresIn: int64(s.cfg.RefreshTokenTTL.Seconds()),
 	}, nil

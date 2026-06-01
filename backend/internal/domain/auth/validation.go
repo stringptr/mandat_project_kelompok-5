@@ -3,23 +3,28 @@ package auth
 import "strings"
 
 func MapValidationError(location, message string) (string, string, bool) {
-	switch location {
-	case "body.email":
-		return "ERR-VAL-01", "Alamat email tidak valid", true
-	case "body.password":
-		return "ERR-VAL-02", "Password tidak valid atau kurang panjang", true
-	case "body.no_hp":
-		return "ERR-VAL-04", "Nomor telepon tidak valid", true
-	case "body.nama":
-		return "ERR-VAL-05", "Nama tidak valid", true
-	case "body.tanggal_lahir":
-		return "ERR-VAL-06", "Tanggal tidak valid", true
-	case "body.jenis_kelamin", "body.id_lokasi", "body.id_pendidikan",
-		"body.id_pekerjaan", "body.id_pendapatan", "body.jumlah_tanggungan":
-		return "ERR-VAL-07", "Pilihan tidak valid", true
-	}
-	if strings.Contains(message, "required") {
-		return "ERR-VAL-03", "Dokumen tidak lengkap", true
+	switch {
+	case strings.HasSuffix(location, "email"):
+		return "ERR-VAL-01", "Masukkan alamat email yang valid", true
+	case strings.HasSuffix(location, "password"):
+		return "ERR-VAL-02", "Masukkan password yang lebih panjang", true
+	case strings.HasSuffix(location, "nik"):
+		return "ERR-VAL", "NIK yang dimasukkan tidak valid", true
+	case strings.HasSuffix(location, "no_hp"):
+		return "ERR-VAL-04", "Masukkan nomor telepon yang valid", true
+	case strings.HasSuffix(location, "nama"):
+		return "ERR-VAL-05", "Masukkan nama yang valid", true
+	case strings.HasSuffix(location, "tanggal_lahir"):
+		return "ERR-VAL-06", "Tanggal yang dimasukkan tidak valid", true
+	case strings.HasSuffix(location, "jenis_kelamin"),
+		strings.HasSuffix(location, "id_lokasi"),
+		strings.HasSuffix(location, "id_pendidikan"),
+		strings.HasSuffix(location, "id_pekerjaan"),
+		strings.HasSuffix(location, "id_pendapatan"),
+		strings.HasSuffix(location, "jumlah_tanggungan"):
+		return "ERR-VAL-07", "Pilihan yang dipilih tidak valid", true
+	case strings.Contains(message, "required"):
+		return "ERR-VAL-03", "Lengkapi dokumen", true
 	}
 	return "", "", false
 }

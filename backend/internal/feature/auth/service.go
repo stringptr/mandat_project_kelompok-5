@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	userSessionDomain "github.com/stringptr/SiGizi/backend/internal/domain/userSession"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/hash"
+	"github.com/stringptr/SiGizi/backend/internal/httputils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 )
@@ -45,7 +45,7 @@ func NewService(
 func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequest) *errorutils.Error {
 	existingUser, err := s.userRepo.GetByNIK(ctx, dataDTO.NIK)
 	if err != nil {
-		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 	if existingUser != nil {
 		if existingUser.Email == dataDTO.Email && existingUser.Nik == dataDTO.NIK && existingUser.Password == dataDTO.Password {
@@ -56,7 +56,7 @@ func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequ
 
 	hashedPassword, err := hash.Hash(dataDTO.Password)
 	if err != nil {
-		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 
 	dataModel := model.UserAccount{}
@@ -65,40 +65,45 @@ func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequ
 
 	err = s.userRepo.Create(ctx, &dataModel)
 	if err != nil {
-		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 	return nil
 }
 
 func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip string) (*authDomain.AuthResponse, *errorutils.Error) {
+	var errs []*httputils.ErrorItem
+
 	user, err := s.userRepo.GetByEmail(ctx, req.Email)
 	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pengecekan akun. Silahkan dicoba kembali.", Errors: nil}
 	}
 	if user == nil {
-		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Akun dengan Email, NIK, dan Password tersebut tidak dapat ditemukan."}
+		errs = append(errs, &httputils.ErrorItem{ID: "ERR-AUTH-02", Message: "Email, NIK, atau Password tidak valid"})
+		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Email, NIK, atau Password tidak valid", Errors: errs}
 	}
 
 	ok, err := hash.VerifyHash(req.Password, user.Password)
 	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Akun dengan Email, NIK, dan Password tersebut tidak dapat ditemukan."}
+		errs = append(errs, &httputils.ErrorItem{ID: "ERR-AUTH-02", Message: "Email, NIK, atau Password tidak valid"})
+		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Email, NIK, atau Password tidak valid", Errors: errs}
 	}
 	if !ok {
-		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Akun dengan Email, NIK, dan Password tersebut tidak dapat ditemukan."}
+		errs = append(errs, &httputils.ErrorItem{ID: "ERR-AUTH-02", Message: "Email, NIK, atau Password tidak valid"})
+		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Email, NIK, atau Password tidak valid", Errors: errs}
 	}
 
 	if user.StatusVerifikasi == model.StatusVerifikasi_Pending {
-		return nil, &errorutils.Error{Status: http.StatusForbidden, Message: "Akun sedang dalam proses verifikasi. Mohon dicek secara berkala."}
+		return nil, &errorutils.Error{Status: http.StatusUnauthorized, Message: "Akun sedang dalam proses verifikasi. Silahkan dicek secara berkala."}
 	}
 
 	roles, err := s.authRepo.GetRoles(ctx, user.IDUser)
 	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pengecekan akun. Mohon dicoba kembali."}
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pengecekan akun. Silahkan dicoba kembali."}
 	}
 
 	newUUID, err := uuid.NewV7()
 	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 
 	refreshTokenExpireDate := time.Now().Add(s.cfg.RefreshTokenTTL)
@@ -113,7 +118,7 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 	}
 	err = s.sessionRepo.Create(ctx, session)
 	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 
 	claim := jwtutils.Claim{
@@ -125,7 +130,7 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 
 	accessToken, err := s.jwt.EncodeWithTTL(claim, s.cfg.AccessTokenTTL)
 	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 
 	return &authDomain.AuthResponse{
@@ -137,37 +142,35 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 }
 
 func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string) (*authDomain.AuthResponse, *errorutils.Error) {
-	log.Print(refreshToken)
 	session, err := s.sessionRepo.GetByID(ctx, refreshToken)
 	if err != nil {
-		log.Print(err)
-		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon login ulang."}
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pengecekan sesi login. Silahkan login ulang."}
 	}
 	if session == nil {
-		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Sesi login tidak dapat ditemukan. Mohon login ulang."}
+		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Sesi login tidak dapat ditemukan. Silahkan login ulang."}
 	}
 
 	if session.StatusSession != model.StatusSession_Aktif {
-		return nil, &errorutils.Error{Status: http.StatusForbidden, Message: "Sesi login telah kadaluwarsa. Mohon login ulang."}
+		return nil, &errorutils.Error{Status: http.StatusForbidden, Message: "Sesi login telah kadaluwarsa. Silahkan login ulang."}
 	}
 
 	session.StatusSession = model.StatusSession_Dicabut
 	err = s.sessionRepo.Update(ctx, session)
 	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon login ulang."}
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pembaruan sesi. Silahkan login ulang."}
 	}
 
 	user, err := s.userRepo.GetByID(ctx, session.IDUser)
 	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pengecekan akun. Mohon login ulang."}
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pengecekan akun. Silahkan login ulang."}
 	}
 	if user == nil {
-		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Akun tidak dapat ditemukan. Mohon login ulang."}
+		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Akun tidak dapat ditemukan. Silahkan login ulang."}
 	}
 
 	roles, err := s.authRepo.GetRoles(ctx, user.IDUser)
 	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusForbidden, Message: "Terjadi kesalahan dalam pengecekan akun. Mohon login ulang."}
+		return nil, &errorutils.Error{Status: http.StatusForbidden, Message: "Terjadi kesalahan dalam pengecekan akun. Silahkan login ulang."}
 	}
 
 	claim := jwtutils.Claim{
@@ -179,7 +182,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string
 
 	newUUID, err := uuid.NewV7()
 	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon login ulang."}
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pembaruan sesi. Silahkan login ulang."}
 	}
 
 	refreshTokenExpireDate := time.Now().Add(s.cfg.RefreshTokenTTL)
@@ -194,12 +197,12 @@ func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string
 	}
 	err = s.sessionRepo.Create(ctx, session)
 	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon login ulang."}
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pembaruan sesi. Silahkan login ulang."}
 	}
 
 	accessToken, err := s.jwt.EncodeWithTTL(claim, s.cfg.AccessTokenTTL)
 	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon login ulang."}
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pembaruan sesi. Silahkan login ulang."}
 	}
 
 	return &authDomain.AuthResponse{

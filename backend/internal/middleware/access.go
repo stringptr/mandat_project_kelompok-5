@@ -14,14 +14,14 @@ func AuthAccessMiddleware(api huma.API, jwt *jwtutils.JWT) func(ctx huma.Context
 	return func(ctx huma.Context, next func(huma.Context)) {
 		cookie, err := httputils.ReadCookie(ctx, "access_token")
 		if err != nil {
-			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Mohon login terlebih dahulu.", nil)
+			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Silahkan login terlebih dahulu.", nil)
 			return
 		}
 
 		token := cookie.Value
 		claims, err := jwt.Decode(token)
 		if err != nil {
-			huma.WriteErr(api, ctx, http.StatusInternalServerError, "Terjadi kesalahan. Mohon dicoba kembali.", nil)
+			huma.WriteErr(api, ctx, http.StatusInternalServerError, "Terjadi kesalahan. Silahkan dicoba kembali.", nil)
 			return
 		}
 
@@ -34,7 +34,7 @@ func RequireRole(api huma.API, roles ...string) func(ctx huma.Context, next func
 	return func(ctx huma.Context, next func(huma.Context)) {
 		claims := httputils.GetAccessClaim(ctx.Context())
 		if claims == nil {
-			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Mohon login terlebih dahulu.", nil)
+			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Silahkan login terlebih dahulu.", nil)
 			return
 		}
 

@@ -13,13 +13,13 @@ func AuthRefreshMiddleware(api huma.API) func(ctx huma.Context, next func(huma.C
 	return func(ctx huma.Context, next func(huma.Context)) {
 		refreshCookie, err := httputils.ReadCookie(ctx, "refresh_token")
 		if err != nil {
-			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Mohon login terlebih dahulu.", nil)
+			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Silahkan login terlebih dahulu.", nil)
 			return
 		}
 
 		refreshToken, err := uuid.FromString(refreshCookie.Value)
 		if err != nil {
-			huma.WriteErr(api, ctx, http.StatusInternalServerError, "Terjadi kesalahan. Mohon dicoba kembali.", nil)
+			huma.WriteErr(api, ctx, http.StatusInternalServerError, "Terjadi kesalahan. Silahkan dicoba kembali.", nil)
 			return
 		}
 		newCtx := context.WithValue(ctx.Context(), httputils.RefreshKey, refreshToken)

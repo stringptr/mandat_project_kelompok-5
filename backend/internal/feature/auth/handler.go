@@ -2,12 +2,12 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
+	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
 	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 )
@@ -23,7 +23,7 @@ func NewHandler(service authDomain.Service) *Handler {
 func (h *Handler) Register(ctx context.Context, input *httputils.APIRequestInput[*authDomain.RegisterRequest]) (*httputils.APIResponseOutput[any], error) {
 	err := h.Service.Register(ctx, input.Body)
 	if err != nil {
-		return nil, huma.NewError(err.Status, err.Message, nil)
+		return nil, errorutils.ToHumaError(err)
 	}
 
 	return &httputils.APIResponseOutput[any]{Body: httputils.Created[any](nil)}, nil
@@ -32,7 +32,7 @@ func (h *Handler) Register(ctx context.Context, input *httputils.APIRequestInput
 func (h *Handler) Me(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*jwtutils.Claim], error) {
 	accessCookie := httputils.GetAccessClaim(ctx)
 	if accessCookie == nil {
-		return nil, huma.Error401Unauthorized("Please login first.", errors.New("no access token"))
+		return nil, huma.Error401Unauthorized("Silahkan login terlebih dahulu.", nil)
 	}
 
 	return &httputils.APIResponseOutput[*jwtutils.Claim]{Body: httputils.OK(accessCookie)}, nil
@@ -42,7 +42,7 @@ func (h *Handler) Login(ctx context.Context, input *httputils.APIRequestInput[*a
 	ip := httputils.GetRealIP(ctx)
 	res, err := h.Service.Login(ctx, input.Body, ip)
 	if err != nil {
-		return nil, huma.NewError(err.Status, err.Message, nil)
+		return nil, errorutils.ToHumaError(err)
 	}
 
 	var returnCookie []http.Cookie
@@ -81,7 +81,7 @@ func (h *Handler) Refresh(ctx context.Context, input *struct{}) (*authDomain.Aut
 
 	res, err := h.Service.Refresh(ctx, refreshToken, ip)
 	if err != nil {
-		return nil, huma.NewError(err.Status, err.Message, nil)
+		return nil, errorutils.ToHumaError(err)
 	}
 	var returnCookie []http.Cookie
 	returnCookie = append(returnCookie,
@@ -117,7 +117,7 @@ func (h *Handler) Logout(ctx context.Context, input *struct{}) (*authDomain.Logo
 	refreshToken := httputils.GetRefreshToken(ctx)
 	err := h.Service.Logout(ctx, refreshToken)
 	if err != nil {
-		return nil, huma.NewError(err.Status, err.Message, nil)
+		return nil, errorutils.ToHumaError(err)
 	}
 
 	var returnCookie []http.Cookie

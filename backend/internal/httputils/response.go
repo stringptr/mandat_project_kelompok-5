@@ -3,6 +3,7 @@ package httputils
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
 )
@@ -31,6 +32,7 @@ type unifiedMarker interface {
 }
 
 type ErrorItem struct {
+	ID       string `json:"id,omitempty"`
 	Location string `json:"location,omitempty"`
 	Message  string `json:"message"`
 	Value    any    `json:"value,omitempty"`
@@ -45,6 +47,8 @@ func OK[T any](data T) APIResponse[T] {
 		Title:   "Success",
 	}
 }
+
+type ValidationMapper func(location, message string) (errorID, customMessage string, matched bool)
 
 func Created[T any](data T) APIResponse[T] {
 	return APIResponse[T]{
@@ -78,38 +82,55 @@ func Error[T any](status int, detail string, errors []ErrorItem) APIResponse[T] 
 	}
 }
 
-func UnifiedTransformer(ctx huma.Context, status string, v any) (any, error) {
-	if _, ok := v.(unifiedMarker); ok {
-		return v, nil
+func mapValidationError(location, message string, mappers []ValidationMapper) (string, string) {
+	for _, m := range mappers {
+		if id, msg, ok := m(location, message); ok {
+			return id, msg
+		}
 	}
-
-	if errModel, ok := v.(*huma.ErrorModel); ok {
-		return convertErrorModel(errModel), nil
-	}
-	if errModel, ok := v.(huma.ErrorModel); ok {
-		return convertErrorModel(&errModel), nil
-	}
-
-	statusCode, _ := strconv.Atoi(status)
-	return APIResponse[any]{
-		Status:  statusCode,
-		Success: statusCode < 400,
-		Data:    v,
-		Title:   http.StatusText(statusCode),
-	}, nil
+	return "", ""
 }
 
-func convertErrorModel(m *huma.ErrorModel) APIResponse[any] {
+func NewUnifiedTransformer(mappers ...ValidationMapper) huma.Transformer {
+	return func(ctx huma.Context, status string, v any) (any, error) {
+		if _, ok := v.(unifiedMarker); ok {
+			return v, nil
+		}
+		if errModel, ok := v.(*huma.ErrorModel); ok {
+			return convertErrorModel(errModel, mappers), nil
+		}
+		if errModel, ok := v.(huma.ErrorModel); ok {
+			return convertErrorModel(&errModel, mappers), nil
+		}
+		statusCode, _ := strconv.Atoi(status)
+		return APIResponse[any]{
+			Status:  statusCode,
+			Success: statusCode < 400,
+			Data:    v,
+			Title:   http.StatusText(statusCode),
+		}, nil
+	}
+}
+
+func convertErrorModel(m *huma.ErrorModel, mappers []ValidationMapper) APIResponse[any] {
 	var errors []ErrorItem
 	if len(m.Errors) > 0 {
 		errors = make([]ErrorItem, len(m.Errors))
 		for i, e := range m.Errors {
 			if e != nil {
-				errors[i] = ErrorItem{
+				item := ErrorItem{
 					Location: e.Location,
 					Message:  e.Message,
 					Value:    e.Value,
 				}
+				if m.Status == 422 {
+					if errorID, customMsg := mapValidationError(e.Location, e.Message, mappers); errorID != "" {
+						item.ID = errorID
+						item.Message = customMsg
+						item.Location = strings.Join([]string{"request.", e.Location}, "")
+					}
+				}
+				errors[i] = item
 			}
 		}
 	}

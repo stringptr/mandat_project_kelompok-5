@@ -23,7 +23,7 @@ func NewHandler(service authDomain.Service) *Handler {
 func (h *Handler) Register(ctx context.Context, input *httputils.APIRequestInput[*authDomain.RegisterRequest]) (*httputils.APIResponseOutput[any], error) {
 	err := h.Service.Register(ctx, input.Body)
 	if err != nil {
-		return nil, huma.Error400BadRequest("Registration Failed", err)
+		return nil, huma.NewError(err.Status, err.Message, nil)
 	}
 
 	return &httputils.APIResponseOutput[any]{Body: httputils.Created[any](nil)}, nil
@@ -42,7 +42,7 @@ func (h *Handler) Login(ctx context.Context, input *httputils.APIRequestInput[*a
 	ip := httputils.GetRealIP(ctx)
 	res, err := h.Service.Login(ctx, input.Body, ip)
 	if err != nil {
-		return nil, huma.Error401Unauthorized(err.Error(), err)
+		return nil, huma.NewError(err.Status, err.Message, nil)
 	}
 
 	var returnCookie []http.Cookie
@@ -81,12 +81,7 @@ func (h *Handler) Refresh(ctx context.Context, input *struct{}) (*authDomain.Aut
 
 	res, err := h.Service.Refresh(ctx, refreshToken, ip)
 	if err != nil {
-		switch err {
-		case authDomain.ErrSessionNotFound, authDomain.ErrSessionExpired, authDomain.ErrSessionInactive:
-			return nil, huma.Error401Unauthorized(err.Error(), err)
-		default:
-			return nil, huma.Error500InternalServerError("internal server error", err)
-		}
+		return nil, huma.NewError(err.Status, err.Message, nil)
 	}
 	var returnCookie []http.Cookie
 	returnCookie = append(returnCookie,
@@ -122,7 +117,7 @@ func (h *Handler) Logout(ctx context.Context, input *struct{}) (*authDomain.Logo
 	refreshToken := httputils.GetRefreshToken(ctx)
 	err := h.Service.Logout(ctx, refreshToken)
 	if err != nil {
-		return nil, huma.Error400BadRequest(err.Error(), err)
+		return nil, huma.NewError(err.Status, err.Message, nil)
 	}
 
 	var returnCookie []http.Cookie

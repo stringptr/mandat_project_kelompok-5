@@ -2,9 +2,8 @@ package userAccount
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
+	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 	. "github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/table"
 
@@ -88,7 +87,7 @@ func (r *Repo) Create(ctx context.Context, userAccModel *model.UserAccount) erro
 		return err
 	}
 	if res.RowsAffected() == 0 {
-		return errors.New("user account creation failed")
+		return userAccountDomain.ErrNotCreated
 	}
 	return nil
 }
@@ -100,20 +99,7 @@ func (r *Repo) DeleteByID(ctx context.Context, IDUser int32) error {
 		return err
 	}
 	if res.RowsAffected() == 0 {
-		return fmt.Errorf("user account dengan id %d cannot be found", IDUser)
-	}
-
-	return nil
-}
-
-func (r *Repo) UpdateStatusVerifikasiByID(ctx context.Context, IDUser int32, statusVerifikasi bool) error {
-	stmt := UserAccount.UPDATE(UserAccount.StatusVerifikasi).SET(statusVerifikasi).WHERE(UserAccount.IDUser.EQ(Int32(IDUser)))
-	res, err := pgxV5.Exec(ctx, stmt, r.db)
-	if err != nil {
-		return err
-	}
-	if res.RowsAffected() == 0 {
-		return fmt.Errorf("user account with iduser of %d cannot be found", IDUser)
+		return userAccountDomain.ErrNotDeleted
 	}
 
 	return nil

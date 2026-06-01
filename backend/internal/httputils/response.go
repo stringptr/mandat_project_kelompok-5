@@ -37,20 +37,45 @@ type ErrorItem struct {
 }
 
 func OK[T any](data T) APIResponse[T] {
-	return APIResponse[T]{Status: http.StatusOK, Success: true, Data: data, Detail: "OK", Title: "Success"}
+	return APIResponse[T]{
+		Status:  http.StatusOK,
+		Success: true,
+		Data:    data,
+		Detail:  "OK",
+		Title:   "Success",
+	}
 }
 
 func Created[T any](data T) APIResponse[T] {
-	return APIResponse[T]{Status: http.StatusCreated, Success: true, Data: data, Detail: "Created", Title: "Created"}
+	return APIResponse[T]{
+		Status:  http.StatusCreated,
+		Success: true,
+		Data:    data,
+		Detail:  "Created",
+		Title:   "Created",
+	}
 }
 
-func Success[T any](status int, data T, detail string, title string) APIResponse[T] {
-	return APIResponse[T]{Status: status, Success: true, Data: data, Detail: detail, Title: title}
+func Success[T any](status int, data T, detail string) APIResponse[T] {
+	return APIResponse[T]{
+		Status:  status,
+		Success: true,
+		Data:    data,
+		Detail:  detail,
+		Title:   http.StatusText(status),
+	}
 }
 
-func Error[T any](status int, title, detail string, errors []ErrorItem) APIResponse[T] {
+func Error[T any](status int, detail string, errors []ErrorItem) APIResponse[T] {
 	var zero T
-	return APIResponse[T]{Status: status, Success: false, Data: zero, Detail: detail, Title: title, Errors: errors}
+	return APIResponse[T]{
+		Status:  status,
+		Success: false,
+		Data:    zero,
+		Detail:  detail,
+		Title:   http.StatusText(status),
+		Errors:  errors,
+	}
 }
 
 func UnifiedTransformer(ctx huma.Context, status string, v any) (any, error) {

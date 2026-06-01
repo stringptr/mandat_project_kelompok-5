@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -14,13 +13,13 @@ func AuthRefreshMiddleware(api huma.API) func(ctx huma.Context, next func(huma.C
 	return func(ctx huma.Context, next func(huma.Context)) {
 		refreshCookie, err := httputils.ReadCookie(ctx, "refresh_token")
 		if err != nil {
-			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Unauthorized", fmt.Errorf("no refresh token provided"))
+			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Mohon login terlebih dahulu.", nil)
 			return
 		}
 
 		refreshToken, err := uuid.FromString(refreshCookie.Value)
 		if err != nil {
-			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Unauthorized", fmt.Errorf("invalid refresh token"))
+			huma.WriteErr(api, ctx, http.StatusInternalServerError, "Terjadi kesalahan. Mohon dicoba kembali.", nil)
 			return
 		}
 		newCtx := context.WithValue(ctx.Context(), httputils.RefreshKey, refreshToken)

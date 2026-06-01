@@ -164,6 +164,37 @@ services:
     command: sh -c "goose up && sleep infinity"
     profiles: ["migration", "staging", "data_management", "dev"]
 
+  nats:
+    image: docker.io/nats:2.14.1-alpine3.22
+    restart: unless-stopped
+    ports:
+      - ${NATS_HTTP_MONITOR_HOST_PORT:-8222}:8222
+    volumes:
+      - ./nats/app:/etc/nats:z
+    env_file:
+      - .env
+    # command: ["-c", "/etc/nats/server.conf"]
+    profiles: ["information_system", "dev"]
+    command:
+      - -js
+      - -m
+      - "8222"
+
+  nui:
+    image: ghcr.io/nats-nui/nui:0.9.2
+    restart: unless-stopped
+    ports:
+      - ${NUI_HOST_PORT:-31311}:31311
+      - "8000:30"
+    volumes:
+      - ./nats/nui/db:/db:z
+      - ./nats/nui/contexts:/contexts:z
+    environment:
+      - NATS_CLI_CONTEXTS=/contexts
+    env_file:
+      - .env
+    profiles: ["information_system", "dev"]
+
   webserver:
     image: docker.io/caddy:2.11.3
     restart: unless-stopped

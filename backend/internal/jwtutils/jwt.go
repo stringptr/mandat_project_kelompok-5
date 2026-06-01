@@ -31,7 +31,7 @@ func (j *JWT) EncodeWithTTL(claim Claim, ttl time.Duration) (string, error) {
 	claim.ExpiresAt = jwt.NewNumericDate(time.Now().Add(ttl))
 	claim.IssuedAt = jwt.NewNumericDate(time.Now())
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claim)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claim)
 	return token.SignedString([]byte(j.secret))
 }
 

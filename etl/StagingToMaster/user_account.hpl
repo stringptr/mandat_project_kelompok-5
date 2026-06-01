@@ -18,14 +18,187 @@
     <modified_date>2026/05/23 03:14:28.432</modified_date>
   </info>
   <notepads>
+    <notepad>
+      <backgroundcolorblue>251</backgroundcolorblue>
+      <backgroundcolorgreen>232</backgroundcolorgreen>
+      <backgroundcolorred>201</backgroundcolorred>
+      <bordercolorblue>90</bordercolorblue>
+      <bordercolorgreen>58</bordercolorgreen>
+      <bordercolorred>14</bordercolorred>
+      <fontbold>N</fontbold>
+      <fontcolorblue>90</fontcolorblue>
+      <fontcolorgreen>58</fontcolorgreen>
+      <fontcolorred>14</fontcolorred>
+      <fontitalic>N</fontitalic>
+      <fontsize>-1</fontsize>
+      <height>20</height>
+      <xloc>480</xloc>
+      <yloc>208</yloc>
+      <width>20</width>
+    </notepad>
+    <notepad>
+      <backgroundcolorblue>251</backgroundcolorblue>
+      <backgroundcolorgreen>232</backgroundcolorgreen>
+      <backgroundcolorred>201</backgroundcolorred>
+      <bordercolorblue>90</bordercolorblue>
+      <bordercolorgreen>58</bordercolorgreen>
+      <bordercolorred>14</bordercolorred>
+      <fontbold>N</fontbold>
+      <fontcolorblue>90</fontcolorblue>
+      <fontcolorgreen>58</fontcolorgreen>
+      <fontcolorred>14</fontcolorred>
+      <fontitalic>N</fontitalic>
+      <fontsize>-1</fontsize>
+      <height>20</height>
+      <xloc>480</xloc>
+      <yloc>192</yloc>
+      <width>20</width>
+    </notepad>
+    <notepad>
+      <backgroundcolorblue>251</backgroundcolorblue>
+      <backgroundcolorgreen>232</backgroundcolorgreen>
+      <backgroundcolorred>201</backgroundcolorred>
+      <bordercolorblue>90</bordercolorblue>
+      <bordercolorgreen>58</bordercolorgreen>
+      <bordercolorred>14</bordercolorred>
+      <fontbold>N</fontbold>
+      <fontcolorblue>90</fontcolorblue>
+      <fontcolorgreen>58</fontcolorgreen>
+      <fontcolorred>14</fontcolorred>
+      <fontitalic>N</fontitalic>
+      <fontsize>-1</fontsize>
+      <height>20</height>
+      <xloc>480</xloc>
+      <yloc>192</yloc>
+      <note>var nik_bersih = null;
+
+if (nik != null) {
+  nik_bersih = nik.replace(/\s/g, "");
+}</note>
+      <width>20</width>
+    </notepad>
   </notepads>
   <order>
     <hop>
       <from>user_account Staging</from>
-      <to>user_account Master</to>
+      <to>JavaScript</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>JavaScript</from>
+      <to>Execute row SQL script</to>
       <enabled>Y</enabled>
     </hop>
   </order>
+  <transform>
+    <name>Execute row SQL script</name>
+    <type>ExecSqlRow</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <commit>1</commit>
+    <connection>Master</connection>
+    <sendOneStatement>Y</sendOneStatement>
+    <sqlFromfile>N</sqlFromfile>
+    <sql_field>sql</sql_field>
+    <attributes/>
+    <GUI>
+      <xloc>608</xloc>
+      <yloc>176</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>JavaScript</name>
+    <type>ScriptValueMod</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <optimizationLevel>9</optimizationLevel>
+    <jsScripts>
+      <jsScript>
+        <jsScript_type>0</jsScript_type>
+        <jsScript_name>Script 1</jsScript_name>
+        <jsScript_script>//Script here
+sql =
+"INSERT INTO public.user_account (" +
+"id_user,email,password,no_hp,status_verifikasi," +
+"nama,nik,jenis_kelamin,tanggal_lahir," +
+"id_lokasi,id_pendidikan,id_pekerjaan,id_pendapatan," +
+"jumlah_tanggungan,akun_ke,created_at,updated_at" +
+") VALUES (" +
+
+id_user + "," +
+
+"'" + email.replace(/'/g,"''") + "'," +
+"'" + password.replace(/'/g,"''") + "'," +
+"'" + no_hp.replace(/'/g,"''") + "'," +
+
+"'" + status_verifikasi + "'::status_verifikasi," +
+
+"'" + nama.replace(/'/g,"''") + "'," +
+"'" + nik + "'," +
+
+"'" + jenis_kelamin + "'::jenis_kelamin," +
+
+"'" + tanggal_lahir + "'," +
+
+id_lokasi + "," +
+
+(id_pendidikan==null ? "NULL" : id_pendidikan) + "," +
+(id_pekerjaan==null ? "NULL" : id_pekerjaan) + "," +
+(id_pendapatan==null ? "NULL" : id_pendapatan) + "," +
+
+(jumlah_tanggungan==null ? "NULL" : jumlah_tanggungan) + "," +
+
+(akun_ke==null ? "1" : akun_ke) + "," +
+
+"'" + created_at + "'," +
+"'" + updated_at + "'" +
+
+") ON CONFLICT (id_user) DO UPDATE SET " +
+
+"email=EXCLUDED.email," +
+"password=EXCLUDED.password," +
+"no_hp=EXCLUDED.no_hp," +
+"status_verifikasi=EXCLUDED.status_verifikasi," +
+"nama=EXCLUDED.nama," +
+"nik=EXCLUDED.nik," +
+"jenis_kelamin=EXCLUDED.jenis_kelamin," +
+"tanggal_lahir=EXCLUDED.tanggal_lahir," +
+"id_lokasi=EXCLUDED.id_lokasi," +
+"id_pendidikan=EXCLUDED.id_pendidikan," +
+"id_pekerjaan=EXCLUDED.id_pekerjaan," +
+"id_pendapatan=EXCLUDED.id_pendapatan," +
+"jumlah_tanggungan=EXCLUDED.jumlah_tanggungan," +
+"akun_ke=EXCLUDED.akun_ke";</jsScript_script>
+      </jsScript>
+    </jsScripts>
+    <fields>
+      <field>
+        <name>sql</name>
+        <rename>sql</rename>
+        <type>String</type>
+        <length>1000</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+    </fields>
+    <attributes/>
+    <GUI>
+      <xloc>464</xloc>
+      <yloc>176</yloc>
+    </GUI>
+  </transform>
   <transform>
     <name>user_account Staging</name>
     <type>TableInput</type>
@@ -41,71 +214,29 @@
     <execute_each_row>N</execute_each_row>
     <limit>0</limit>
     <sql>SELECT
-  id_user
-, email
-, password
-, no_hp
-, status_verifikasi
-, nama
-, nik
-, jenis_kelamin
-, tanggal_lahir
-, id_lokasi
-, id_pendidikan
-, id_pekerjaan
-, id_pendapatan
-, jumlah_tanggungan
-, created_at
-, updated_at
-FROM [dbo].user_account
-</sql>
+    id_user,
+    email,
+    password,
+    no_hp,
+    status_verifikasi,
+    nama,
+    nik,
+    jenis_kelamin,
+    tanggal_lahir,
+    id_lokasi,
+    id_pendidikan,
+    id_pekerjaan,
+    id_pendapatan,
+    jumlah_tanggungan,
+    akun_ke,
+    created_at,
+    updated_at
+FROM dbo.user_account;</sql>
     <variables_active>N</variables_active>
     <attributes/>
     <GUI>
-      <xloc>176</xloc>
-      <yloc>144</yloc>
-    </GUI>
-  </transform>
-  <transform>
-    <name>user_account Master</name>
-    <type>TableOutput</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <add_columns>N</add_columns>
-    <always_drop_and_recreate>N</always_drop_and_recreate>
-    <auto_update_table_structure>N</auto_update_table_structure>
-    <change_column_types>N</change_column_types>
-    <commit>1000</commit>
-    <connection>Master</connection>
-    <drop_columns>N</drop_columns>
-    <fields>
-</fields>
-    <ignore_errors>N</ignore_errors>
-    <only_when_have_rows>N</only_when_have_rows>
-    <partitioning_daily>N</partitioning_daily>
-    <partitioning_enabled>N</partitioning_enabled>
-    <partitioning_field/>
-    <partitioning_monthly>Y</partitioning_monthly>
-    <return_field/>
-    <return_keys>N</return_keys>
-    <schema>"public"</schema>
-    <specify_fields>N</specify_fields>
-    <table>user_account</table>
-    <tablename_field/>
-    <tablename_in_field>N</tablename_in_field>
-    <tablename_in_table>Y</tablename_in_table>
-    <truncate>N</truncate>
-    <use_batch>Y</use_batch>
-    <attributes/>
-    <GUI>
       <xloc>336</xloc>
-      <yloc>144</yloc>
+      <yloc>176</yloc>
     </GUI>
   </transform>
   <transform_error_handling>

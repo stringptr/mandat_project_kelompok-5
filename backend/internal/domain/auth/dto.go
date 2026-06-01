@@ -9,18 +9,18 @@ import (
 )
 
 type RegisterRequest struct {
-	Email            string    `json:"email"           validate:"required,email"`
-	Password         string    `json:"password"        validate:"required,max=255"`
-	NoHp             string    `json:"no_hp"           validate:"required,max=20"`
-	Nama             string    `json:"nama"            validate:"required,min=1,max=255"`
-	NIK              string    `json:"nik"             validate:"required,len=16"`
-	JenisKelamin     string    `json:"jenis_kelamin"   validate:"required,oneof=Laki-Laki Perempuan"`
-	TanggalLahir     time.Time `json:"tanggal_lahir"   validate:"required"`
-	IDLokasi         int32     `json:"id_lokasi"       validate:"required"`
-	IDPendidikan     *int32    `json:"id_pendidikan,omitempty"   validate:"min=1"`
-	IDPekerjaan      *int32    `json:"id_pekerjaan,omitempty"    validate:"min=1"`
-	IDPendapatan     *int32    `json:"id_pendapatan,omitempty"   validate:"min=1"`
-	JumlahTanggungan *int32    `json:"jumlah_tanggungan,omitempty" validate:"min=0"`
+	Email            string    `json:"email"           format:"email"`
+	Password         string    `json:"password"        minLength:"8" maxLength:"255"`
+	NoHp             string    `json:"no_hp"           maxLength:"20"`
+	Nama             string    `json:"nama"            minLength:"1" maxLength:"255"`
+	NIK              string    `json:"nik"             minLength:"16" maxLength:"16"`
+	JenisKelamin     string    `json:"jenis_kelamin"   enum:"Laki-Laki,Perempuan"`
+	TanggalLahir     time.Time `json:"tanggal_lahir"   format:"date-time"`
+	IDLokasi         int32     `json:"id_lokasi"       minimum:"1"`
+	IDPendidikan     *int32    `json:"id_pendidikan,omitempty"     minimum:"1"`
+	IDPekerjaan      *int32    `json:"id_pekerjaan,omitempty"      minimum:"1"`
+	IDPendapatan     *int32    `json:"id_pendapatan,omitempty"     minimum:"1"`
+	JumlahTanggungan *int32    `json:"jumlah_tanggungan,omitempty" minimum:"0"`
 }
 
 type LoginResponse struct {
@@ -30,8 +30,8 @@ type LoginResponse struct {
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
+	Email    string `json:"email"           format:"email"`
+	Password string `json:"password"        minLength:"8" maxLength:"255"`
 }
 
 type AuthResponse struct {

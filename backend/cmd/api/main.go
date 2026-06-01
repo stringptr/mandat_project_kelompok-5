@@ -9,7 +9,11 @@ import (
 
 	v1 "github.com/stringptr/SiGizi/backend/internal/api/v1"
 	"github.com/stringptr/SiGizi/backend/internal/config"
+	"github.com/stringptr/SiGizi/backend/internal/feature/auth"
+	"github.com/stringptr/SiGizi/backend/internal/feature/userAccount"
+	"github.com/stringptr/SiGizi/backend/internal/feature/userSession"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
+	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 	"github.com/stringptr/SiGizi/backend/internal/middleware"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -40,6 +44,15 @@ func main() {
 	}
 
 	defer pool.Close()
+
+	jwtUtil := jwtutils.New(cfg.AuthConfig.JWTSecret)
+
+	userAccountRepo := userAccount.NewRepo(pool)
+	userSessionRepo := userSession.NewRepo(pool)
+
+	authRepo := auth.NewRepo(pool)
+	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig)
+	authHandler := auth.NewHandler(authService)
 
 	r := chi.NewMux()
 
@@ -94,7 +107,15 @@ func main() {
 	})
 
 	v1Group := huma.NewGroup(api, "/v1")
-	v1.RegisterRoutes(v1Group, r, pool, cfg)
+	v1.RegisterRoutes(v1Group, r, v1.Dependency{
+		AuthConfig:      cfg.AuthConfig,
+		JWTUtil:         jwtUtil,
+		UserAccountRepo: userAccountRepo,
+		UserSessionRepo: userSessionRepo,
+		AuthRepo:        authRepo,
+		AuthService:     authService,
+		AuthHandler:     authHandler,
+	})
 
 	http.ListenAndServe(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port), api.Adapter())
 }

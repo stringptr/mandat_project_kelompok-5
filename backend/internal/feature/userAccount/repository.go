@@ -68,6 +68,21 @@ func (r *Repo) GetByEmail(ctx context.Context, email string) (*model.UserAccount
 	return user[0], nil
 }
 
+func (r *Repo) GetByNIKEmail(ctx context.Context, NIK string, email string) (*model.UserAccount, error) {
+	var user []*model.UserAccount
+
+	stmt := SELECT(UserAccount.AllColumns).FROM(UserAccount).WHERE(UserAccount.Nik.EQ(String(NIK)).AND(UserAccount.Email.EQ(String(email))))
+	err := pgxV5.Query(ctx, stmt, r.db, &user)
+	if err != nil {
+		return nil, err
+	}
+	if len(user) == 0 {
+		return nil, nil
+	}
+
+	return user[0], nil
+}
+
 func (r *Repo) GetAll(ctx context.Context) ([]*model.UserAccount, error) {
 	var users []*model.UserAccount
 

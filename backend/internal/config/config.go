@@ -3,16 +3,18 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 )
 
 type Config struct {
-	Host           string
-	Port           string
-	CORSOrigins    []string
-	DBMasterConfig PostgresConfig
-	NATSConfig     NATSConfig
-	AuthConfig     AuthConfig
+	Host               string
+	Port               string
+	CORSOrigins        []string
+	DBMasterConfig     PostgresConfig
+	AuthConfig         AuthConfig
+	NATSConfig         NATSConfig
+	RestrictAuthConfig RestrictAuthConfig
 }
 
 type PostgresConfig struct {
@@ -24,15 +26,21 @@ type PostgresConfig struct {
 	SSLMode  string
 }
 
-type NATSConfig struct {
-	natsHost string
-	natsPort string
-}
-
 type AuthConfig struct {
 	JWTSecret       string
 	AccessTokenTTL  time.Duration
 	RefreshTokenTTL time.Duration
+}
+
+type NATSConfig struct {
+	Host  string
+	Port  string
+	Token string
+}
+
+type RestrictAuthConfig struct {
+	MaxAttempt int
+	Duration   time.Duration
 }
 
 func Load() *Config {
@@ -46,10 +54,16 @@ func Load() *Config {
 	dbUser := getEnv("MASTER_USER", "postgres")
 	dbPass := getEnv("MASTER_PASSWORD", "postgres")
 
-	natsHost := getEnv("NATS_HOST", "message-system")
-	natsPort := getEnv("NATS_PORT", "4222")
-
 	jwtSecret := getEnv("JWT_SECRET", "abcdefghijklmnopqrstuvwxyz")
+
+	natsHost := getEnv("NATS_HOST", "nats")
+	natsPort := getEnv("NATS_PORT", "4222")
+	natsToken := getEnv("NATS_TOKEN", "")
+
+	restrictAuthDuration := getEnv("BANNED_AUTH_DURATION", strconv.Itoa(int(time.Hour/2)))
+	restrictAuthMaxAttempt := getEnv("BANNED_AUTH_MAX_ATTEMPT", "5")
+	restrictAuthDurationInt, _ := strconv.Atoi(restrictAuthDuration)
+	restrictAuthMaxAttemptInt, _ := strconv.Atoi(restrictAuthMaxAttempt)
 
 	return &Config{
 		Host:        serverHost,
@@ -63,14 +77,19 @@ func Load() *Config {
 			DBName:   dbName,
 			SSLMode:  "disable",
 		},
-		NATSConfig: NATSConfig{
-			natsHost: natsHost,
-			natsPort: natsPort,
-		},
 		AuthConfig: AuthConfig{
 			JWTSecret:       jwtSecret,
 			AccessTokenTTL:  30 * time.Minute,
 			RefreshTokenTTL: 7 * 24 * time.Hour,
+		},
+		NATSConfig: NATSConfig{
+			Host:  natsHost,
+			Port:  natsPort,
+			Token: natsToken,
+		},
+		RestrictAuthConfig: RestrictAuthConfig{
+			MaxAttempt: restrictAuthMaxAttemptInt,
+			Duration:   time.Duration(restrictAuthDurationInt) * time.Second,
 		},
 	}
 }
@@ -81,8 +100,10 @@ func (c *PostgresConfig) DSN() string {
 		c.User, c.Password, c.Host, c.Port, c.DBName, c.SSLMode)
 }
 
-func (c *NATSConfig) NATSURL() string {
-	return fmt.Sprintf("nats://%s:%s", c.natsHost, c.natsPort)
+func (c *NATSConfig) URL() string {
+	return fmt.Sprintf(
+		"nats://%s:%s",
+		c.Host, c.Port)
 }
 
 func (c *Config) Server() (string, string) {

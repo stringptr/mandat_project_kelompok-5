@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/stringptr/SiGizi/backend/internal/config"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
+	bannedipDomain "github.com/stringptr/SiGizi/backend/internal/domain/bannedip"
+	jwtblacklistDomain "github.com/stringptr/SiGizi/backend/internal/domain/jwtblacklist"
 	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
 	userSessionDomain "github.com/stringptr/SiGizi/backend/internal/domain/userSession"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
@@ -19,11 +22,14 @@ import (
 )
 
 type Service struct {
-	authRepo    authDomain.Repo
-	sessionRepo userSessionDomain.Repo
-	userRepo    userAccountDomain.Repo
-	jwt         jwtutils.JWT
-	cfg         *config.AuthConfig
+	authRepo        authDomain.Repo
+	sessionRepo     userSessionDomain.Repo
+	userRepo        userAccountDomain.Repo
+	jwt             jwtutils.JWT
+	authCfg         *config.AuthConfig
+	restrictAuthCfg *config.RestrictAuthConfig
+	banRepo         bannedipDomain.Repo
+	blacklistRepo   jwtblacklistDomain.Repo
 }
 
 func NewService(
@@ -31,25 +37,45 @@ func NewService(
 	sessionRepo userSessionDomain.Repo,
 	userRepo userAccountDomain.Repo,
 	jwt jwtutils.JWT,
-	cfg *config.AuthConfig,
+	authCfg *config.AuthConfig,
+	restrictAuthCfg *config.RestrictAuthConfig,
+	banRepo bannedipDomain.Repo,
+	blacklistRepo jwtblacklistDomain.Repo,
 ) *Service {
 	return &Service{
-		authRepo:    authRepo,
-		sessionRepo: sessionRepo,
-		userRepo:    userRepo,
-		jwt:         jwt,
-		cfg:         cfg,
+		authRepo:        authRepo,
+		sessionRepo:     sessionRepo,
+		userRepo:        userRepo,
+		jwt:             jwt,
+		authCfg:         authCfg,
+		restrictAuthCfg: restrictAuthCfg,
+		banRepo:         banRepo,
+		blacklistRepo:   blacklistRepo,
 	}
 }
 
-func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequest) *errorutils.Error {
-	existingUser, err := s.userRepo.GetByNIK(ctx, dataDTO.NIK)
+func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequest, ip string) *errorutils.Error {
+	if ip != "" {
+		info, _ := s.banRepo.GetBanInfo(ctx, ip)
+		if info != nil && time.Now().Before(info.ExpiresAt) {
+			remaining := time.Until(info.ExpiresAt)
+			return &errorutils.Error{Status: http.StatusForbidden, Message: fmt.Sprintf("Akses ditolak. Terlalu banyak percobaan. Silahkan coba lagi dalam %d menit %d detik.", int(remaining.Minutes()), int(remaining.Seconds())%60)}
+		}
+	}
+
+	existingUser, err := s.userRepo.GetByNIKEmail(ctx, dataDTO.NIK, dataDTO.Email)
 	if err != nil {
 		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 	if existingUser != nil {
+		if ip != "" {
+			s.banRepo.IncrementAttempt(ctx, ip, s.restrictAuthCfg.MaxAttempt, s.restrictAuthCfg.Duration)
+		}
 		if existingUser.Email == dataDTO.Email && existingUser.Nik == dataDTO.NIK && existingUser.Password == dataDTO.Password {
 			return &errorutils.Error{Status: http.StatusConflict, Message: "Akun dengan Email, NIK, dan Password tersebut sudah terdaftar."}
+		}
+		if err != nil {
+			return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 		}
 		return &errorutils.Error{Status: http.StatusConflict, Message: "Tidak dapat mendaftar dengan identitas yang diberikan."}
 	}
@@ -73,21 +99,38 @@ func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequ
 func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip string) (*authDomain.AuthResponse, *errorutils.Error) {
 	var errs []*httputils.ErrorItem
 
+	if ip != "" {
+		info, _ := s.banRepo.GetBanInfo(ctx, ip)
+		if info != nil && time.Now().Before(info.ExpiresAt) {
+			remaining := time.Until(info.ExpiresAt)
+			return nil, &errorutils.Error{Status: http.StatusForbidden, Message: fmt.Sprintf("Akses ditolak. Terlalu banyak percobaan login. Silahkan coba lagi dalam %d menit %d detik.", int(remaining.Minutes()), int(remaining.Seconds())%60)}
+		}
+	}
+
 	user, err := s.userRepo.GetByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pengecekan akun. Silahkan dicoba kembali.", Errors: nil}
 	}
 	if user == nil {
+		if ip != "" {
+			s.banRepo.IncrementAttempt(ctx, ip, s.restrictAuthCfg.MaxAttempt, s.restrictAuthCfg.Duration)
+		}
 		errs = append(errs, &httputils.ErrorItem{ID: "ERR-AUTH-02", Message: "Email, NIK, atau Password tidak valid"})
 		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Email, NIK, atau Password tidak valid", Errors: errs}
 	}
 
 	ok, err := hash.VerifyHash(req.Password, user.Password)
 	if err != nil {
+		if ip != "" {
+			s.banRepo.IncrementAttempt(ctx, ip, s.restrictAuthCfg.MaxAttempt, s.restrictAuthCfg.Duration)
+		}
 		errs = append(errs, &httputils.ErrorItem{ID: "ERR-AUTH-02", Message: "Email, NIK, atau Password tidak valid"})
 		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Email, NIK, atau Password tidak valid", Errors: errs}
 	}
 	if !ok {
+		if ip != "" {
+			s.banRepo.IncrementAttempt(ctx, ip, s.restrictAuthCfg.MaxAttempt, s.restrictAuthCfg.Duration)
+		}
 		errs = append(errs, &httputils.ErrorItem{ID: "ERR-AUTH-02", Message: "Email, NIK, atau Password tidak valid"})
 		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Email, NIK, atau Password tidak valid", Errors: errs}
 	}
@@ -95,6 +138,8 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 	if user.StatusVerifikasi == model.StatusVerifikasi_Pending {
 		return nil, &errorutils.Error{Status: http.StatusUnauthorized, Message: "Akun sedang dalam proses verifikasi. Silahkan dicek secara berkala."}
 	}
+
+	s.banRepo.ClearAttempts(ctx, ip)
 
 	roles, err := s.authRepo.GetRoles(ctx, user.IDUser)
 	if err != nil {
@@ -106,7 +151,7 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 
-	refreshTokenExpireDate := time.Now().Add(s.cfg.RefreshTokenTTL)
+	refreshTokenExpireDate := time.Now().Add(s.authCfg.RefreshTokenTTL)
 	session := &model.UserSession{
 		IDSession:     newUUID,
 		IDUser:        user.IDUser,
@@ -128,7 +173,7 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 		NIK:    user.Nik,
 	}
 
-	accessToken, err := s.jwt.EncodeWithTTL(claim, s.cfg.AccessTokenTTL)
+	accessToken, err := s.jwt.EncodeWithTTL(claim, s.authCfg.AccessTokenTTL)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
@@ -136,8 +181,8 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 	return &authDomain.AuthResponse{
 		AccessToken:           accessToken,
 		RefreshToken:          session.IDSession,
-		AccessTokenExpiresIn:  int64(s.cfg.AccessTokenTTL.Seconds()),
-		RefreshTokenExpiresIn: int64(s.cfg.RefreshTokenTTL.Seconds()),
+		AccessTokenExpiresIn:  int64(s.authCfg.AccessTokenTTL.Seconds()),
+		RefreshTokenExpiresIn: int64(s.authCfg.RefreshTokenTTL.Seconds()),
 	}, nil
 }
 
@@ -185,7 +230,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pembaruan sesi. Silahkan login ulang."}
 	}
 
-	refreshTokenExpireDate := time.Now().Add(s.cfg.RefreshTokenTTL)
+	refreshTokenExpireDate := time.Now().Add(s.authCfg.RefreshTokenTTL)
 	session = &model.UserSession{
 		IDSession:     newUUID,
 		IDUser:        user.IDUser,
@@ -200,7 +245,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pembaruan sesi. Silahkan login ulang."}
 	}
 
-	accessToken, err := s.jwt.EncodeWithTTL(claim, s.cfg.AccessTokenTTL)
+	accessToken, err := s.jwt.EncodeWithTTL(claim, s.authCfg.AccessTokenTTL)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pembaruan sesi. Silahkan login ulang."}
 	}
@@ -208,12 +253,12 @@ func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string
 	return &authDomain.AuthResponse{
 		AccessToken:           accessToken,
 		RefreshToken:          session.IDSession,
-		AccessTokenExpiresIn:  int64(s.cfg.AccessTokenTTL.Seconds()),
-		RefreshTokenExpiresIn: int64(s.cfg.RefreshTokenTTL.Seconds()),
+		AccessTokenExpiresIn:  int64(s.authCfg.AccessTokenTTL.Seconds()),
+		RefreshTokenExpiresIn: int64(s.authCfg.RefreshTokenTTL.Seconds()),
 	}, nil
 }
 
-func (s *Service) Logout(ctx context.Context, refreshToken uuid.UUID) *errorutils.Error {
+func (s *Service) Logout(ctx context.Context, refreshToken uuid.UUID, accessTokenJTI string) *errorutils.Error {
 	session, err := s.sessionRepo.GetByID(ctx, refreshToken)
 	if err != nil {
 		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan."}
@@ -227,5 +272,10 @@ func (s *Service) Logout(ctx context.Context, refreshToken uuid.UUID) *errorutil
 	if err != nil {
 		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan."}
 	}
+
+	if accessTokenJTI != "" {
+		s.blacklistRepo.Blacklist(ctx, accessTokenJTI, session.IDUser, "logout", s.authCfg.AccessTokenTTL)
+	}
+
 	return nil
 }

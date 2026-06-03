@@ -14,14 +14,16 @@ import (
 
 type Handler struct {
 	Service authDomain.Service
+	jwt     *jwtutils.JWT
 }
 
-func NewHandler(service authDomain.Service) *Handler {
-	return &Handler{Service: service}
+func NewHandler(service authDomain.Service, jwt *jwtutils.JWT) *Handler {
+	return &Handler{Service: service, jwt: jwt}
 }
 
 func (h *Handler) Register(ctx context.Context, input *httputils.APIRequestInput[*authDomain.RegisterRequest]) (*httputils.APIResponseOutput[any], error) {
-	err := h.Service.Register(ctx, input.Body)
+	ip := httputils.GetRealIP(ctx)
+	err := h.Service.Register(ctx, input.Body, ip)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}
@@ -115,7 +117,9 @@ func (h *Handler) Refresh(ctx context.Context, input *struct{}) (*authDomain.Aut
 
 func (h *Handler) Logout(ctx context.Context, input *struct{}) (*authDomain.LogoutOutput, error) {
 	refreshToken := httputils.GetRefreshToken(ctx)
-	err := h.Service.Logout(ctx, refreshToken)
+	jti := httputils.GetAccessTokenJTI(ctx)
+
+	err := h.Service.Logout(ctx, refreshToken, jti)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}

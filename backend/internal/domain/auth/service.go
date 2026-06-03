@@ -8,8 +8,8 @@ import (
 )
 
 type Service interface {
-	Register(ctx context.Context, dataDTO *RegisterRequest) *errorutils.Error
+	Register(ctx context.Context, dataDTO *RegisterRequest, ip string) *errorutils.Error
 	Login(ctx context.Context, req *LoginRequest, ip string) (*AuthResponse, *errorutils.Error)
 	Refresh(ctx context.Context, refreshToken uuid.UUID, ip string) (*AuthResponse, *errorutils.Error)
-	Logout(ctx context.Context, refreshToken uuid.UUID) *errorutils.Error
+	Logout(ctx context.Context, refreshToken uuid.UUID, accessTokenJTI string) *errorutils.Error
 }

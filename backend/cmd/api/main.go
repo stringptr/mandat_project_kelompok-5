@@ -6,14 +6,19 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	v1 "github.com/stringptr/SiGizi/backend/internal/api/v1"
 	"github.com/stringptr/SiGizi/backend/internal/config"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
 	"github.com/stringptr/SiGizi/backend/internal/feature/auth"
+	"github.com/stringptr/SiGizi/backend/internal/feature/bannedip"
+	"github.com/stringptr/SiGizi/backend/internal/feature/jwtblacklist"
+	"github.com/stringptr/SiGizi/backend/internal/feature/notification"
 	"github.com/stringptr/SiGizi/backend/internal/feature/userAccount"
 	"github.com/stringptr/SiGizi/backend/internal/feature/userSession"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
+	natsutil "github.com/stringptr/SiGizi/backend/internal/infrastructure/nats"
 	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 	"github.com/stringptr/SiGizi/backend/internal/middleware"
 
@@ -48,12 +53,32 @@ func main() {
 
 	jwtUtil := jwtutils.New(cfg.AuthConfig.JWTSecret)
 
+	natsConn, err := natsutil.Connect(cfg.NATSConfig.URL(), cfg.NATSConfig.Token)
+	if err != nil {
+		log.Fatalf("unable to connect to NATS: %v", err)
+	}
+	defer natsConn.Close()
+
+	bannedIPKV, err := natsConn.CreateKeyValue(context.Background(), "banned_ips", cfg.RestrictAuthConfig.Duration)
+	bannedAuthIPKV, err := natsConn.CreateKeyValue(context.Background(), "banned_auth_ips", cfg.RestrictAuthConfig.Duration)
+	if err != nil {
+		log.Fatalf("unable to create banned_ips KV bucket: %v", err)
+	}
+	jwtBlacklistKV, err := natsConn.CreateKeyValue(context.Background(), "jwt_blacklist", 30*time.Minute)
+	if err != nil {
+		log.Fatalf("unable to create jwt_blacklist KV bucket: %v", err)
+	}
+
 	userAccountRepo := userAccount.NewRepo(pool)
 	userSessionRepo := userSession.NewRepo(pool)
-
 	authRepo := auth.NewRepo(pool)
-	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig)
-	authHandler := auth.NewHandler(authService)
+	banRepo := bannedip.NewRepo(natsutil.NewKV(bannedIPKV))
+	banAuthRepo := bannedip.NewRepo(natsutil.NewKV(bannedAuthIPKV))
+	blacklistRepo := jwtblacklist.NewRepo(natsutil.NewKV(jwtBlacklistKV))
+	notifPublisher := notification.NewPublisher(natsutil.NewPubSub(natsConn.Conn()))
+
+	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo)
+	authHandler := auth.NewHandler(authService, &jwtUtil)
 
 	r := chi.NewMux()
 
@@ -69,7 +94,7 @@ func main() {
 	}))
 
 	rConfig := huma.DefaultConfig("RESTful API", "1.0.0")
-	rConfig.DocsPath = "/docs"
+	rConfig.DocsPath = "/"
 	rConfig.Servers = []*huma.Server{
 		{URL: "/api"},
 	}
@@ -79,9 +104,9 @@ func main() {
 
 	api := humachi.New(r, rConfig)
 	api.UseMiddleware(middleware.RealIPMiddleware())
+	api.UseMiddleware(middleware.AuthAccessMiddleware(api, &jwtUtil, blacklistRepo))
 
-	r.Get("/docs/scalar", func(w http.ResponseWriter, r *http.Request) {
-		// Please also refer to the "DocsRendererScalar" renderer code inside api.go on what to return here
+	r.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
 		csp := []string{
 			"default-src 'none'",
 			"base-uri 'none'",
@@ -89,8 +114,8 @@ func main() {
 			"form-action 'none'",
 			"frame-ancestors 'none'",
 			"sandbox allow-same-origin allow-scripts",
-			"script-src 'unsafe-eval' https://unpkg.com/@scalar/api-reference@1.44.20/dist/browser/standalone.js", // TODO: Somehow drop 'unsafe-eval'
-			"style-src 'unsafe-inline'", // TODO: Somehow drop 'unsafe-inline'
+			"script-src 'unsafe-eval' https://unpkg.com/@scalar/api-reference@1.44.20/dist/browser/standalone.js",
+			"style-src 'unsafe-inline'",
 		}
 		w.Header().Set("Content-Security-Policy", strings.Join(csp, "; "))
 		w.Header().Set("Content-Type", "text/html")
@@ -99,18 +124,18 @@ func main() {
 			<head>
 				<meta charset="utf-8">
 				<meta name="referrer" content="no-referrer">
-				<meta name="viewport" content="width=device-width, initial-scale=1">
+				<meta name="viewport" content="initial-scale=1">
 				<title>API Reference</title>
 			</head>
 			<body>
-				<script id="api-reference" data-url="../openapi.json"></script>
+				<script id="api-reference" data-url="./openapi.json"></script>
 				<script src="https://unpkg.com/@scalar/api-reference@1.44.20/dist/browser/standalone.js" crossorigin integrity="sha384-tMz7GAo6dMy55x9tLFtH+sHtogji6Scmb+feBR31TAHmvSPRUTboK9H3M5NFaP4R"></script>
 			</body>
 		</html>`))
 	})
 
 	v1Group := huma.NewGroup(api, "/v1")
-	v1.RegisterRoutes(v1Group, r, v1.Dependency{
+	v1.RegisterRoutes(v1Group, r, &v1.Dependency{
 		AuthConfig:      cfg.AuthConfig,
 		JWTUtil:         jwtUtil,
 		UserAccountRepo: userAccountRepo,
@@ -118,7 +143,12 @@ func main() {
 		AuthRepo:        authRepo,
 		AuthService:     authService,
 		AuthHandler:     authHandler,
+		BanRepo:         banRepo,
+		BanAuthRepo:     banAuthRepo,
+		BlacklistRepo:   blacklistRepo,
+		NotifPublisher:  notifPublisher,
 	})
 
+	log.Printf("server starting on %s:%s", cfg.Host, cfg.Port)
 	http.ListenAndServe(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port), api.Adapter())
 }

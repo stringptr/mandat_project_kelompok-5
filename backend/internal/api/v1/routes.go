@@ -38,7 +38,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	kaderGroup := huma.NewGroup(adminGroup, "")
 	dinkesGroup := huma.NewGroup(userGroup, "")
 
-	authAccess.UseMiddleware(middleware.AuthRequiredAccessMiddleware(api, &d.JWTUtil, d.BlacklistRepo))
+	authAccess.UseMiddleware(middleware.AuthAccessMiddleware(api, &d.JWTUtil, d.BlacklistRepo))
 	authRefresh.UseMiddleware(middleware.AuthRefreshMiddleware(api, &d.JWTUtil))
 	userGroup.UseMiddleware(middleware.RequireRole(authAccess, "USER"))
 	adminGroup.UseMiddleware(middleware.RequireRole(authAccess, "ADMIN"))
@@ -46,11 +46,11 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	kaderGroup.UseMiddleware(middleware.RequireRole(authAccess, "KADER"))
 	dinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "DINKES"))
 
-	notLoggedInGroup := huma.NewGroup(api, "")
-	notLoggedInGroup.UseMiddleware(middleware.NotLoggedInRequiredMiddleware(api, &d.JWTUtil, d.BlacklistRepo))
+	nonAuthenticatedOnlyGroup := huma.NewGroup(api, "")
+	nonAuthenticatedOnlyGroup.UseMiddleware(middleware.NonAuthenticatedOnlyMiddleware(api, &d.JWTUtil, d.BlacklistRepo))
 
-	huma.Post(notLoggedInGroup, "/auth/register", d.AuthHandler.Register)
-	huma.Post(notLoggedInGroup, "/auth/login", d.AuthHandler.Login)
+	huma.Post(nonAuthenticatedOnlyGroup, "/auth/register", d.AuthHandler.Register)
+	huma.Post(nonAuthenticatedOnlyGroup, "/auth/login", d.AuthHandler.Login)
 
 	huma.Post(authRefresh, "/auth/refresh", d.AuthHandler.Refresh)
 	huma.Post(authRefresh, "/auth/logout", d.AuthHandler.Logout)

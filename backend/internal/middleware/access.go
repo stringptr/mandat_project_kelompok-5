@@ -11,11 +11,16 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 )
 
-func AuthAccessMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo jwtblacklist.Repo) func(ctx huma.Context, next func(huma.Context)) {
+func AccessTokenMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo jwtblacklist.Repo) func(ctx huma.Context, next func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		cookie, err := httputils.ReadCookie(ctx, "access_token")
 		if err != nil {
-			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Silahkan login terlebih dahulu.", nil)
+			if err == http.ErrNoCookie {
+				newCtx := context.WithValue(ctx.Context(), httputils.AccessKey, nil)
+				next(huma.WithContext(ctx, newCtx))
+			} else {
+				huma.WriteErr(api, ctx, http.StatusInternalServerError, "Terjadi kesalahan. Silahkan dicoba kembali.", nil)
+			}
 			return
 		}
 
@@ -39,7 +44,7 @@ func AuthAccessMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo jwtblac
 	}
 }
 
-func AuthRequiredAccessMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo jwtblacklist.Repo) func(ctx huma.Context, next func(huma.Context)) {
+func AuthAccessMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo jwtblacklist.Repo) func(ctx huma.Context, next func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		claims := httputils.GetAccessClaim(ctx.Context())
 
@@ -52,15 +57,15 @@ func AuthRequiredAccessMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo
 	}
 }
 
-func NotLoggedInRequiredMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo jwtblacklist.Repo) func(ctx huma.Context, next func(huma.Context)) {
+func NonAuthenticatedOnlyMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo jwtblacklist.Repo) func(ctx huma.Context, next func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
 		claims := httputils.GetAccessClaim(ctx.Context())
 
-		if claims == nil {
-			next(ctx)
+		if claims != nil {
+			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Anda sudah login. Silahkan logout terlebih dahulu.", nil)
 		}
 
-		huma.WriteErr(api, ctx, http.StatusUnauthorized, "Anda sudah loginl. Silahkan logout terlebih dahulu.", nil)
+		next(ctx)
 	}
 }
 

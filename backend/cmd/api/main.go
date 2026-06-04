@@ -60,7 +60,6 @@ func main() {
 	defer natsConn.Close()
 
 	bannedIPKV, err := natsConn.CreateKeyValue(context.Background(), "banned_ips", cfg.RestrictAuthConfig.Duration)
-	bannedAuthIPKV, err := natsConn.CreateKeyValue(context.Background(), "banned_auth_ips", cfg.RestrictAuthConfig.Duration)
 	if err != nil {
 		log.Fatalf("unable to create banned_ips KV bucket: %v", err)
 	}
@@ -73,7 +72,6 @@ func main() {
 	userSessionRepo := userSession.NewRepo(pool)
 	authRepo := auth.NewRepo(pool)
 	banRepo := bannedip.NewRepo(natsutil.NewKV(bannedIPKV))
-	banAuthRepo := bannedip.NewRepo(natsutil.NewKV(bannedAuthIPKV))
 	blacklistRepo := jwtblacklist.NewRepo(natsutil.NewKV(jwtBlacklistKV))
 	notifPublisher := notification.NewPublisher(natsutil.NewPubSub(natsConn.Conn()))
 
@@ -104,7 +102,7 @@ func main() {
 
 	api := humachi.New(r, rConfig)
 	api.UseMiddleware(middleware.RealIPMiddleware())
-	api.UseMiddleware(middleware.AuthAccessMiddleware(api, &jwtUtil, blacklistRepo))
+	api.UseMiddleware(middleware.AccessTokenMiddleware(api, &jwtUtil, blacklistRepo))
 
 	r.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
 		csp := []string{
@@ -144,7 +142,6 @@ func main() {
 		AuthService:     authService,
 		AuthHandler:     authHandler,
 		BanRepo:         banRepo,
-		BanAuthRepo:     banAuthRepo,
 		BlacklistRepo:   blacklistRepo,
 		NotifPublisher:  notifPublisher,
 	})

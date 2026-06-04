@@ -60,8 +60,8 @@ func Load() *Config {
 	natsPort := getEnv("NATS_PORT", "4222")
 	natsToken := getEnv("NATS_TOKEN", "")
 
-	restrictAuthDuration := getEnv("BANNED_AUTH_DURATION", strconv.Itoa(int(time.Hour/2)))
-	restrictAuthMaxAttempt := getEnv("BANNED_AUTH_MAX_ATTEMPT", "5")
+	restrictAuthDuration := getEnv("BANNED_AUTH_DURATION", strconv.Itoa(int(15*time.Second)))
+	restrictAuthMaxAttempt := getEnv("BANNED_AUTH_MAX_ATTEMPT", "3")
 	restrictAuthDurationInt, _ := strconv.Atoi(restrictAuthDuration)
 	restrictAuthMaxAttemptInt, _ := strconv.Atoi(restrictAuthMaxAttempt)
 

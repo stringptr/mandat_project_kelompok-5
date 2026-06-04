@@ -196,7 +196,9 @@ services:
     profiles: ["information_system", "dev"]
 
   webserver:
-    image: docker.io/caddy:2.11.3
+    build:
+      context: ./webserver
+      dockerfile: Containerfile
     restart: unless-stopped
     ports:
       - ${HOST_IP:-127.0.0.1}:${WEBSERVER_HTTP_HOST_PORT:-8080}:80
@@ -206,7 +208,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./webserver:/etc/caddy
+      - ./webserver/Caddyfile:/etc/caddy/Caddyfile:ro
     profiles: ["webserver", "information_system", "dev"]
 
   backend:

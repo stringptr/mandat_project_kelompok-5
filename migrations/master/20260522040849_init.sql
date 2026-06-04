@@ -410,9 +410,9 @@ CREATE TABLE user_session (
    id_user INT NOT NULL,
    status_session status_session NOT NULL DEFAULT 'AKTIF',
    ip_address INET,
-   expired_at TIMESTAMPTZ NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '7 day'),
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   expired_at TIMESTAMPTZ NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '7 day'),
    CONSTRAINT fk_audit_user
        FOREIGN KEY (id_user)
        REFERENCES user_account(id_user)

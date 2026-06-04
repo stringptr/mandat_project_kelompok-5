@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Outer circle decorative ring -->
+  <circle cx="50" cy="50" r="46" fill="none" stroke="#095c3e" stroke-width="2" stroke-dasharray="6 3"/>
+  <circle cx="50" cy="50" r="42" fill="none" stroke="#0d7a55" stroke-width="1.5"/>
+
+  <!-- Leaf backgrounds / embracing wings -->
+  <path d="M50 85 C20 85, 12 55, 25 35 C18 50, 20 70, 45 80 Z" fill="#095c3e" opacity="0.8"/>
+  <path d="M50 85 C80 85, 88 55, 75 35 C82 50, 80 70, 55 80 Z" fill="#10b981" opacity="0.9"/>
+  <path d="M50 85 C35 75, 30 60, 35 45 C42 60, 48 70, 50 85 Z" fill="#34d399"/>
+  
+  <!-- The Family silhouette in the center -->
+  <g transform="translate(50, 55) scale(0.65)" id="family">
+    <!-- Child (Center) -->
+    <circle cx="0" cy="-12" r="5" fill="#064e3b" />
+    <path d="M-4 -6 C-4 -6, -6 6, -6 18 L6 18 C6 6, 4 -6, 4 -6 Z" fill="#064e3b" />
+    
+    <!-- Mother (Right) -->
+    <circle cx="15" cy="-20" r="7" fill="#095c3e" />
+    <path d="M5 -11 C7 -11, 25 -11, 25 22 L5 22 C5 10, 3 -11, 5 -11 Z" fill="#095c3e" />
+    
+    <!-- Father (Left) -->
+    <circle cx="-15" cy="-22" r="7.5" fill="#111827" />
+    <path d="M-25 -13 C-23 -13, -5 -13, -5 22 L-25 22 C-25 8, -27 -13, -25 -13 Z" fill="#111827" />
+  </g>
+
+  <!-- Glowing leaf emblem in the bottom center -->
+  <path d="M50 88 C46 80, 48 74, 50 72 C52 74, 54 80, 50 88 Z" fill="#10b981"/>
+  <circle cx="50" cy="74" r="2" fill="#fff"/>
+</svg>

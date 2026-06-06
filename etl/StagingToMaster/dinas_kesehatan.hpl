@@ -148,7 +148,7 @@ id_user + "," +
       <method>none</method>
       <schema_name/>
     </partitioning>
-    <commit>1</commit>
+    <commit>1000</commit>
     <connection>Master</connection>
     <sendOneStatement>Y</sendOneStatement>
     <sqlFromfile>N</sqlFromfile>

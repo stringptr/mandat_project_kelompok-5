@@ -288,7 +288,7 @@ CREATE TABLE user_session (
     status_session VARCHAR(50),
     ip_address VARCHAR(50),
     created_at DATETIME2 DEFAULT GETDATE(),
-    updated_at DATETIME2 DEFAULT GETDATE()
+    updated_at DATETIME2 DEFAULT GETDATE(),
     expired_at DATETIME2 DEFAULT DATEADD(day, 7, GETDATE())
 );
 

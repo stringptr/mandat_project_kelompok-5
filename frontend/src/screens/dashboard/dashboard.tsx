@@ -1,8 +1,32 @@
-export default function Dashboard(): JSX.Element {
-    return (
-        <div>
-            <h1 className="text-2xl font-bold text-neutral font-headline">Dashboard Overview</h1>
-            <p className="text-neutral-600 mt-2 font-body">Dashboard content here...</p>
-        </div>
-    );
+/**
+ * Dashboard — orchestrator
+ *
+ * Routes to the correct section based on currentRole.
+ *
+ * Role → Section
+ *   Ibu/Wali        → IbuWaliSection   (status anak, riwayat, jadwal imunisasi)
+ *   Kader Posyandu  → BidanKaderSection (ringkasan monitoring posyandu)
+ *   Bidan           → BidanKaderSection (ringkasan monitoring + bidan stats)
+ *   Dinas Kesehatan → DinkesSection    (statistik regional, peta, tren)
+ */
+import type { Role } from '../../App';
+import { IbuWaliSection } from './sections/IbuWaliSection';
+import { BidanKaderSection } from './sections/BidanKaderSection';
+import { DinkesSection } from './sections/DinkesSection';
+
+interface DashboardProps {
+  currentRole: Role;
+}
+
+export default function Dashboard({ currentRole }: DashboardProps): JSX.Element {
+  return (
+    <div className="space-y-5 font-body text-neutral-800">
+      {/* Role section */}
+      {currentRole === 'Ibu/Wali' && <IbuWaliSection />}
+      {(currentRole === 'Bidan' || currentRole === 'Kader Posyandu') && (
+        <BidanKaderSection currentRole={currentRole} />
+      )}
+      {currentRole === 'Dinas Kesehatan' && <DinkesSection />}
+    </div>
+  );
 }

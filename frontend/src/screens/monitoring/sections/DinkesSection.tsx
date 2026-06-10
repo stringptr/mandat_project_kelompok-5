@@ -176,12 +176,6 @@ export function DinkesSection() {
             ],
           },
         ]}
-        actions={
-          <button className="inline-flex items-center gap-2 bg-primary hover:bg-primary-600 text-white rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
-            <Download size={16} />
-            Download Laporan
-          </button>
-        }
       />
 
       <DataTable

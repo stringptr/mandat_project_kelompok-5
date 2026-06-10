@@ -1,42 +1,79 @@
-import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Sidebar } from "./components/sidebar";
 import { Header } from "./components/header";
 import { Footer } from "./components/footer";
+import { GuestDashboard } from "./screens/guest/GuestDashboard";
+import { useNavigate } from "react-router-dom";
 
 // Screens
+import LoginPage from "./screens/login/LoginPage";
+import RegisterPage from "./screens/register/RegisterPage";
 import Dashboard from "./screens/dashboard/dashboard";
 import Monitoring from "./screens/monitoring/monitoring";
 import TindakLanjut from "./screens/tindak-lanjut/tindak-lanjut";
 import Edukasi from "./screens/edukasi/edukasi";
 import UserManagement from "./screens/user-management/user-management";
 import Notifikasi from "./screens/notifikasi/notifikasi";
+import JadwalImunisasi from "./screens/jadwal-imunisasi/jadwal-imunisasi";
 
 export type Role = 'Ibu/Wali' | 'Bidan' | 'Dinas Kesehatan' | 'Kader Posyandu';
 
-export default function App(): JSX.Element {
-  const [currentRole, setCurrentRole] = useState<Role>('Kader Posyandu');
+function AppShell(): JSX.Element {
+  const { isLoggedIn, user } = useAuth();
+  const navigate = useNavigate();
+
+  const currentRole: Role = isLoggedIn && user ? user.role : 'Kader Posyandu';
+  const goLogin = () => navigate('/login');
 
   return (
-    <div className="flex h-screen bg-neutral-50">
-      <Sidebar currentRole={currentRole} />
+    <Routes>
+      {/* ── Auth pages — no sidebar/header ─────────────────────────── */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header currentRole={currentRole} onChangeRole={setCurrentRole} />
+      {/* ── App shell with sidebar/header ──────────────────────────── */}
+      <Route path="/*" element={
+        <div className="flex h-screen bg-neutral-50">
+          <Sidebar currentRole={currentRole} onLoginClick={goLogin} />
 
-        <main className="flex-1 overflow-y-auto p-8">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/monitoring" element={<Monitoring currentRole={currentRole} />} /> {/* ← FIX */}
-            <Route path="/tindak-lanjut" element={<TindakLanjut />} />
-            <Route path="/edukasi" element={<Edukasi />} />
-            <Route path="/user-management" element={<UserManagement />} />
-            <Route path="/notifikasi" element={<Notifikasi />} />
-          </Routes>
-        </main>
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <Header
+              currentRole={isLoggedIn ? currentRole : undefined}
+              onLoginClick={goLogin}
+            />
 
-        <Footer />
-      </div>
-    </div>
+            <main className="flex-1 overflow-y-auto p-8">
+              <Routes>
+                <Route
+                  path="/"
+                  element={
+                    isLoggedIn
+                      ? <Dashboard currentRole={currentRole} />
+                      : <GuestDashboard onLoginClick={goLogin} />
+                  }
+                />
+                <Route path="/monitoring" element={<Monitoring currentRole={currentRole} />} />
+                <Route path="/tindak-lanjut" element={<TindakLanjut />} />
+                <Route path="/edukasi" element={<Edukasi currentRole={currentRole} />} />
+                <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/notifikasi" element={<Notifikasi />} />
+                <Route path="/jadwal-imunisasi" element={<JadwalImunisasi currentRole={currentRole} />} />
+              </Routes>
+            </main>
+
+            <Footer />
+          </div>
+        </div>
+      } />
+    </Routes>
+  );
+}
+
+export default function App(): JSX.Element {
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
   );
 }

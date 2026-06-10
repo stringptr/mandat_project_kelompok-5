@@ -23,7 +23,6 @@ services:
           path: /app/Containerfile
     volumes:
       - ./migrations:/app:z
-      - go_cache:/go/pkg/mod:z
     working_dir: /app
     environment:
       GOOSE_DRIVER: postgres
@@ -58,13 +57,12 @@ services:
         condition: service_started
     volumes:
       - ./backend:/app:z
-      - go_cache:/go/pkg/mod:z
     working_dir: /app
     environment:
       JWT_SECRET: test-secret-key
       NATS_HOST: nats
       NATS_PORT: "4222"
-    command: sh -c "go test -v -tags=integration ./..."
+    command: sh -c "go test -p 1 -v -tags=integration ./..."
 
   frontend:
     build:
@@ -81,6 +79,3 @@ services:
     environment:
       - NODE_ENV=development
     profiles: ["frontend", "dev"]
-
-volumes:
-  go_cache:

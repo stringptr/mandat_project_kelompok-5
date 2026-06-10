@@ -52,7 +52,9 @@ services:
     volumes:
       - ./backend:/app:z
     working_dir: /app
-    command: sh -c "go mod tidy && go test -tags=integration ./...""
+    environment:
+      JWT_SECRET: test-secret-key
+    command: sh -c "go mod tidy && go test -tags=integration ./..."
     profiles: ["backend", "dev"]
 
   frontend:

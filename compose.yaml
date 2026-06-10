@@ -187,7 +187,7 @@ services:
       - ${NUI_HOST_PORT:-31311}:31311
       - "8000:30"
     volumes:
-      - ./nats/nui/db:/db:z
+      - ./stoage/nats/nui/db:/db:z
       - ./nats/nui/contexts:/contexts:z
     environment:
       - NATS_CLI_CONTEXTS=/contexts

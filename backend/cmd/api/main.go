@@ -147,13 +147,8 @@ func main() {
 	v1.RegisterRoutes(v1Group, r, &v1.Dependency{
 		AuthConfig:         cfg.AuthConfig,
 		JWTUtil:            jwtUtil,
-		UserAccountRepo:    userAccountRepo,
 		UserAccountHandler: userAccountHandler,
-		UserSessionRepo:    userSessionRepo,
-		AuthRepo:           authRepo,
-		AuthService:        authService,
 		AuthHandler:        authHandler,
-		BanRepo:            banRepo,
 		BlacklistRepo:      blacklistRepo,
 		NotifPublisher:     notifPublisher,
 		NotifHandler:       notifHandler,

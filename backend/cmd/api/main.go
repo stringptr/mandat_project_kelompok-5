@@ -20,6 +20,7 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/feature/userAccount"
 	"github.com/stringptr/SiGizi/backend/internal/feature/userSession"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
+	"github.com/stringptr/SiGizi/backend/internal/infrastructure/mail"
 	natsutil "github.com/stringptr/SiGizi/backend/internal/infrastructure/nats"
 	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 	"github.com/stringptr/SiGizi/backend/internal/middleware"
@@ -88,7 +89,7 @@ func main() {
 	pasienService := pasienFeature.NewService(pasienRepo, auditLogRepo)
 	pasienHandler := pasienFeature.NewHandler(pasienService)
 
-	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo, auditLogRepo)
+	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo, auditLogRepo, mail.NewSender(cfg.SMTPConfig))
 	authHandler := auth.NewHandler(authService, &jwtUtil)
 
 	r := chi.NewMux()

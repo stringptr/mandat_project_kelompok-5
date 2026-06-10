@@ -229,7 +229,7 @@ services:
       - 8070:8080
     env_file:
       - .env
-    command: sh -c "go mod tidy && air -c .air.toml"
+    command: sh -c "air -c .air.toml"
     profiles: ["backend", "information_system", "dev"]
 
   frontend:

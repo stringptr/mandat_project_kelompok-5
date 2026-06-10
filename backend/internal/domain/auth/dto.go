@@ -50,3 +50,8 @@ type LogoutOutput struct {
 	Body      httputils.APIResponse[any]
 	SetCookie []http.Cookie `header:"Set-Cookie"`
 }
+
+type VerifyUserRequest struct {
+	IDUser int32  `path:"id_user" minimum:"1"`
+	Status string `json:"status" enum:"Aktif,Ditolak"`
+}

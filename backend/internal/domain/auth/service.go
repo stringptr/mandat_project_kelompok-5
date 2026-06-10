@@ -12,4 +12,5 @@ type Service interface {
 	Login(ctx context.Context, req *LoginRequest, ip string) (*AuthResponse, *errorutils.Error)
 	Refresh(ctx context.Context, refreshToken uuid.UUID, ip string) (*AuthResponse, *errorutils.Error)
 	Logout(ctx context.Context, refreshToken uuid.UUID, accessTokenJTI string) *errorutils.Error
+	VerifyUser(ctx context.Context, req *VerifyUserRequest) *errorutils.Error
 }

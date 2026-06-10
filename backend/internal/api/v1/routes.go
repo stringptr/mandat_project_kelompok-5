@@ -56,4 +56,6 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Post(authRefresh, "/auth/logout", d.AuthHandler.Logout)
 
 	huma.Get(userGroup, "/me", d.AuthHandler.Me)
+
+	huma.Patch(adminGroup, "/users/{id_user}/verification", d.AuthHandler.VerifyUser)
 }

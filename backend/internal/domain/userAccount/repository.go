@@ -13,5 +13,6 @@ type Repo interface {
 	GetByEmail(ctx context.Context, email string) (*model.UserAccount, error)
 	GetAll(ctx context.Context) ([]*model.UserAccount, error)
 	Create(ctx context.Context, dataModel *model.UserAccount) error
+	UpdateStatusVerifikasi(ctx context.Context, IDUser int32, status model.StatusVerifikasi) error
 	DeleteByID(ctx context.Context, IDUser int32) error
 }

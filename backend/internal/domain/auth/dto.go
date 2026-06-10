@@ -21,6 +21,10 @@ type RegisterRequest struct {
 	IDPekerjaan      *int32    `json:"id_pekerjaan,omitempty"      minimum:"1"`
 	IDPendapatan     *int32    `json:"id_pendapatan,omitempty"     minimum:"1"`
 	JumlahTanggungan *int32    `json:"jumlah_tanggungan,omitempty" minimum:"0"`
+	Role             string    `json:"role"            enum:"Bidan,Kader,Dinkes,Ibu Hamil,Anak"`
+	NoStr            string    `json:"no_str,omitempty"`
+	WilayahKerja     *int32    `json:"wilayah_kerja,omitempty"     minimum:"1"`
+	NoSk             string    `json:"no_sk,omitempty"`
 }
 
 type LoginResponse struct {
@@ -30,8 +34,9 @@ type LoginResponse struct {
 }
 
 type LoginRequest struct {
-	Email    string `json:"email"           format:"email"`
-	Password string `json:"password"        minLength:"8" maxLength:"255"`
+	Email    string `json:"email"    format:"email"`
+	NIK      string `json:"nik"      minLength:"16" maxLength:"16" pattern:"^[0-9]{16}$"`
+	Password string `json:"password" minLength:"8" maxLength:"255"`
 }
 
 type AuthResponse struct {

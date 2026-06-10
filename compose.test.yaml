@@ -72,3 +72,6 @@ services:
     environment:
       - NODE_ENV=development
     profiles: ["frontend", "dev"]
+
+volumes:
+  go_cache:

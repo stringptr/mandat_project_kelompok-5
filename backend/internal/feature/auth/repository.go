@@ -9,8 +9,8 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 	. "github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/table"
 
-	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/pgxV5"
+	. "github.com/go-jet/jet/v2/postgres"
 )
 
 type Repo struct {
@@ -39,7 +39,9 @@ func (r *Repo) GetRoles(ctx context.Context, idUser int32) ([]string, error) {
 
 	roles := []string{"USER"}
 	if isDinkes {
-		roles = append(roles, "ADMIN_DINKES")
+		roles = append(roles, "DINKES")
+		roles = append(roles, "SUPER_ADMIN")
+		roles = append(roles, "ADMIN")
 	}
 	if isBidan {
 		roles = append(roles, "BIDAN")

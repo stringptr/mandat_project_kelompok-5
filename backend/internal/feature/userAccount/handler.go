@@ -29,7 +29,10 @@ func (h *Handler) GetAllUsers(ctx context.Context, input *httputils.APIRequestIn
 	}, nil
 }
 
-func (h *Handler) GetUserByID(ctx context.Context, input *struct{ IDUser int32 `path:"id" minimum:"1"` }) (*httputils.APIResponseOutput[*userAccountDomain.UserDetailResponse], error) {
+func (h *Handler) GetUserByID(ctx context.Context, input *struct {
+	IDUser int32 `path:"id" minimum:"1"`
+},
+) (*httputils.APIResponseOutput[*userAccountDomain.UserDetailResponse], error) {
 	user, err := h.Service.GetUserByID(ctx, input.IDUser)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
@@ -54,7 +57,7 @@ func (h *Handler) UpdateUser(ctx context.Context, input *httputils.APIRequestInp
 	if idUser != claims.IDUser {
 		isAdmin := false
 		for _, r := range claims.Roles {
-			if r == "ADMIN" || r == "ADMIN_DINKES" {
+			if r == "ADMIN" || r == "SUPER_ADMIN" {
 				isAdmin = true
 				break
 			}

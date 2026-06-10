@@ -61,3 +61,11 @@ type VerifyUserRequest struct {
 	Status          string `json:"status" enum:"Aktif,Ditolak"`
 	AlasanPenolakan string `json:"alasan_penolakan,omitempty"`
 }
+
+type VerifyUserInput struct {
+	IDUser int32 `path:"id_user" minimum:"1"`
+	Body   struct {
+		Status          string `json:"status" enum:"Aktif,Ditolak"`
+		AlasanPenolakan string `json:"alasan_penolakan,omitempty"`
+	}
+}

@@ -1,0 +1,96 @@
+import { useState } from 'react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import type { Role } from '../../App';
+
+const MOCK_USERS: Record<string, { password: string; role: Role; name: string; avatarUrl: string }> = {
+  'ibu@sigizi.id': { password: 'password', role: 'Ibu/Wali', name: 'Ny. Rina Marlina', avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' },
+  'bidan@sigizi.id': { password: 'password', role: 'Bidan', name: 'Bidan Sri Lestari', avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' },
+  'dinkes@sigizi.id': { password: 'password', role: 'Dinas Kesehatan', name: 'Dr. Budi Hermawan', avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' },
+  'kader@sigizi.id': { password: 'password', role: 'Kader Posyandu', name: 'Siti Aminah', avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80' },
+};
+
+export default function LoginPage(): JSX.Element {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    setTimeout(() => {
+      const u = MOCK_USERS[email.toLowerCase().trim()];
+      if (u && u.password === password) {
+        login({ name: u.name, role: u.role, avatarUrl: u.avatarUrl });
+        navigate('/');
+      } else {
+        setError('Email atau password salah. Coba lagi.');
+      }
+      setLoading(false);
+    }, 600);
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-50 via-white to-primary-100 px-4 font-body">
+      {/* Logo */}
+      <div className="flex flex-col items-center mb-8">
+        <img src="/logo-sigizi.svg" alt="SiGizi" className="w-16 h-16 object-contain mb-3" />
+        <p className="text-xl font-bold text-primary font-headline">SiGizi</p>
+        <p className="text-xs text-neutral-500 mt-0.5 text-center leading-snug">
+          Sistem Monitoring Gizi Ibu dan Anak<br />Berbasis Komunitas
+        </p>
+      </div>
+
+      {/* Card */}
+      <div className="bg-white rounded-2xl shadow-xl border border-neutral-100 w-full max-w-sm p-8">
+        <h1 className="text-xl font-bold text-neutral-900 font-headline mb-1">Selamat Datang Kembali</h1>
+        <p className="text-sm text-neutral-500 mb-6">Silakan masuk ke akun Anda.</p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wide block mb-1.5">Email</label>
+            <div className="relative">
+              <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com" required
+                className="w-full pl-10 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary transition-colors" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wide block mb-1.5">Password</label>
+            <div className="relative">
+              <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required
+                className="w-full pl-10 pr-11 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary transition-colors" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors">
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
+
+          {error && <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
+
+          <button type="submit" disabled={loading}
+            className="w-full py-3 bg-primary hover:bg-primary-600 disabled:bg-primary/60 text-white rounded-xl text-sm font-bold transition-colors mt-2 flex items-center justify-center gap-2">
+            {loading ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Memproses...</> : 'Masuk'}
+          </button>
+        </form>
+
+        <p className="text-center text-xs text-neutral-500 mt-5">
+          Belum memiliki akun?{' '}
+          <button onClick={() => navigate('/register')} className="text-primary font-semibold hover:text-primary-600 transition-colors">Daftar</button>
+        </p>
+      </div>
+
+      <p className="text-xs text-neutral-400 mt-6 text-center">
+        © {new Date().getFullYear()} Dinas Kesehatan & Komunitas SiGizi. Seluruh hak dilindungi.
+      </p>
+    </div>
+  );
+}

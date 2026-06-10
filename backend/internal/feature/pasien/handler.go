@@ -43,8 +43,8 @@ func (h *Handler) GetAll(ctx context.Context, input *httputils.APIRequestInput[*
 	return &httputils.APIResponseOutput[*pasienDomain.PasienListData]{Body: httputils.OK(res)}, nil
 }
 
-func (h *Handler) Search(ctx context.Context, input *httputils.APIRequestInput[*pasienDomain.SearchPasienRequest]) (*httputils.APIResponseOutput[[]*pasienDomain.PasienListItem], error) {
-	res, err := h.Service.Search(ctx, input.Body)
+func (h *Handler) Search(ctx context.Context, input *pasienDomain.SearchPasienRequest) (*httputils.APIResponseOutput[[]*pasienDomain.PasienListItem], error) {
+	res, err := h.Service.Search(ctx, input)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}

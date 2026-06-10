@@ -43,6 +43,31 @@ func TruncateNotifikasiTables(t *testing.T, pool *pgxpool.Pool) {
 	}
 }
 
+func TruncatePasienTables(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	ctx := context.Background()
+
+	tables := []string{
+		"ibu_hamil",
+		"anak",
+		"pasien",
+		"kader_posyandu",
+		"posyandu",
+	}
+
+	for _, table := range tables {
+		_, err := pool.Exec(ctx, "TRUNCATE TABLE "+table+" CASCADE")
+		if err != nil {
+			t.Fatalf("failed to truncate table %s: %v", table, err)
+		}
+	}
+
+	_, err := pool.Exec(ctx, "ALTER SEQUENCE posyandu_id_posyandu_seq RESTART WITH 1")
+	if err != nil {
+		_ = err
+	}
+}
+
 func TruncateAuthTables(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	ctx := context.Background()

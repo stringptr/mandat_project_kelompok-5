@@ -174,6 +174,9 @@ func (s *Service) DaftarAnak(ctx context.Context, req *pasienDomain.DaftarAnakRe
 }
 
 func (s *Service) GetAll(ctx context.Context, req *pasienDomain.GetAllPasienRequest) (*pasienDomain.PasienListData, *errorutils.Error) {
+	if req == nil {
+		req = &pasienDomain.GetAllPasienRequest{}
+	}
 	page := req.Page
 	if page < 1 {
 		page = 1
@@ -214,6 +217,9 @@ func (s *Service) GetAll(ctx context.Context, req *pasienDomain.GetAllPasienRequ
 }
 
 func (s *Service) Search(ctx context.Context, req *pasienDomain.SearchPasienRequest) ([]*pasienDomain.PasienListItem, *errorutils.Error) {
+	if req == nil {
+		req = &pasienDomain.SearchPasienRequest{}
+	}
 	if req.Q == "" {
 		return nil, &errorutils.Error{Status: http.StatusBadRequest, Message: "Parameter pencarian (q) wajib diisi."}
 	}

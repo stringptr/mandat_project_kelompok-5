@@ -142,7 +142,7 @@ func TestAuthRegisterSuccess(t *testing.T) {
 	}
 	resp := testutils.DoRequest(f.handler, http.MethodPost, "/auth/register", body)
 	respBody := testutils.ReadBody(resp)
-	pass := resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated
+	pass := resp.StatusCode == http.StatusCreated
 
 	testutils.TestResult{
 		SRSRef: "SRS-7.1(1,2,3)", FSDRef: "FSD-2.1",

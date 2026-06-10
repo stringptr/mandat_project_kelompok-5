@@ -108,6 +108,80 @@ func SeedAuthData(t *testing.T, pool *pgxpool.Pool) *AuthSeedIDs {
 	}
 }
 
+type PasienSeedIDs struct {
+	PosyanduID int32
+	IbuHamilID int32
+	AnakID     int32
+}
+
+func SeedPosyandu(t *testing.T, pool *pgxpool.Pool, idLokasi, idBidan int32) int32 {
+	t.Helper()
+	ctx := context.Background()
+	now := time.Now().Truncate(time.Microsecond)
+
+	var idPosyandu int32
+	err := pool.QueryRow(ctx, `
+		INSERT INTO posyandu (nama_posyandu, id_lokasi, id_bidan, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $4)
+		RETURNING id_posyandu`,
+		"Posyandu Test", idLokasi, idBidan, now,
+	).Scan(&idPosyandu)
+	if err != nil {
+		t.Fatalf("failed to seed posyandu: %v", err)
+	}
+	return idPosyandu
+}
+
+func SeedPasienIbuHamil(t *testing.T, pool *pgxpool.Pool, idUser, idPosyandu int32) int32 {
+	t.Helper()
+	ctx := context.Background()
+	now := time.Now().Truncate(time.Microsecond)
+
+	_, err := pool.Exec(ctx,
+		"INSERT INTO pasien (id_pasien, id_posyandu, created_at, updated_at) VALUES ($1, $2, $3, $3)",
+		idUser, idPosyandu, now)
+	if err != nil {
+		t.Fatalf("failed to seed pasien: %v", err)
+	}
+
+	var idIbuHamil int32
+	nowDate := now.Format("2006-01-02")
+	err = pool.QueryRow(ctx, `
+		INSERT INTO ibu_hamil (id_pasien, hamil_ke, bulan_mulai_hamil, hpht, status_kehamilan, created_at, updated_at)
+		VALUES ($1, 1, $2::date, $3::date, $4, $5, $5)
+		RETURNING id_ibu_hamil`,
+		idUser, nowDate, nowDate, "Trimester 1", now,
+	).Scan(&idIbuHamil)
+	if err != nil {
+		t.Fatalf("failed to seed ibu_hamil: %v", err)
+	}
+
+	return idUser
+}
+
+func SeedPasienAnak(t *testing.T, pool *pgxpool.Pool, idUser, idPosyandu, idWali int32) int32 {
+	t.Helper()
+	ctx := context.Background()
+	now := time.Now().Truncate(time.Microsecond)
+
+	_, err := pool.Exec(ctx,
+		"INSERT INTO pasien (id_pasien, id_posyandu, created_at, updated_at) VALUES ($1, $2, $3, $3)",
+		idUser, idPosyandu, now)
+	if err != nil {
+		t.Fatalf("failed to seed pasien: %v", err)
+	}
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO anak (id_pasien, id_wali, nama_anak, berat_lahir, panjang_lahir, hubungan_dengan_wali, created_at, updated_at)
+		VALUES ($1, $2, 'Anak Test', 3.0, 50.0, 'Kandung', $3, $3)`,
+		idUser, idWali, now)
+	if err != nil {
+		t.Fatalf("failed to seed anak: %v", err)
+	}
+
+	return idUser
+}
+
 func SeedActiveSession(t *testing.T, pool *pgxpool.Pool, userID int32) uuid.UUID {
 	t.Helper()
 	ctx := context.Background()

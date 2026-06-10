@@ -100,7 +100,7 @@ func (r *Repo) CreateIbuHamil(ctx context.Context, data *model.IbuHamil) error {
 }
 
 func (r *Repo) CreateAnak(ctx context.Context, data *model.Anak) error {
-	stmt := Anak.INSERT(Anak.MutableColumns).
+	stmt := Anak.INSERT(Anak.IDPasien, Anak.IDIbuHamil, Anak.IDWali, Anak.NamaAnak, Anak.BeratLahir, Anak.PanjangLahir, Anak.HubunganDenganWali, Anak.CreatedAt, Anak.UpdatedAt).
 		MODEL(data)
 	_, err := pgxV5.Exec(ctx, stmt, r.db)
 	return err

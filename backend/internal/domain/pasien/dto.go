@@ -85,7 +85,7 @@ type AnakData struct {
 }
 
 type UpdatePasienRequest struct {
-	IDPasien         int32   `path:"id" minimum:"1"`
+	IDPasien         int32   `json:"-" path:"id" minimum:"1"`
 	IDPosyandu       *int32  `json:"id_posyandu,omitempty" minimum:"1"`
 	HamilKe          *int32  `json:"hamil_ke,omitempty" minimum:"1"`
 	BulanMulaiHamil  *string `json:"bulan_mulai_hamil,omitempty" format:"date"`

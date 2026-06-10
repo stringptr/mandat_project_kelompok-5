@@ -27,6 +27,7 @@ type Dependency struct {
 	BanAuthRepo     bannedipDomain.Repo
 	BlacklistRepo   jwtblacklistDomain.Repo
 	NotifPublisher  notificationDomain.Publisher
+	NotifHandler    notificationDomain.Handler
 }
 
 func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
@@ -58,4 +59,16 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Get(userGroup, "/me", d.AuthHandler.Me)
 
 	huma.Patch(adminGroup, "/users/{id_user}/verification", d.AuthHandler.VerifyUser)
+
+	// Notifikasi routes
+	notifBidanKaderDinkesGroup := huma.NewGroup(authAccess, "")
+	notifBidanKaderDinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN", "KADER", "DINKES"))
+
+	huma.Get(authAccess, "/notifikasi", d.NotifHandler.GetNotifikasi)
+	huma.Get(authAccess, "/notifikasi/{id}", d.NotifHandler.GetNotifikasiDetail)
+	huma.Patch(authAccess, "/notifikasi/{id}/read", d.NotifHandler.MarkRead)
+	huma.Patch(authAccess, "/notifikasi/read-all", d.NotifHandler.MarkAllRead)
+	huma.Get(bidanGroup, "/notifikasi/bidan", d.NotifHandler.GetBidanDashboard)
+	huma.Get(notifBidanKaderDinkesGroup, "/notifikasi/statistik", d.NotifHandler.GetStatistics)
+	huma.Get(notifBidanKaderDinkesGroup, "/notifikasi/aktivitas", d.NotifHandler.GetActivity)
 }

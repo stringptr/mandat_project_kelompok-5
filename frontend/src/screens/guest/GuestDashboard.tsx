@@ -6,7 +6,7 @@
  *  - Preview artikel edukasi terbaru
  *  - CTA login per jenis pengguna
  */
-import { LogIn, Users, Baby, TrendingDown, BookOpen, ChevronRight, Clock, User } from 'lucide-react';
+import { Users, Baby, TrendingDown, BookOpen, ChevronRight, Clock, User } from 'lucide-react';
 import { DUMMY_ARTIKEL } from '../edukasi/data/artikel.data';
 import { KABUPATEN_DATA, TARGET_WILAYAH } from '../dashboard/data/dashboard.data';
 import { ProgressBar } from '../dashboard/components/ProgressBar';
@@ -16,41 +16,6 @@ import { TREN_NUTRISI } from '../dashboard/data/dashboard.data';
 interface GuestDashboardProps {
   onLoginClick: () => void;
 }
-
-const ROLE_CTA = [
-  {
-    role: 'Ibu/Wali',
-    icon: '🤰',
-    title: 'Orang Tua / Wali',
-    desc: 'Pantau tumbuh kembang anak dan akses panduan nutrisi personal.',
-    color: 'bg-pink-50 border-pink-200 hover:border-pink-400',
-    textColor: 'text-pink-700',
-  },
-  {
-    role: 'Kader Posyandu',
-    icon: '🏥',
-    title: 'Kader Posyandu',
-    desc: 'Kelola data posyandu, jadwal, dan aktivitas monitoring balita.',
-    color: 'bg-emerald-50 border-emerald-200 hover:border-emerald-400',
-    textColor: 'text-emerald-700',
-  },
-  {
-    role: 'Bidan',
-    icon: '👩‍⚕️',
-    title: 'Bidan',
-    desc: 'Akses data wilayah binaan, pantau ibu hamil, dan buat laporan.',
-    color: 'bg-blue-50 border-blue-200 hover:border-blue-400',
-    textColor: 'text-blue-700',
-  },
-  {
-    role: 'Dinas Kesehatan',
-    icon: '🏛️',
-    title: 'Dinas Kesehatan',
-    desc: 'Statistik regional, verifikasi laporan, dan manajemen program.',
-    color: 'bg-violet-50 border-violet-200 hover:border-violet-400',
-    textColor: 'text-violet-700',
-  },
-];
 
 const PUBLIC_STATS = [
   { icon: <Users size={22} />, label: 'Total Pasien Terdaftar', value: '12,482', delta: '+13% bulan ini', color: 'bg-primary text-white' },

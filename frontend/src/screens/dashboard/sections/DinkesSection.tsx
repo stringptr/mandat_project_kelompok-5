@@ -1,4 +1,4 @@
-import { Users, AlertTriangle, Target, Download, Calendar, ChevronRight } from 'lucide-react';
+import { Users, AlertTriangle, Target, Calendar, ChevronRight } from 'lucide-react';
 import { INTERVENSI_TERBARU, KABUPATEN_DATA, TREN_NUTRISI } from '../data/dashboard.data';
 import { PrevalensiMap } from '../components/PrevalensiMap';
 import { TrendChart } from '../components/TrendChart';

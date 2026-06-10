@@ -57,6 +57,7 @@ type LogoutOutput struct {
 }
 
 type VerifyUserRequest struct {
-	IDUser int32  `path:"id_user" minimum:"1"`
-	Status string `json:"status" enum:"Aktif,Ditolak"`
+	IDUser          int32  `path:"id_user" minimum:"1"`
+	Status          string `json:"status" enum:"Aktif,Ditolak"`
+	AlasanPenolakan string `json:"alasan_penolakan,omitempty"`
 }

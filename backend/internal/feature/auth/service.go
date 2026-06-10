@@ -24,6 +24,7 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/hash"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
+	"github.com/stringptr/SiGizi/backend/internal/infrastructure/mail"
 	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 )
 
@@ -37,6 +38,7 @@ type Service struct {
 	banRepo         bannedipDomain.Repo
 	blacklistRepo   jwtblacklistDomain.Repo
 	auditRepo       auditlogDomain.Repo
+	mailSender      *mail.Sender
 }
 
 func NewService(
@@ -49,6 +51,7 @@ func NewService(
 	banRepo bannedipDomain.Repo,
 	blacklistRepo jwtblacklistDomain.Repo,
 	auditRepo auditlogDomain.Repo,
+	mailSender *mail.Sender,
 ) *Service {
 	return &Service{
 		authRepo:        authRepo,
@@ -60,6 +63,7 @@ func NewService(
 		banRepo:         banRepo,
 		blacklistRepo:   blacklistRepo,
 		auditRepo:       auditRepo,
+		mailSender:      mailSender,
 	}
 }
 
@@ -399,6 +403,21 @@ func (s *Service) VerifyUser(ctx context.Context, req *authDomain.VerifyUserRequ
 		tipe = model.TipeAktivitas_PenolakanRegistrasi
 	}
 	s.logAudit(ctx, "PATCH /auth/user/verify", tipe, true, "user_account", strconv.Itoa(int(req.IDUser)), "Verifikasi akun menjadi "+string(newStatus))
+
+	if s.mailSender != nil {
+		var subject, body string
+		if newStatus == model.StatusVerifikasi_Aktif {
+			subject, body = accountActivatedEmail(user.Nama)
+		} else {
+			reason := req.AlasanPenolakan
+			if reason == "" {
+				reason = "Tidak memenuhi persyaratan."
+			}
+			subject, body = accountRejectedEmail(user.Nama, reason)
+		}
+		go s.mailSender.Send(user.Email, subject, body)
+	}
+
 	return nil
 }
 

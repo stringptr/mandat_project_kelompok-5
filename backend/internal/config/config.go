@@ -15,6 +15,7 @@ type Config struct {
 	AuthConfig         AuthConfig
 	NATSConfig         NATSConfig
 	RestrictAuthConfig RestrictAuthConfig
+	SMTPConfig         SMTPConfig
 }
 
 type PostgresConfig struct {
@@ -43,6 +44,15 @@ type RestrictAuthConfig struct {
 	Duration   time.Duration
 }
 
+type SMTPConfig struct {
+	Host      string
+	Port      int
+	Username  string
+	Password  string
+	FromEmail string
+	FromName  string
+}
+
 func Load() *Config {
 	serverHost := getEnv("BACKEND_IP", "0.0.0.0")
 	serverPort := getEnv("BACKEND_PORT", "8080")
@@ -64,6 +74,14 @@ func Load() *Config {
 	restrictAuthMaxAttempt := getEnv("BANNED_AUTH_MAX_ATTEMPT", "3")
 	restrictAuthDurationInt, _ := strconv.Atoi(restrictAuthDuration)
 	restrictAuthMaxAttemptInt, _ := strconv.Atoi(restrictAuthMaxAttempt)
+
+	smtpHost := getEnv("MAILTRAP_HOST", "sandbox.smtp.mailtrap.io")
+	smtpPortStr := getEnv("MAILTRAP_PORT", "2525")
+	smtpUser := getEnv("MAILTRAP_USERNAME", "")
+	smtpPass := getEnv("MAILTRAP_PASSWORD", "")
+	smtpFromEmail := getEnv("MAILTRAP_FROM_EMAIL", "noreply@sigizi.com")
+	smtpFromName := getEnv("MAILTRAP_FROM_NAME", "SiGizi")
+	smtpPortInt, _ := strconv.Atoi(smtpPortStr)
 
 	return &Config{
 		Host:        serverHost,
@@ -90,6 +108,14 @@ func Load() *Config {
 		RestrictAuthConfig: RestrictAuthConfig{
 			MaxAttempt: restrictAuthMaxAttemptInt,
 			Duration:   time.Duration(restrictAuthDurationInt) * time.Second,
+		},
+		SMTPConfig: SMTPConfig{
+			Host:      smtpHost,
+			Port:      smtpPortInt,
+			Username:  smtpUser,
+			Password:  smtpPass,
+			FromEmail: smtpFromEmail,
+			FromName:  smtpFromName,
 		},
 	}
 }

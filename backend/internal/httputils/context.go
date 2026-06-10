@@ -14,7 +14,17 @@ type key string
 const (
 	AccessKey  key = "access_token"
 	RefreshKey key = "refresh_token"
+	JTIKey     key = "access_token_jti"
 )
+
+func GetAccessTokenJTI(ctx context.Context) string {
+	jti, _ := ctx.Value(JTIKey).(string)
+	return jti
+}
+
+func WithAccessTokenJTI(ctx context.Context, jti string) context.Context {
+	return context.WithValue(ctx, JTIKey, jti)
+}
 
 func GetAccessClaim(ctx context.Context) *jwtutils.Claim {
 	claims, _ := ctx.Value(AccessKey).(*jwtutils.Claim)

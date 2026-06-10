@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -28,6 +29,11 @@ func (j *JWT) Encode(claim Claim) (string, error) {
 }
 
 func (j *JWT) EncodeWithTTL(claim Claim, ttl time.Duration) (string, error) {
+	jti, err := uuid.NewV7()
+	if err != nil {
+		return "", fmt.Errorf("generate jti: %w", err)
+	}
+	claim.ID = jti.String()
 	claim.ExpiresAt = jwt.NewNumericDate(time.Now().Add(ttl))
 	claim.IssuedAt = jwt.NewNumericDate(time.Now())
 

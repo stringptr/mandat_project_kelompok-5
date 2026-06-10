@@ -6,6 +6,7 @@ var (
 	ErrAccountStatusPending  = errors.New("account verification still pending")
 	ErrAccountStatusRejected = errors.New("account verification rejected")
 	ErrNIKEmailExist         = errors.New("combination of email and NIK already used")
+	ErrNotFound              = errors.New("pengguna tidak ditemukan")
 	ErrNotDeleted            = errors.New("fail to delete account")
 	ErrNotCreated            = errors.New("fail to create account")
 	ErrNotUpdated            = errors.New("fail to update account")

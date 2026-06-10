@@ -16,18 +16,19 @@ import (
 )
 
 type Dependency struct {
-	AuthConfig      config.AuthConfig
-	JWTUtil         jwtutils.JWT
-	UserAccountRepo userAccountDomain.Repo
-	UserSessionRepo userSessionDomain.Repo
-	AuthRepo        authDomain.Repo
-	AuthService     authDomain.Service
-	AuthHandler     authDomain.Handler
-	BanRepo         bannedipDomain.Repo
-	BanAuthRepo     bannedipDomain.Repo
-	BlacklistRepo   jwtblacklistDomain.Repo
-	NotifPublisher  notificationDomain.Publisher
-	NotifHandler    notificationDomain.Handler
+	AuthConfig          config.AuthConfig
+	JWTUtil             jwtutils.JWT
+	UserAccountRepo     userAccountDomain.Repo
+	UserAccountHandler  userAccountDomain.Handler
+	UserSessionRepo     userSessionDomain.Repo
+	AuthRepo            authDomain.Repo
+	AuthService         authDomain.Service
+	AuthHandler         authDomain.Handler
+	BanRepo             bannedipDomain.Repo
+	BanAuthRepo         bannedipDomain.Repo
+	BlacklistRepo       jwtblacklistDomain.Repo
+	NotifPublisher      notificationDomain.Publisher
+	NotifHandler        notificationDomain.Handler
 }
 
 func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
@@ -45,7 +46,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	adminGroup.UseMiddleware(middleware.RequireRole(authAccess, "ADMIN"))
 	bidanGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN"))
 	kaderGroup.UseMiddleware(middleware.RequireRole(authAccess, "KADER"))
-	dinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "DINKES"))
+	dinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "ADMIN_DINKES"))
 
 	nonAuthenticatedOnlyGroup := huma.NewGroup(api, "")
 	nonAuthenticatedOnlyGroup.UseMiddleware(middleware.NonAuthenticatedOnlyMiddleware(api, &d.JWTUtil, d.BlacklistRepo))
@@ -60,9 +61,17 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 
 	huma.Patch(adminGroup, "/users/{id_user}/verification", d.AuthHandler.VerifyUser)
 
+	// User Management routes — ADMIN and DINKES can list all users
+	usermgtGroup := huma.NewGroup(authAccess, "")
+	usermgtGroup.UseMiddleware(middleware.RequireRole(authAccess, "ADMIN", "ADMIN_DINKES"))
+
+	huma.Get(usermgtGroup, "/users", d.UserAccountHandler.GetAllUsers)
+	huma.Get(userGroup, "/users/{id}", d.UserAccountHandler.GetUserByID)
+	huma.Patch(userGroup, "/users/{id}", d.UserAccountHandler.UpdateUser)
+
 	// Notifikasi routes
 	notifBidanKaderDinkesGroup := huma.NewGroup(authAccess, "")
-	notifBidanKaderDinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN", "KADER", "DINKES"))
+	notifBidanKaderDinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN", "KADER", "ADMIN_DINKES"))
 
 	huma.Get(authAccess, "/notifikasi", d.NotifHandler.GetNotifikasi)
 	huma.Get(authAccess, "/notifikasi/{id}", d.NotifHandler.GetNotifikasiDetail)

@@ -69,6 +69,8 @@ func main() {
 	}
 
 	userAccountRepo := userAccount.NewRepo(pool)
+	userAccountService := userAccount.NewService(userAccountRepo)
+	userAccountHandler := userAccount.NewHandler(userAccountService)
 	userSessionRepo := userSession.NewRepo(pool)
 	authRepo := auth.NewRepo(pool)
 	banRepo := bannedip.NewRepo(natsutil.NewKV(bannedIPKV))
@@ -138,17 +140,18 @@ func main() {
 
 	v1Group := huma.NewGroup(api, "/v1")
 	v1.RegisterRoutes(v1Group, r, &v1.Dependency{
-		AuthConfig:      cfg.AuthConfig,
-		JWTUtil:         jwtUtil,
-		UserAccountRepo: userAccountRepo,
-		UserSessionRepo: userSessionRepo,
-		AuthRepo:        authRepo,
-		AuthService:     authService,
-		AuthHandler:     authHandler,
-		BanRepo:         banRepo,
-		BlacklistRepo:   blacklistRepo,
-		NotifPublisher:  notifPublisher,
-		NotifHandler:    notifHandler,
+		AuthConfig:         cfg.AuthConfig,
+		JWTUtil:            jwtUtil,
+		UserAccountRepo:    userAccountRepo,
+		UserAccountHandler: userAccountHandler,
+		UserSessionRepo:    userSessionRepo,
+		AuthRepo:           authRepo,
+		AuthService:        authService,
+		AuthHandler:        authHandler,
+		BanRepo:            banRepo,
+		BlacklistRepo:      blacklistRepo,
+		NotifPublisher:     notifPublisher,
+		NotifHandler:       notifHandler,
 	})
 
 	log.Printf("server starting on %s:%s", cfg.Host, cfg.Port)

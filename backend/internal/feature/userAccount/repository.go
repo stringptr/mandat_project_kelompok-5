@@ -107,6 +107,22 @@ func (r *Repo) Create(ctx context.Context, userAccModel *model.UserAccount) erro
 	return nil
 }
 
+func (r *Repo) UpdateStatusVerifikasi(ctx context.Context, IDUser int32, status model.StatusVerifikasi) error {
+	stmt := UserAccount.UPDATE(UserAccount.StatusVerifikasi, UserAccount.UpdatedAt).
+		SET(String(status.String()), Raw("CURRENT_TIMESTAMP")).
+		WHERE(UserAccount.IDUser.EQ(Int32(IDUser)))
+
+	res, err := pgxV5.Exec(ctx, stmt, r.db)
+	if err != nil {
+		return err
+	}
+	if res.RowsAffected() == 0 {
+		return userAccountDomain.ErrNotUpdated
+	}
+
+	return nil
+}
+
 func (r *Repo) DeleteByID(ctx context.Context, IDUser int32) error {
 	stmt := UserAccount.DELETE().WHERE(UserAccount.IDUser.EQ(Int32(IDUser)))
 	res, err := pgxV5.Exec(ctx, stmt, r.db)

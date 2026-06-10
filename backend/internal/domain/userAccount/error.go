@@ -8,4 +8,5 @@ var (
 	ErrNIKEmailExist         = errors.New("combination of email and NIK already used")
 	ErrNotDeleted            = errors.New("fail to delete account")
 	ErrNotCreated            = errors.New("fail to create account")
+	ErrNotUpdated            = errors.New("fail to update account")
 )

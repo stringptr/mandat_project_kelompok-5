@@ -279,3 +279,30 @@ func (s *Service) Logout(ctx context.Context, refreshToken uuid.UUID, accessToke
 
 	return nil
 }
+
+func (s *Service) VerifyUser(ctx context.Context, req *authDomain.VerifyUserRequest) *errorutils.Error {
+	user, err := s.userRepo.GetByID(ctx, req.IDUser)
+	if err != nil {
+		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
+	}
+	if user == nil {
+		return &errorutils.Error{Status: http.StatusNotFound, Message: "Akun tidak ditemukan."}
+	}
+
+	var newStatus model.StatusVerifikasi
+	switch req.Status {
+	case "Aktif":
+		newStatus = model.StatusVerifikasi_Aktif
+	case "Ditolak":
+		newStatus = model.StatusVerifikasi_Ditolak
+	default:
+		return &errorutils.Error{Status: http.StatusBadRequest, Message: "Status yang dimasukkan tidak valid."}
+	}
+
+	err = s.userRepo.UpdateStatusVerifikasi(ctx, req.IDUser, newStatus)
+	if err != nil {
+		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
+	}
+
+	return nil
+}

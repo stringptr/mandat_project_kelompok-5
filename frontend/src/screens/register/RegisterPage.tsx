@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, ShieldCheck, Headset, ArrowLeft, ArrowRight, Upload, User, Mail, Lock, Phone, Calendar, MapPin, BookOpen, Briefcase, Users } from 'lucide-react';
-import type { Role } from '../../App';
+import { CheckCircle, ShieldCheck, Headset, ArrowLeft, ArrowRight, User, Mail, Lock, Phone, Calendar, MapPin, BookOpen, Briefcase, Users } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type RegisterRole = 'Ibu/Wali' | 'Bidan' | 'Kader Posyandu';

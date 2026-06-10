@@ -10,7 +10,7 @@ interface ModalTambahJadwalProps {
 
 export function ModalTambahJadwal({ onClose, onSimpan }: ModalTambahJadwalProps): JSX.Element {
   const [idPasien, setIdPasien] = useState('');
-  const [namaAnak, setNamaAnak] = useState('');
+  const [namaAnak] = useState('');
   const [namaVaksin, setNamaVaksin] = useState('');
   const [tanggalJadwal, setTanggalJadwal] = useState('');
   const [status, setStatus] = useState<'BELUM' | 'SUDAH'>('BELUM');

@@ -1,38 +1,27 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Search, Bell, LogOut, LogIn } from 'lucide-react';
+import { Search, Bell, LogOut, LogIn, ChevronDown, ArrowRight } from 'lucide-react';
 import type { Role } from '../App';
 import { useAuth } from '../context/AuthContext';
+import { NOTIF_PREVIEW, CATEGORY_DOT } from '../screens/notifikasi/data/notifikasi.data';
 
 interface HeaderProps {
   currentRole?: Role;
   onLoginClick: () => void;
+  onChangeRole?: (role: Role) => void;
 }
 
 const PAGE_TITLES: Record<string, string> = {
-  '/': 'Dashboard',
+  '/': 'Dashboard Overview',
   '/monitoring': 'Monitoring Gizi Ibu dan Anak',
   '/tindak-lanjut': 'Tindak Lanjut',
   '/jadwal-imunisasi': 'Jadwal Imunisasi',
-  '/edukasi': 'Edukasi Hub',
+  '/edukasi': 'Edukasi',
   '/user-management': 'User Management',
   '/notifikasi': 'Notifikasi',
 };
 
-interface Notification {
-  id: number;
-  message: string;
-  time: string;
-  unread: boolean;
-}
-
-const NOTIFICATIONS: Notification[] = [
-  { id: 1, message: 'Data ibu hamil baru perlu verifikasi', time: '5 menit lalu', unread: true },
-  { id: 2, message: 'Laporan bulanan telah diapprove', time: '1 jam lalu', unread: true },
-  { id: 3, message: 'Jadwal edukasi besok pukul 09:00', time: '3 jam lalu', unread: false },
-];
-
-export function Header({ currentRole, onLoginClick }: HeaderProps): JSX.Element {
+export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps): JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isLoggedIn, logout } = useAuth();
@@ -42,24 +31,46 @@ export function Header({ currentRole, onLoginClick }: HeaderProps): JSX.Element 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const pageTitle = PAGE_TITLES[location.pathname] || 'SiGizi';
-  const unreadCount = NOTIFICATIONS.filter((n) => n.unread).length;
+
+  // Preview notifikasi sesuai role yang sedang login
+  const previewItems = isLoggedIn && currentRole ? (NOTIF_PREVIEW[currentRole] ?? []) : [];
+  const unreadCount = previewItems.filter((n) => !n.read).length || previewItems.length;
 
   const handleLogout = () => {
     setShowProfileMenu(false);
     logout();
+    navigate('/');
   };
 
   return (
     <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-neutral-100 relative z-30">
-      {/* Left: page title + role badge */}
+      {/* Left: page title + role badge/switcher */}
       <div className="flex items-center gap-3">
         <h1 className="text-xl font-bold text-neutral-800 font-headline">{pageTitle}</h1>
         {isLoggedIn && currentRole && (
           <>
             <div className="h-5 w-px bg-neutral-200" />
-            <span className="text-xs font-semibold text-primary border border-primary px-2.5 py-1 rounded-lg font-body">
-              {currentRole}
-            </span>
+            {onChangeRole ? (
+              <div className="relative flex items-center">
+                <select
+                  value={currentRole}
+                  onChange={(e) => onChangeRole(e.target.value as Role)}
+                  className="appearance-none bg-white border border-primary text-primary text-xs font-semibold px-3 py-1.5 pr-8 rounded-lg focus:outline-none cursor-pointer"
+                >
+                  <option value="Ibu/Wali">Role: Ibu/Wali</option>
+                  <option value="Bidan">Role: Bidan</option>
+                  <option value="Dinas Kesehatan">Role: Dinas Kesehatan</option>
+                  <option value="Kader Posyandu">Role: Kader Posyandu</option>
+                </select>
+                <span className="absolute right-2.5 pointer-events-none text-primary">
+                  <ChevronDown size={14} />
+                </span>
+              </div>
+            ) : (
+              <span className="text-xs font-semibold text-primary border border-primary px-2.5 py-1 rounded-lg font-body">
+                {currentRole}
+              </span>
+            )}
           </>
         )}
       </div>
@@ -82,7 +93,7 @@ export function Header({ currentRole, onLoginClick }: HeaderProps): JSX.Element 
 
         {isLoggedIn ? (
           <>
-            {/* Notification bell */}
+            {/* Notification bell — preview dropdown */}
             <div className="relative">
               <button
                 onClick={() => { setShowNotifications(!showNotifications); setShowProfileMenu(false); }}
@@ -97,22 +108,66 @@ export function Header({ currentRole, onLoginClick }: HeaderProps): JSX.Element 
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-lg border border-neutral-100 py-2 z-50">
-                  <div className="px-4 py-2 border-b border-neutral-100">
-                    <span className="text-sm font-semibold text-neutral-800 font-headline">Notifikasi</span>
-                  </div>
-                  {NOTIFICATIONS.map((n) => (
-                    <div key={n.id} className={`px-4 py-3 hover:bg-neutral-50 cursor-pointer ${n.unread ? 'bg-primary-50/50' : ''}`}>
-                      <p className="text-sm text-neutral-700 font-body">{n.message}</p>
-                      <p className="text-xs text-neutral-400 mt-1 font-body">{n.time}</p>
+                <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-2xl shadow-xl border border-neutral-100 overflow-hidden z-50">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-100">
+                    <div className="flex items-center gap-2">
+                      <Bell size={15} className="text-neutral-500" />
+                      <span className="text-sm font-bold text-neutral-800 font-headline">Notifikasi</span>
+                      {unreadCount > 0 && (
+                        <span className="text-[10px] font-bold bg-red-500 text-white px-2 py-0.5 rounded-full">
+                          {unreadCount} baru
+                        </span>
+                      )}
                     </div>
-                  ))}
-                  <div className="px-4 py-2 border-t border-neutral-100 text-center">
                     <button
                       onClick={() => { navigate('/notifikasi'); setShowNotifications(false); }}
-                      className="text-xs text-primary font-medium hover:text-primary-600 font-body"
+                      className="text-xs text-primary font-semibold hover:text-primary-600 transition-colors flex items-center gap-1"
                     >
-                      Lihat Semua
+                      Lihat Semua <ArrowRight size={11} />
+                    </button>
+                  </div>
+
+                  {/* Preview list */}
+                  <div className="divide-y divide-neutral-50 max-h-80 overflow-y-auto">
+                    {previewItems.slice(0, 4).map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => { navigate('/notifikasi'); setShowNotifications(false); }}
+                        className="flex items-start gap-3 px-5 py-3.5 hover:bg-neutral-50 cursor-pointer transition-colors"
+                      >
+                        {/* Category dot */}
+                        <div className="flex-shrink-0 mt-1.5">
+                          <span className={`w-2 h-2 rounded-full block ${CATEGORY_DOT[item.category] ?? 'bg-neutral-300'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-neutral-800 leading-snug truncate">{item.title}</p>
+                          {item.description && (
+                            <p className="text-xs text-neutral-500 mt-0.5 line-clamp-1 leading-relaxed">{item.description}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className="text-[10px] text-neutral-400">{item.time}</span>
+                            {item.tags[0] && (
+                              <span
+                                className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                                style={{ color: item.tags[0].color, backgroundColor: item.tags[0].bg }}
+                              >
+                                {item.tags[0].label}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Footer CTA */}
+                  <div className="px-5 py-3 bg-neutral-50 border-t border-neutral-100">
+                    <button
+                      onClick={() => { navigate('/notifikasi'); setShowNotifications(false); }}
+                      className="w-full py-2 bg-primary hover:bg-primary-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      Buka Semua Notifikasi <ArrowRight size={12} />
                     </button>
                   </div>
                 </div>

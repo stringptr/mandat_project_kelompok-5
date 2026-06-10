@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, Calendar, FileWarning, Plus, Printer } from 'lucide-react';
+import { AlertCircle, Calendar, FileWarning, Plus } from 'lucide-react';
 import { StatCard } from '../components/statcard';
 import { ChartWidget } from '../components/chartwidget';
 import { DataTable, type Column } from '../components/datatable';

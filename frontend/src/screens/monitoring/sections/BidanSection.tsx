@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { AlertTriangle, ClipboardCheck, CalendarDays, Plus, FileText } from 'lucide-react';
+import { AlertTriangle, ClipboardCheck, CalendarDays, Plus } from 'lucide-react';
 import { StatCard } from '../components/statcard';
 import { ChartWidget } from '../components/chartwidget';
 import { DataTable, type Column } from '../components/datatable';
 import { StatusBadge } from '../components/statusbadge';
 import { FilterBar } from '../components/filterbar';
-import ModalTambahPemeriksaan, { type FormDataTambah, type PasienOption } from '../components/Modaltambah';
+import ModalTambahPemeriksaan, { type FormDataTambah, type PasienOption } from '../components/modaltambah';
 import ModalEditPemeriksaan, { type PemeriksaanData } from '../components/modalubah';
 import ModalHapusPemeriksaan from '../components/modalhapus';
+import { ModalVerifikasiBidan } from '../../../components/verifikasi/ModalVerifikasiBidan';
+import type { VerifikasiTarget } from '../../../components/verifikasi/VerifikasiPanel';
 
 // === Types ===
 interface BalitaUrgent {
@@ -25,7 +27,7 @@ interface BalitaUrgent {
 }
 
 // === Dummy Data ===
-const BALITA_URGENT: BalitaUrgent[] = [
+const INITIAL_BALITA: BalitaUrgent[] = [
   { no: 1, id: 'b1', nama: 'Danu Saputra', ibu: 'Linda Sari', usia: '38 Bln', bb: '12.1', tb: '84.2', statusGizi: 'Stunting', verifikasi: 'Pending', prioritas: 'Tinggi' },
   { no: 2, id: 'b2', nama: 'Arka Mahendra', ibu: 'Rina Marlina', usia: '24 Bln', bb: '10.2', tb: '76.0', statusGizi: 'Gizi Kurang', verifikasi: 'Pending', prioritas: 'Tinggi' },
   { no: 3, id: 'b3', nama: 'Nabila Putri', ibu: 'Dewi Anggraini', usia: '18 Bln', bb: '8.5', tb: '72.1', statusGizi: 'Gizi Kurang', verifikasi: 'Verified', prioritas: 'Sedang' },
@@ -35,7 +37,7 @@ const BALITA_URGENT: BalitaUrgent[] = [
 ];
 
 // Daftar pasien untuk step-1 modal tambah (bisa diganti data dari API)
-const PASIEN_LIST: PasienOption[] = BALITA_URGENT.map(b => ({
+const PASIEN_LIST: PasienOption[] = INITIAL_BALITA.map(b => ({
   id: b.id,
   nama: b.nama,
   namaIbu: b.ibu,
@@ -52,6 +54,7 @@ const DISTRIBUSI_GIZI = [
 ];
 
 export function BidanSection() {
+  const [balitaData, setBalitaData] = useState<BalitaUrgent[]>(INITIAL_BALITA);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('Semua');
 
@@ -66,6 +69,9 @@ export function BidanSection() {
   const [modalHapus, setModalHapus] = useState(false);
   const [hapusTarget, setHapusTarget] = useState<{ id: string; nama: string; tanggal: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // — Modal Verifikasi —
+  const [verifikasiTarget, setVerifikasiTarget] = useState<VerifikasiTarget | null>(null);
 
   // === Handlers ===
   const openTambah = () => setModalTambah(true);
@@ -93,6 +99,40 @@ export function BidanSection() {
     setModalHapus(true);
   };
 
+  const openVerifikasi = (row: BalitaUrgent) => {
+    const WARNA_MAP: Record<number, { bg: string; text: string }> = {
+      0: { bg: 'bg-primary', text: 'text-white' },
+      1: { bg: 'bg-blue-500', text: 'text-white' },
+      2: { bg: 'bg-amber-500', text: 'text-white' },
+      3: { bg: 'bg-violet-500', text: 'text-white' },
+    };
+    const idx = row.no % 4;
+    const warna = WARNA_MAP[idx] ?? WARNA_MAP[0];
+    const inisial = row.nama.split(' ').map(w => w[0]).slice(0, 2).join('');
+    setVerifikasiTarget({
+      id: row.id,
+      nama: row.nama,
+      inisial,
+      warnaBg: warna.bg,
+      warnaText: warna.text,
+      usia: row.usia,
+      bb: row.bb,
+      tb: row.tb,
+      petugas: 'Siti Aminah · Posyandu Melati 02',
+      statusGizi: row.statusGizi,
+    });
+  };
+
+  const handleVerifikasiSetuju = (id: string, _catatan: string) => {
+    setBalitaData(prev => prev.map(b => b.id === id ? { ...b, verifikasi: 'Verified' } : b));
+    setVerifikasiTarget(null);
+  };
+
+  const handleVerifikasiTolak = (id: string, _catatan: string) => {
+    setBalitaData(prev => prev.map(b => b.id === id ? { ...b, verifikasi: 'Rejected' } : b));
+    setVerifikasiTarget(null);
+  };
+
   const handleTambahSubmit = (pasienId: string, namaAnak: string, data: FormDataTambah) => {
     console.log('Tambah data pasien:', pasienId, namaAnak, data);
     // TODO: POST ke API
@@ -107,7 +147,7 @@ export function BidanSection() {
     if (!hapusTarget) return;
     setIsDeleting(true);
     try {
-      await new Promise(r => setTimeout(r, 1000)); // ganti dengan API call
+      await new Promise(r => setTimeout(r, 1000));
       console.log('Hapus id:', hapusTarget.id);
       setModalHapus(false);
       setHapusTarget(null);
@@ -144,7 +184,7 @@ export function BidanSection() {
       header: 'VERIFIKASI',
       accessor: 'verifikasi',
       render: (row) => {
-        const v = row.verifikasi === 'Verified' ? 'verified' : 'pending';
+        const v = row.verifikasi === 'Verified' ? 'verified' : row.verifikasi === 'Rejected' ? 'urgent' : 'pending';
         return <StatusBadge variant={v} />;
       },
     },
@@ -160,7 +200,19 @@ export function BidanSection() {
       header: 'AKSI',
       accessor: 'id',
       render: (row) => (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Verifikasi — only for Pending */}
+          {row.verifikasi === 'Pending' && (
+            <button
+              onClick={() => openVerifikasi(row)}
+              className="flex items-center gap-1 text-xs text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1.5 rounded-lg transition-colors font-medium"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Verifikasi
+            </button>
+          )}
           <button
             onClick={() => openEdit(row)}
             className="flex items-center gap-1 text-xs text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1.5 rounded-lg transition-colors"
@@ -185,7 +237,7 @@ export function BidanSection() {
   ];
 
   // === Filtered data ===
-  const filteredData = BALITA_URGENT.filter(row => {
+  const filteredData = balitaData.filter(row => {
     const matchSearch =
       !search ||
       row.nama.toLowerCase().includes(search.toLowerCase()) ||
@@ -216,7 +268,7 @@ export function BidanSection() {
         />
         <StatCard
           title="Perlu Verifikasi"
-          value="7"
+          value={String(balitaData.filter(b => b.verifikasi === 'Pending').length)}
           icon={<ClipboardCheck size={22} />}
           variant="icon"
           color="amber"
@@ -235,7 +287,7 @@ export function BidanSection() {
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
         <button
-          onClick={() => openTambah()}
+          onClick={openTambah}
           className="inline-flex items-center gap-2 bg-primary hover:bg-primary-600 text-white rounded-xl px-5 py-2.5 text-sm font-medium transition-colors"
         >
           <Plus size={16} />
@@ -321,6 +373,16 @@ export function BidanSection() {
         onConfirm={handleHapusConfirm}
         isLoading={isDeleting}
       />
+
+      {/* Verifikasi Modal — muncul saat bidan klik tombol Verifikasi di tabel */}
+      {verifikasiTarget && (
+        <ModalVerifikasiBidan
+          target={verifikasiTarget}
+          onClose={() => setVerifikasiTarget(null)}
+          onSetuju={handleVerifikasiSetuju}
+          onTolak={handleVerifikasiTolak}
+        />
+      )}
     </div>
   );
 }

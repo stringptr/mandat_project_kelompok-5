@@ -26,6 +26,7 @@ type UserAccount struct {
 	IDPekerjaan      *int32
 	IDPendapatan     *int32
 	JumlahTanggungan *int32
+	AkunKe           int32
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }

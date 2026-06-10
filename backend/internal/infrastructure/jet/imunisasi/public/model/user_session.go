@@ -8,9 +8,8 @@
 package model
 
 import (
+	"github.com/google/uuid"
 	"time"
-
-	"github.com/gofrs/uuid/v5"
 )
 
 type UserSession struct {

@@ -47,8 +47,8 @@ func (r *Repo) GetByUserID(ctx context.Context, idUser int32, search string, lim
 	if search != "" {
 		searchPattern := "%" + strings.ToLower(search) + "%"
 		conditions = conditions.AND(
-			Notifikasi.Judul.ILIKE(String(searchPattern)).
-				OR(Notifikasi.Pesan.ILIKE(String(searchPattern))),
+			LOWER(Notifikasi.Judul).LIKE(String(searchPattern)).
+				OR(LOWER(Notifikasi.Pesan).LIKE(String(searchPattern))),
 		)
 	}
 
@@ -56,8 +56,8 @@ func (r *Repo) GetByUserID(ctx context.Context, idUser int32, search string, lim
 		FROM(Notifikasi).
 		WHERE(conditions).
 		ORDER_BY(Notifikasi.TanggalKirim.DESC()).
-		LIMIT(limit).
-		OFFSET(offset)
+		LIMIT(int64(limit)).
+		OFFSET(int64(offset))
 
 	err := pgxV5.Query(ctx, stmt, r.db, &notif)
 	if err != nil {
@@ -75,12 +75,12 @@ func (r *Repo) CountByUserID(ctx context.Context, idUser int32, search string) (
 	if search != "" {
 		searchPattern := "%" + strings.ToLower(search) + "%"
 		conditions = conditions.AND(
-			Notifikasi.Judul.ILIKE(String(searchPattern)).
-				OR(Notifikasi.Pesan.ILIKE(String(searchPattern))),
+			LOWER(Notifikasi.Judul).LIKE(String(searchPattern)).
+				OR(LOWER(Notifikasi.Pesan).LIKE(String(searchPattern))),
 		)
 	}
 
-	stmt := SELECT(COUNT(Star).AS("count")).
+	stmt := SELECT(COUNT(STAR).AS("count")).
 		FROM(Notifikasi).
 		WHERE(conditions)
 
@@ -96,7 +96,7 @@ func (r *Repo) CountUnreadByUserID(ctx context.Context, idUser int32) (int32, er
 		Count int32
 	}
 
-	stmt := SELECT(COUNT(Star).AS("count")).
+	stmt := SELECT(COUNT(STAR).AS("count")).
 		FROM(Notifikasi).
 		WHERE(Notifikasi.IDUser.EQ(Int32(idUser)).
 			AND(Notifikasi.StatusBaca.EQ(Bool(false))))
@@ -145,7 +145,7 @@ func (r *Repo) Create(ctx context.Context, data *model.Notifikasi) error {
 func (r *Repo) getBidanIDByUserID(ctx context.Context, idUser int32) (int32, error) {
 	var bidans []*model.Bidan
 
-	stmt := SELECT(Bidan.IDBidan).
+	stmt := SELECT(Bidan.IDUser).
 		FROM(Bidan).
 		WHERE(Bidan.IDUser.EQ(Int32(idUser))).
 		LIMIT(1)
@@ -157,7 +157,7 @@ func (r *Repo) getBidanIDByUserID(ctx context.Context, idUser int32) (int32, err
 	if len(bidans) == 0 {
 		return 0, nil
 	}
-	return bidans[0].IDBidan, nil
+	return bidans[0].IDUser, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -202,7 +202,7 @@ func (r *Repo) getTodayNotifikasi(ctx context.Context, idUser int32) ([]*model.N
 	stmt := SELECT(Notifikasi.AllColumns).
 		FROM(Notifikasi).
 		WHERE(Notifikasi.IDUser.EQ(Int32(idUser)).
-			AND(Notifikasi.TanggalKirim.GT_EQ(Raw("CURRENT_DATE")))).
+			AND(Notifikasi.TanggalKirim.GT_EQ(RawTimestampz("CURRENT_DATE")))).
 		ORDER_BY(Notifikasi.TanggalKirim.DESC())
 
 	err := pgxV5.Query(ctx, stmt, r.db, &notif)
@@ -218,8 +218,8 @@ func (r *Repo) getYesterdayNotifikasi(ctx context.Context, idUser int32) ([]*mod
 	stmt := SELECT(Notifikasi.AllColumns).
 		FROM(Notifikasi).
 		WHERE(Notifikasi.IDUser.EQ(Int32(idUser)).
-			AND(Notifikasi.TanggalKirim.GT_EQ(Raw("CURRENT_DATE - INTERVAL '1 day'"))).
-			AND(Notifikasi.TanggalKirim.LT(Raw("CURRENT_DATE")))).
+			AND(Notifikasi.TanggalKirim.GT_EQ(RawTimestampz("CURRENT_DATE - INTERVAL '1 day'"))).
+			AND(Notifikasi.TanggalKirim.LT(RawTimestampz("CURRENT_DATE")))).
 		ORDER_BY(Notifikasi.TanggalKirim.DESC())
 
 	err := pgxV5.Query(ctx, stmt, r.db, &notif)
@@ -238,10 +238,10 @@ func (r *Repo) countBidanJadwalKontrol(ctx context.Context, idBidan int32) (int3
 		Count int32
 	}
 
-	stmt := SELECT(COUNT(Star).AS("count")).
+	stmt := SELECT(COUNT(STAR).AS("count")).
 		FROM(TindakLanjut).
 		WHERE(TindakLanjut.IDBidan.EQ(Int32(idBidan)).
-			AND(TindakLanjut.JadwalKontrol.GT_EQ(Raw("CURRENT_DATE"))))
+			AND(TindakLanjut.JadwalKontrol.GT_EQ(RawDate("CURRENT_DATE"))))
 
 	err := pgxV5.Query(ctx, stmt, r.db, &count)
 	if err != nil {
@@ -281,7 +281,7 @@ func (r *Repo) countBidanRujukanMendesak(ctx context.Context, idBidan int32) (in
 		Count int32
 	}
 
-	stmt := SELECT(COUNT(Star).AS("count")).
+	stmt := SELECT(COUNT(STAR).AS("count")).
 		FROM(
 			Rujukan.
 			INNER_JOIN(TindakLanjut, Rujukan.IDTindakLanjut.EQ(TindakLanjut.IDTindakLanjut)),
@@ -352,7 +352,7 @@ func (r *Repo) getBidanJadwalMonitoringList(ctx context.Context, idBidan int32) 
 			INNER_JOIN(Anak, Pasien.IDPasien.EQ(Anak.IDPasien)),
 		).
 		WHERE(TindakLanjut.IDBidan.EQ(Int32(idBidan)).
-			AND(TindakLanjut.JadwalKontrol.GT_EQ(Raw("CURRENT_DATE")))).
+			AND(TindakLanjut.JadwalKontrol.GT_EQ(RawDate("CURRENT_DATE")))).
 		ORDER_BY(TindakLanjut.JadwalKontrol.ASC())
 
 	err := pgxV5.Query(ctx, stmt, r.db, &rows)
@@ -408,8 +408,8 @@ func (r *Repo) getBidanLaporanBulanan(ctx context.Context, idBidan int32) (*lapo
 			LEFT_JOIN(Rujukan, Rujukan.IDTindakLanjut.EQ(TindakLanjut.IDTindakLanjut)),
 		).
 		WHERE(TindakLanjut.IDBidan.EQ(Int32(idBidan)).
-			AND(TindakLanjut.CreatedAt.GT_EQ(Raw("DATE_TRUNC('month', CURRENT_DATE)"))).
-			AND(TindakLanjut.CreatedAt.LT(Raw("DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'"))))
+			AND(TindakLanjut.CreatedAt.GT_EQ(RawTimestampz("DATE_TRUNC('month', CURRENT_DATE)"))).
+			AND(TindakLanjut.CreatedAt.LT(RawTimestampz("DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'"))))
 
 	err := pgxV5.Query(ctx, stmt, r.db, &row)
 	if err != nil {

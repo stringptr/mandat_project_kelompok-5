@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid/v5"
+	guuid "github.com/google/uuid"
 	"github.com/jinzhu/copier"
 	"github.com/stringptr/SiGizi/backend/internal/config"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
@@ -192,7 +193,7 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 
 	refreshTokenExpireDate := time.Now().Add(s.authCfg.RefreshTokenTTL)
 	session := &model.UserSession{
-		IDSession:     newUUID,
+		IDSession:     guuid.UUID(newUUID),
 		IDUser:        user.IDUser,
 		StatusSession: model.StatusSession_Aktif,
 		IPAddress:     &ip,
@@ -223,7 +224,7 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 
 	return &authDomain.AuthResponse{
 		AccessToken:           accessToken,
-		RefreshToken:          session.IDSession,
+		RefreshToken:          uuid.UUID(session.IDSession),
 		AccessTokenExpiresIn:  int64(s.authCfg.AccessTokenTTL.Seconds()),
 		RefreshTokenExpiresIn: int64(s.authCfg.RefreshTokenTTL.Seconds()),
 	}, nil
@@ -291,7 +292,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string
 
 	refreshTokenExpireDate := time.Now().Add(s.authCfg.RefreshTokenTTL)
 	session = &model.UserSession{
-		IDSession:     newUUID,
+		IDSession:     guuid.UUID(newUUID),
 		IDUser:        user.IDUser,
 		StatusSession: model.StatusSession_Aktif,
 		IPAddress:     &ip,
@@ -315,7 +316,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string
 
 	return &authDomain.AuthResponse{
 		AccessToken:           accessToken,
-		RefreshToken:          session.IDSession,
+		RefreshToken:          uuid.UUID(session.IDSession),
 		AccessTokenExpiresIn:  int64(s.authCfg.AccessTokenTTL.Seconds()),
 		RefreshTokenExpiresIn: int64(s.authCfg.RefreshTokenTTL.Seconds()),
 	}, nil

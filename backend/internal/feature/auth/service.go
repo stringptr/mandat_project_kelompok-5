@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/stringptr/SiGizi/backend/internal/config"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
+	auditlogDomain "github.com/stringptr/SiGizi/backend/internal/domain/auditlog"
 	bannedipDomain "github.com/stringptr/SiGizi/backend/internal/domain/bannedip"
 	jwtblacklistDomain "github.com/stringptr/SiGizi/backend/internal/domain/jwtblacklist"
 	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
@@ -34,6 +36,7 @@ type Service struct {
 	restrictAuthCfg *config.RestrictAuthConfig
 	banRepo         bannedipDomain.Repo
 	blacklistRepo   jwtblacklistDomain.Repo
+	auditRepo       auditlogDomain.Repo
 }
 
 func NewService(
@@ -45,6 +48,7 @@ func NewService(
 	restrictAuthCfg *config.RestrictAuthConfig,
 	banRepo bannedipDomain.Repo,
 	blacklistRepo jwtblacklistDomain.Repo,
+	auditRepo auditlogDomain.Repo,
 ) *Service {
 	return &Service{
 		authRepo:        authRepo,
@@ -55,7 +59,25 @@ func NewService(
 		restrictAuthCfg: restrictAuthCfg,
 		banRepo:         banRepo,
 		blacklistRepo:   blacklistRepo,
+		auditRepo:       auditRepo,
 	}
+}
+
+func (s *Service) logAudit(ctx context.Context, endpoint string, tipeAktivitas model.TipeAktivitas, berhasil bool, tableName string, recordID string, detail string) {
+	tipeAktor := model.TipeAktor_User
+	claims := httputils.GetAccessClaim(ctx)
+	if claims == nil {
+		tipeAktor = model.TipeAktor_Anonymous
+	}
+	s.auditRepo.Log(ctx, &model.AuditLog{
+		TipeAktor:     &tipeAktor,
+		TipeAktivitas: &tipeAktivitas,
+		Berhasil:      &berhasil,
+		Endpoint:      &endpoint,
+		TableName:     &tableName,
+		RecordID:      &recordID,
+		Detail:        &detail,
+	})
 }
 
 func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequest, ip string) *errorutils.Error {
@@ -121,6 +143,7 @@ func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequ
 		}
 	}
 
+	s.logAudit(ctx, "POST /auth/register", model.TipeAktivitas_Registrasi, true, "user_account", strconv.Itoa(int(idUser)), "Berhasil mendaftarkan akun")
 	return nil
 }
 
@@ -222,6 +245,7 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 
+	s.logAudit(ctx, "POST /auth/login", model.TipeAktivitas_Login, true, "user_session", session.IDSession.String(), "Login berhasil: "+user.Email)
 	return &authDomain.AuthResponse{
 		AccessToken:           accessToken,
 		RefreshToken:          uuid.UUID(session.IDSession),
@@ -314,6 +338,7 @@ func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pembaruan sesi. Silahkan login ulang."}
 	}
 
+	s.logAudit(ctx, "POST /auth/refresh", model.TipeAktivitas_Login, true, "user_session", session.IDSession.String(), "Refresh token berhasil untuk user "+strconv.Itoa(int(session.IDUser)))
 	return &authDomain.AuthResponse{
 		AccessToken:           accessToken,
 		RefreshToken:          uuid.UUID(session.IDSession),
@@ -341,6 +366,7 @@ func (s *Service) Logout(ctx context.Context, refreshToken uuid.UUID, accessToke
 		s.blacklistRepo.Blacklist(ctx, accessTokenJTI, session.IDUser, "logout", s.authCfg.AccessTokenTTL)
 	}
 
+	s.logAudit(ctx, "POST /auth/logout", model.TipeAktivitas_Login, true, "user_session", refreshToken.String(), "Logout berhasil")
 	return nil
 }
 
@@ -368,6 +394,11 @@ func (s *Service) VerifyUser(ctx context.Context, req *authDomain.VerifyUserRequ
 		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 
+	tipe := model.TipeAktivitas_VerifikasiRegistrasi
+	if newStatus == model.StatusVerifikasi_Ditolak {
+		tipe = model.TipeAktivitas_PenolakanRegistrasi
+	}
+	s.logAudit(ctx, "PATCH /auth/user/verify", tipe, true, "user_account", strconv.Itoa(int(req.IDUser)), "Verifikasi akun menjadi "+string(newStatus))
 	return nil
 }
 

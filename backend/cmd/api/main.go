@@ -12,6 +12,7 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/config"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
 	"github.com/stringptr/SiGizi/backend/internal/feature/auth"
+	"github.com/stringptr/SiGizi/backend/internal/feature/auditlog"
 	"github.com/stringptr/SiGizi/backend/internal/feature/bannedip"
 	"github.com/stringptr/SiGizi/backend/internal/feature/jwtblacklist"
 	"github.com/stringptr/SiGizi/backend/internal/feature/notification"
@@ -83,10 +84,11 @@ func main() {
 	notifHandler := notification.NewHandler(notifService)
 
 	pasienRepo := pasienFeature.NewRepo(pool)
-	pasienService := pasienFeature.NewService(pasienRepo)
+	auditLogRepo := auditlog.NewRepo(pool)
+	pasienService := pasienFeature.NewService(pasienRepo, auditLogRepo)
 	pasienHandler := pasienFeature.NewHandler(pasienService)
 
-	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo)
+	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo, auditLogRepo)
 	authHandler := auth.NewHandler(authService, &jwtUtil)
 
 	r := chi.NewMux()

@@ -9,17 +9,32 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	auditlogDomain "github.com/stringptr/SiGizi/backend/internal/domain/auditlog"
 	pasienDomain "github.com/stringptr/SiGizi/backend/internal/domain/pasien"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 )
 
 type Service struct {
-	repo pasienDomain.Repo
+	repo      pasienDomain.Repo
+	auditRepo auditlogDomain.Repo
 }
 
-func NewService(repo pasienDomain.Repo) *Service {
-	return &Service{repo: repo}
+func NewService(repo pasienDomain.Repo, auditRepo auditlogDomain.Repo) *Service {
+	return &Service{repo: repo, auditRepo: auditRepo}
+}
+
+func (s *Service) logAudit(ctx context.Context, endpoint string, tipeAktivitas model.TipeAktivitas, berhasil bool, tableName string, recordID string, detail string) {
+	tipeAktor := model.TipeAktor_User
+	s.auditRepo.Log(ctx, &model.AuditLog{
+		TipeAktor:     &tipeAktor,
+		TipeAktivitas: &tipeAktivitas,
+		Berhasil:      &berhasil,
+		Endpoint:      &endpoint,
+		TableName:     &tableName,
+		RecordID:      &recordID,
+		Detail:        &detail,
+	})
 }
 
 func (s *Service) DaftarIbuHamil(ctx context.Context, req *pasienDomain.DaftarIbuHamilRequest) *errorutils.Error {
@@ -94,6 +109,7 @@ func (s *Service) DaftarIbuHamil(ctx context.Context, req *pasienDomain.DaftarIb
 		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Gagal membuat data ibu hamil."}
 	}
 
+	s.logAudit(ctx, "POST /pasien/daftar-ibu-hamil", model.TipeAktivitas_DataInsert, true, "pasien, ibu_hamil", strconv.Itoa(int(req.IDUser)), "Berhasil mendaftarkan ibu hamil")
 	return nil
 }
 
@@ -153,6 +169,7 @@ func (s *Service) DaftarAnak(ctx context.Context, req *pasienDomain.DaftarAnakRe
 		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Gagal membuat data anak."}
 	}
 
+	s.logAudit(ctx, "POST /pasien/daftar-anak", model.TipeAktivitas_DataInsert, true, "pasien, anak", strconv.Itoa(int(req.IDUser)), "Berhasil mendaftarkan anak")
 	return nil
 }
 
@@ -371,6 +388,8 @@ func (s *Service) Update(ctx context.Context, req *pasienDomain.UpdatePasienRequ
 		}
 	}
 
+	s.logAudit(ctx, "PATCH /pasien/"+strconv.Itoa(int(req.IDPasien)), model.TipeAktivitas_DataUpdate, true, "pasien", strconv.Itoa(int(req.IDPasien)), "Berhasil memperbarui data pasien")
+
 	return s.GetByID(ctx, req.IDPasien)
 }
 
@@ -388,6 +407,7 @@ func (s *Service) Delete(ctx context.Context, idPasien int32) *errorutils.Error 
 		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Gagal menghapus data pasien."}
 	}
 
+	s.logAudit(ctx, "DELETE /pasien/"+strconv.Itoa(int(idPasien)), model.TipeAktivitas_DataDelete, true, "pasien", strconv.Itoa(int(idPasien)), "Berhasil menghapus data pasien")
 	return nil
 }
 

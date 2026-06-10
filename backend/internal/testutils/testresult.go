@@ -23,7 +23,7 @@ type TestResult struct {
 	Date            string `json:"date"`
 }
 
-func (tr *TestResult) Log(t *testing.T, actualPass bool, resp *http.Response, respBody []byte) {
+func (tr TestResult) Log(t *testing.T, actualPass bool, resp *http.Response, respBody []byte) {
 	t.Helper()
 	tr.Date = time.Now().Format("2006-01-02")
 	if actualPass {

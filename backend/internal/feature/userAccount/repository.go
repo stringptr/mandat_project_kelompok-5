@@ -205,7 +205,6 @@ func (r *Repo) Update(ctx context.Context, dataModel *model.UserAccount) error {
 		UserAccount.IDPekerjaan,
 		UserAccount.IDPendapatan,
 		UserAccount.JumlahTanggungan,
-		UserAccount.UpdatedAt,
 	).MODEL(dataModel).WHERE(UserAccount.IDUser.EQ(Int32(dataModel.IDUser)))
 
 	res, err := pgxV5.Exec(ctx, stmt, r.db)
@@ -220,9 +219,7 @@ func (r *Repo) Update(ctx context.Context, dataModel *model.UserAccount) error {
 }
 
 func (r *Repo) UpdateStatusVerifikasi(ctx context.Context, IDUser int32, status model.StatusVerifikasi) error {
-	stmt := UserAccount.UPDATE(UserAccount.StatusVerifikasi, UserAccount.UpdatedAt).
-		SET(String(status.String()), Raw("CURRENT_TIMESTAMP")).
-		WHERE(UserAccount.IDUser.EQ(Int32(IDUser)))
+	stmt := UserAccount.UPDATE(UserAccount.StatusVerifikasi).SET(status.String()).WHERE(UserAccount.IDUser.EQ(Int32(IDUser)))
 
 	res, err := pgxV5.Exec(ctx, stmt, r.db)
 	if err != nil {

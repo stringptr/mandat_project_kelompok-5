@@ -150,8 +150,12 @@ func (h *Handler) Logout(ctx context.Context, input *struct{}) (*authDomain.Logo
 	return &authDomain.LogoutOutput{Body: httputils.Success[any](http.StatusOK, nil, "Logout berhasil."), SetCookie: returnCookie}, nil
 }
 
-func (h *Handler) VerifyUser(ctx context.Context, input *httputils.APIRequestInput[*authDomain.VerifyUserRequest]) (*httputils.APIResponseOutput[any], error) {
-	err := h.Service.VerifyUser(ctx, input.Body)
+func (h *Handler) VerifyUser(ctx context.Context, input *authDomain.VerifyUserInput) (*httputils.APIResponseOutput[any], error) {
+	err := h.Service.VerifyUser(ctx, &authDomain.VerifyUserRequest{
+		IDUser:          input.IDUser,
+		Status:          input.Body.Status,
+		AlasanPenolakan: input.Body.AlasanPenolakan,
+	})
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}

@@ -8,11 +8,10 @@ services:
       POSTGRES_USER: ${MASTER_USER:-postgres}
       POSTGRES_PASSWORD: ${MASTER_PASSWORD:-postgres}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${MASTER_DB:-imunisasi}"]
       interval: 5s
       retries: 10
       timeout: 5s
-    profiles: ["master", "dev"]
 
   migration-master:
     build:
@@ -34,7 +33,13 @@ services:
       master:
         condition: service_healthy
     command: sh -c "goose up && sleep infinity"
-    profiles: ["migration", "master", "dev"]
+
+  nats:
+    image: docker.io/nats:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "4222:4222"
+    command: ["-js"]
 
   backend:
     build:
@@ -48,14 +53,18 @@ services:
           path: /app/Containerfile
     depends_on:
       migration-master:
-        condition: service_completed_successfully
+        condition: service_started
+      nats:
+        condition: service_started
     volumes:
       - ./backend:/app:z
+      - go_cache:/go/pkg/mod:z
     working_dir: /app
     environment:
       JWT_SECRET: test-secret-key
-    command: sh -c "go mod tidy && go test -tags=integration ./..."
-    profiles: ["backend", "dev"]
+      NATS_HOST: nats
+      NATS_PORT: "4222"
+    command: sh -c "go test -v -tags=integration ./..."
 
   frontend:
     build:

@@ -131,15 +131,171 @@ func (s *Service) MarkAllRead(ctx context.Context, idUser int32) (*notificationD
 }
 
 func (s *Service) GetBidanDashboard(ctx context.Context, idUser int32) (*notificationDomain.BidanNotificationResponse, *errorutils.Error) {
-	return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Tidak terdapat data pusat notifikasi bidan."}
+	concreteRepo, ok := s.Repo.(*Repo)
+	if !ok {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	bidanID, err := concreteRepo.getBidanIDByUserID(ctx, idUser)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+	if bidanID == 0 {
+		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Tidak terdapat data pusat notifikasi bidan."}
+	}
+
+	jadwalKontrol, err := concreteRepo.countBidanJadwalKontrol(ctx, bidanID)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	risikoStuntingCount, err := concreteRepo.countBidanRisikoStunting(ctx, bidanID)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	rujukanMendesakCount, err := concreteRepo.countBidanRujukanMendesak(ctx, bidanID)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	risikoStuntingList, err := concreteRepo.getBidanRisikoStuntingList(ctx, bidanID)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	jadwalMonitoringList, err := concreteRepo.getBidanJadwalMonitoringList(ctx, bidanID)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	rujukanMendesakList, err := concreteRepo.getBidanRujukanMendesakList(ctx, bidanID)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	laporanBulanan, err := concreteRepo.getBidanLaporanBulanan(ctx, bidanID)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	risikoStuntingItems := make([]notificationDomain.PasienRisikoItem, 0, len(risikoStuntingList))
+	for _, r := range risikoStuntingList {
+		risikoStuntingItems = append(risikoStuntingItems, notificationDomain.PasienRisikoItem{
+			IDPasien:          r.IDPasien,
+			NamaPasien:        r.NamaPasien,
+			StatusGizi:        r.StatusGizi,
+			StatusStunting:    r.StatusStunting,
+			TanggalMonitoring: r.TanggalMonitoring.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	jadwalMonitoringItems := make([]notificationDomain.JadwalMonitoringItem, 0, len(jadwalMonitoringList))
+	for _, j := range jadwalMonitoringList {
+		jadwalMonitoringItems = append(jadwalMonitoringItems, notificationDomain.JadwalMonitoringItem{
+			IDPasien:      j.IDPasien,
+			NamaPasien:    j.NamaPasien,
+			JadwalKontrol: j.JadwalKontrol.Format("2006-01-02 15:04:05"),
+			Status:        j.Status,
+		})
+	}
+
+	rujukanMendesakItems := make([]notificationDomain.RujukanMendesakItem, 0, len(rujukanMendesakList))
+	for _, r := range rujukanMendesakList {
+		rujukanMendesakItems = append(rujukanMendesakItems, notificationDomain.RujukanMendesakItem{
+			IDRujukan:      r.IDRujukan,
+			NamaPasien:     r.NamaPasien,
+			StatusRujukan:  r.StatusRujukan,
+			TanggalRujukan: r.TanggalRujukan.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	return &notificationDomain.BidanNotificationResponse{
+		Statistik: notificationDomain.NotifikasiBidanStats{
+			JadwalKontrol:   jadwalKontrol,
+			RisikoStunting:  risikoStuntingCount,
+			RujukanMendesak: rujukanMendesakCount,
+		},
+		RisikoStunting:   risikoStuntingItems,
+		JadwalMonitoring: jadwalMonitoringItems,
+		RujukanMendesak:  rujukanMendesakItems,
+		LaporanBulanan: notificationDomain.LaporanBulanan{
+			Bulan:                  laporanBulanan.Bulan,
+			JumlahPasienMonitoring: laporanBulanan.JumlahPasienMonitoring,
+			JumlahPasienDirujuk:    laporanBulanan.JumlahPasienDirujuk,
+		},
+	}, nil
 }
 
 func (s *Service) GetStatistics(ctx context.Context, idUser int32) (*notificationDomain.NotificationStats, *errorutils.Error) {
-	return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Data statistik notifikasi tidak ditemukan."}
+	concreteRepo, ok := s.Repo.(*Repo)
+	if !ok {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	bidanID, err := concreteRepo.getBidanIDByUserID(ctx, idUser)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	jadwalKontrol, err := concreteRepo.countBidanJadwalKontrol(ctx, bidanID)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	risikoStunting, err := concreteRepo.countBidanRisikoStunting(ctx, bidanID)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	rujukanMendesak, err := concreteRepo.countBidanRujukanMendesak(ctx, bidanID)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	unread, err := s.Repo.CountUnreadByUserID(ctx, idUser)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	return &notificationDomain.NotificationStats{
+		JadwalUlang:           jadwalKontrol,
+		RujukanMendesak:       rujukanMendesak,
+		RisikoStunting:        risikoStunting,
+		NotifikasiBelumDibaca: unread,
+	}, nil
 }
 
 func (s *Service) GetActivity(ctx context.Context, idUser int32) (*notificationDomain.NotificationActivity, *errorutils.Error) {
-	return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Tidak terdapat aktivitas notifikasi."}
+	concreteRepo, ok := s.Repo.(*Repo)
+	if !ok {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	today, err := concreteRepo.getTodayNotifikasi(ctx, idUser)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	yesterday, err := concreteRepo.getYesterdayNotifikasi(ctx, idUser)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	hariIni := make([]notificationDomain.AktivitasItem, 0, len(today))
+	for _, n := range today {
+		hariIni = append(hariIni, toAktivitasItem(n))
+	}
+
+	kemarin := make([]notificationDomain.AktivitasItem, 0, len(yesterday))
+	for _, n := range yesterday {
+		kemarin = append(kemarin, toAktivitasItem(n))
+	}
+
+	return &notificationDomain.NotificationActivity{
+		HariIni: hariIni,
+		Kemarin: kemarin,
+	}, nil
 }
 
 func toNotifikasiItem(n *model.Notifikasi) notificationDomain.NotifikasiItem {
@@ -150,5 +306,18 @@ func toNotifikasiItem(n *model.Notifikasi) notificationDomain.NotifikasiItem {
 		TipeNotifikasi: string(n.TipeNotifikasi),
 		StatusBaca:     n.StatusBaca,
 		TanggalKirim:   n.TanggalKirim,
+	}
+}
+
+func toAktivitasItem(n *model.Notifikasi) notificationDomain.AktivitasItem {
+	status := "terbaca"
+	if !n.StatusBaca {
+		status = "baru"
+	}
+	return notificationDomain.AktivitasItem{
+		IDNotifikasi: n.IDNotifikasi,
+		Judul:        n.Judul,
+		Status:       status,
+		Timestamp:    n.TanggalKirim,
 	}
 }

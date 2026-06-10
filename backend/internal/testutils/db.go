@@ -35,6 +35,14 @@ func NewTestDB(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
+func TruncateNotifikasiTables(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	_, err := pool.Exec(context.Background(), "TRUNCATE TABLE notifikasi CASCADE")
+	if err != nil {
+		t.Fatalf("failed to truncate notifikasi: %v", err)
+	}
+}
+
 func TruncateAuthTables(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	ctx := context.Background()

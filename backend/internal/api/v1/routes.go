@@ -59,13 +59,13 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Get(userGroup, "/users/{id}", d.UserAccountHandler.GetUserByID)
 	huma.Patch(userGroup, "/users/{id}", d.UserAccountHandler.UpdateUser)
 
+	huma.Get(bidanGroup, "/notifikasi/bidan", d.NotifHandler.GetBidanDashboard)
+	huma.Get(adminGroup, "/notifikasi/statistik", d.NotifHandler.GetStatistics)
+	huma.Get(adminGroup, "/notifikasi/aktivitas", d.NotifHandler.GetActivity)
 	huma.Get(userGroup, "/notifikasi", d.NotifHandler.GetNotifikasi)
 	huma.Get(userGroup, "/notifikasi/{id}", d.NotifHandler.GetNotifikasiDetail)
 	huma.Patch(userGroup, "/notifikasi/{id}/read", d.NotifHandler.MarkRead)
 	huma.Patch(userGroup, "/notifikasi/read-all", d.NotifHandler.MarkAllRead)
-	huma.Get(bidanGroup, "/notifikasi/bidan", d.NotifHandler.GetBidanDashboard)
-	huma.Get(adminGroup, "/notifikasi/statistik", d.NotifHandler.GetStatistics)
-	huma.Get(adminGroup, "/notifikasi/aktivitas", d.NotifHandler.GetActivity)
 
 	huma.Post(adminGroup, "/pasien/ibu-hamil", d.PasienHandler.DaftarIbuHamil)
 	huma.Post(adminGroup, "/pasien/anak", d.PasienHandler.DaftarAnak)

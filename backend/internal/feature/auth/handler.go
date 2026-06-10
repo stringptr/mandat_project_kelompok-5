@@ -28,7 +28,7 @@ func (h *Handler) Register(ctx context.Context, input *httputils.APIRequestInput
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[any]{Body: httputils.Created[any](nil)}, nil
+	return &httputils.APIResponseOutput[any]{Body: httputils.Success[any](http.StatusCreated, nil, "Register berhasil. Akun sedang diverifikasi. Silahkan dicek secara berkala.")}, nil
 }
 
 func (h *Handler) Me(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*jwtutils.Claim], error) {
@@ -147,7 +147,7 @@ func (h *Handler) Logout(ctx context.Context, input *struct{}) (*authDomain.Logo
 			SameSite: http.SameSiteStrictMode,
 		},
 	)
-	return &authDomain.LogoutOutput{Body: httputils.OK[any](nil), SetCookie: returnCookie}, nil
+	return &authDomain.LogoutOutput{Body: httputils.Success[any](http.StatusOK, nil, "Logout berhasil."), SetCookie: returnCookie}, nil
 }
 
 func (h *Handler) VerifyUser(ctx context.Context, input *httputils.APIRequestInput[*authDomain.VerifyUserRequest]) (*httputils.APIResponseOutput[any], error) {

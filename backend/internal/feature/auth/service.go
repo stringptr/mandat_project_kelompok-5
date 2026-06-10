@@ -2,8 +2,11 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
@@ -59,7 +62,11 @@ func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequ
 		info, _ := s.banRepo.GetBanInfo(ctx, ip)
 		if info != nil && time.Now().Before(info.ExpiresAt) {
 			remaining := time.Until(info.ExpiresAt)
-			return &errorutils.Error{Status: http.StatusForbidden, Message: fmt.Sprintf("Akses ditolak. Terlalu banyak percobaan. Silahkan coba lagi dalam %d menit %d detik.", int(remaining.Minutes()), int(remaining.Seconds())%60)}
+			errs := []*httputils.ErrorItem{{
+				ID:      "ERR-LOCK-01",
+				Message: "Percobaan gagal dalam 3 kali. Akun dikunci untuk sementara. Silahkan coba lagi dalam 15 menit.",
+			}}
+			return &errorutils.Error{Status: http.StatusForbidden, Message: fmt.Sprintf("Akses ditolak. Terlalu banyak percobaan. Silahkan coba lagi dalam %d menit %d detik.", int(remaining.Minutes()), int(remaining.Seconds())%60), Errors: errs}
 		}
 	}
 
@@ -89,10 +96,30 @@ func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequ
 	copier.Copy(&dataModel, &dataDTO)
 	dataModel.Password = hashedPassword
 
-	err = s.userRepo.Create(ctx, &dataModel)
+	idUser, err := s.authRepo.CreateUser(ctx, &dataModel)
 	if err != nil {
+		if isDBConnectionError(err) {
+			errs := []*httputils.ErrorItem{{ID: "ERR-SYS-01", Message: "Layanan tidak tersedia. Silakan coba lagi."}}
+			return &errorutils.Error{Status: http.StatusServiceUnavailable, Message: "Layanan tidak tersedia. Silakan coba lagi.", Errors: errs}
+		}
 		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
+
+	if dataDTO.Role != "" {
+		wilayahKerja := int32(0)
+		if dataDTO.WilayahKerja != nil {
+			wilayahKerja = *dataDTO.WilayahKerja
+		}
+		err = s.authRepo.CreateRoleRecord(ctx, idUser, dataDTO.Role, dataDTO.NoStr, wilayahKerja, dataDTO.NoSk)
+		if err != nil {
+			if isDBConnectionError(err) {
+				errs := []*httputils.ErrorItem{{ID: "ERR-SYS-01", Message: "Layanan tidak tersedia. Silakan coba lagi."}}
+				return &errorutils.Error{Status: http.StatusServiceUnavailable, Message: "Layanan tidak tersedia. Silakan coba lagi.", Errors: errs}
+			}
+			return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
+		}
+	}
+
 	return nil
 }
 
@@ -103,12 +130,20 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 		info, _ := s.banRepo.GetBanInfo(ctx, ip)
 		if info != nil && time.Now().Before(info.ExpiresAt) {
 			remaining := time.Until(info.ExpiresAt)
-			return nil, &errorutils.Error{Status: http.StatusForbidden, Message: fmt.Sprintf("Akses ditolak. Terlalu banyak percobaan login. Silahkan coba lagi dalam %d menit %d detik.", int(remaining.Minutes()), int(remaining.Seconds())%60)}
+			errs := []*httputils.ErrorItem{{
+				ID:      "ERR-LOCK-01",
+				Message: "Percobaan login gagal dalam 3 kali. Akun dikunci untuk sementara. Silahkan coba lagi dalam 15 menit.",
+			}}
+			return nil, &errorutils.Error{Status: http.StatusForbidden, Message: fmt.Sprintf("Akses ditolak. Terlalu banyak percobaan login. Silahkan coba lagi dalam %d menit %d detik.", int(remaining.Minutes()), int(remaining.Seconds())%60), Errors: errs}
 		}
 	}
 
-	user, err := s.userRepo.GetByEmail(ctx, req.Email)
+	user, err := s.authRepo.GetByEmailNIK(ctx, req.Email, req.NIK)
 	if err != nil {
+		if isDBConnectionError(err) {
+			errs = append(errs, &httputils.ErrorItem{ID: "ERR-SYS-01", Message: "Layanan tidak tersedia. Silakan coba lagi."})
+			return nil, &errorutils.Error{Status: http.StatusServiceUnavailable, Message: "Layanan tidak tersedia. Silakan coba lagi.", Errors: errs}
+		}
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pengecekan akun. Silahkan dicoba kembali.", Errors: nil}
 	}
 	if user == nil {
@@ -116,7 +151,7 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 			s.banRepo.IncrementAttempt(ctx, ip, s.restrictAuthCfg.MaxAttempt, s.restrictAuthCfg.Duration)
 		}
 		errs = append(errs, &httputils.ErrorItem{ID: "ERR-AUTH-02", Message: "Email, NIK, atau Password tidak valid"})
-		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Email, NIK, atau Password tidak valid", Errors: errs}
+		return nil, &errorutils.Error{Status: http.StatusUnauthorized, Message: "Email, NIK, atau Password tidak valid", Errors: errs}
 	}
 
 	ok, err := hash.VerifyHash(req.Password, user.Password)
@@ -125,14 +160,14 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 			s.banRepo.IncrementAttempt(ctx, ip, s.restrictAuthCfg.MaxAttempt, s.restrictAuthCfg.Duration)
 		}
 		errs = append(errs, &httputils.ErrorItem{ID: "ERR-AUTH-02", Message: "Email, NIK, atau Password tidak valid"})
-		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Email, NIK, atau Password tidak valid", Errors: errs}
+		return nil, &errorutils.Error{Status: http.StatusUnauthorized, Message: "Email, NIK, atau Password tidak valid", Errors: errs}
 	}
 	if !ok {
 		if ip != "" {
 			s.banRepo.IncrementAttempt(ctx, ip, s.restrictAuthCfg.MaxAttempt, s.restrictAuthCfg.Duration)
 		}
 		errs = append(errs, &httputils.ErrorItem{ID: "ERR-AUTH-02", Message: "Email, NIK, atau Password tidak valid"})
-		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Email, NIK, atau Password tidak valid", Errors: errs}
+		return nil, &errorutils.Error{Status: http.StatusUnauthorized, Message: "Email, NIK, atau Password tidak valid", Errors: errs}
 	}
 
 	if user.StatusVerifikasi == model.StatusVerifikasi_Pending {
@@ -143,6 +178,10 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 
 	roles, err := s.authRepo.GetRoles(ctx, user.IDUser)
 	if err != nil {
+		if isDBConnectionError(err) {
+			errs := []*httputils.ErrorItem{{ID: "ERR-SYS-01", Message: "Layanan tidak tersedia. Silakan coba lagi."}}
+			return nil, &errorutils.Error{Status: http.StatusServiceUnavailable, Message: "Layanan tidak tersedia. Silakan coba lagi.", Errors: errs}
+		}
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pengecekan akun. Silahkan dicoba kembali."}
 	}
 
@@ -163,6 +202,10 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 	}
 	err = s.sessionRepo.Create(ctx, session)
 	if err != nil {
+		if isDBConnectionError(err) {
+			errs := []*httputils.ErrorItem{{ID: "ERR-SYS-01", Message: "Layanan tidak tersedia. Silakan coba lagi."}}
+			return nil, &errorutils.Error{Status: http.StatusServiceUnavailable, Message: "Layanan tidak tersedia. Silakan coba lagi.", Errors: errs}
+		}
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 
@@ -189,6 +232,10 @@ func (s *Service) Login(ctx context.Context, req *authDomain.LoginRequest, ip st
 func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string) (*authDomain.AuthResponse, *errorutils.Error) {
 	session, err := s.sessionRepo.GetByID(ctx, refreshToken)
 	if err != nil {
+		if isDBConnectionError(err) {
+			errs := []*httputils.ErrorItem{{ID: "ERR-SYS-01", Message: "Layanan tidak tersedia. Silakan coba lagi."}}
+			return nil, &errorutils.Error{Status: http.StatusServiceUnavailable, Message: "Layanan tidak tersedia. Silakan coba lagi.", Errors: errs}
+		}
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pengecekan sesi login. Silahkan login ulang."}
 	}
 	if session == nil {
@@ -202,11 +249,19 @@ func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string
 	session.StatusSession = model.StatusSession_Dicabut
 	err = s.sessionRepo.Update(ctx, session)
 	if err != nil {
+		if isDBConnectionError(err) {
+			errs := []*httputils.ErrorItem{{ID: "ERR-SYS-01", Message: "Layanan tidak tersedia. Silakan coba lagi."}}
+			return nil, &errorutils.Error{Status: http.StatusServiceUnavailable, Message: "Layanan tidak tersedia. Silakan coba lagi.", Errors: errs}
+		}
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pembaruan sesi. Silahkan login ulang."}
 	}
 
 	user, err := s.userRepo.GetByID(ctx, session.IDUser)
 	if err != nil {
+		if isDBConnectionError(err) {
+			errs := []*httputils.ErrorItem{{ID: "ERR-SYS-01", Message: "Layanan tidak tersedia. Silakan coba lagi."}}
+			return nil, &errorutils.Error{Status: http.StatusServiceUnavailable, Message: "Layanan tidak tersedia. Silakan coba lagi.", Errors: errs}
+		}
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pengecekan akun. Silahkan login ulang."}
 	}
 	if user == nil {
@@ -215,6 +270,10 @@ func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string
 
 	roles, err := s.authRepo.GetRoles(ctx, user.IDUser)
 	if err != nil {
+		if isDBConnectionError(err) {
+			errs := []*httputils.ErrorItem{{ID: "ERR-SYS-01", Message: "Layanan tidak tersedia. Silakan coba lagi."}}
+			return nil, &errorutils.Error{Status: http.StatusServiceUnavailable, Message: "Layanan tidak tersedia. Silakan coba lagi.", Errors: errs}
+		}
 		return nil, &errorutils.Error{Status: http.StatusForbidden, Message: "Terjadi kesalahan dalam pengecekan akun. Silahkan login ulang."}
 	}
 
@@ -242,6 +301,10 @@ func (s *Service) Refresh(ctx context.Context, refreshToken uuid.UUID, ip string
 	}
 	err = s.sessionRepo.Create(ctx, session)
 	if err != nil {
+		if isDBConnectionError(err) {
+			errs := []*httputils.ErrorItem{{ID: "ERR-SYS-01", Message: "Layanan tidak tersedia. Silakan coba lagi."}}
+			return nil, &errorutils.Error{Status: http.StatusServiceUnavailable, Message: "Layanan tidak tersedia. Silakan coba lagi.", Errors: errs}
+		}
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan dalam pembaruan sesi. Silahkan login ulang."}
 	}
 
@@ -305,4 +368,15 @@ func (s *Service) VerifyUser(ctx context.Context, req *authDomain.VerifyUserRequ
 	}
 
 	return nil
+}
+
+func isDBConnectionError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "connection refused") ||
+		strings.Contains(err.Error(), "no such host") ||
+		strings.Contains(err.Error(), "network is unreachable") ||
+		errors.Is(err, io.EOF) ||
+		errors.Is(err, context.DeadlineExceeded)
 }

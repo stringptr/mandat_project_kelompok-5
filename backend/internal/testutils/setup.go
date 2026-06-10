@@ -11,14 +11,14 @@ import (
 )
 
 type Groups struct {
-	AuthAccess  huma.Group
-	AuthRefresh huma.Group
-	UserGroup   huma.Group
-	AdminGroup  huma.Group
-	BidanGroup  huma.Group
-	KaderGroup  huma.Group
-	DinkesGroup huma.Group
-	NonAuth     huma.Group
+	AuthAccess  *huma.Group
+	AuthRefresh *huma.Group
+	UserGroup   *huma.Group
+	AdminGroup  *huma.Group
+	BidanGroup  *huma.Group
+	KaderGroup  *huma.Group
+	DinkesGroup *huma.Group
+	NonAuth     *huma.Group
 }
 
 func SetupRouter(t *testing.T) (http.Handler, huma.API, *jwtutils.JWT, *NoopBlacklistRepo) {

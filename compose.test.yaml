@@ -44,6 +44,7 @@ services:
     build:
       context: ./backend
       dockerfile: Containerfile
+      target: integration_test
     develop:
       watch:
         - action: rebuild
@@ -62,7 +63,6 @@ services:
       JWT_SECRET: test-secret-key
       NATS_HOST: nats
       NATS_PORT: "4222"
-    command: sh -c "go test -p 1 -v -tags=integration ./..."
 
   frontend:
     build:

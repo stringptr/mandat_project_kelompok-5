@@ -4,12 +4,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stringptr/SiGizi/backend/internal/config"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
-	bannedipDomain "github.com/stringptr/SiGizi/backend/internal/domain/bannedip"
 	jwtblacklistDomain "github.com/stringptr/SiGizi/backend/internal/domain/jwtblacklist"
 	notificationDomain "github.com/stringptr/SiGizi/backend/internal/domain/notification"
 	pasienDomain "github.com/stringptr/SiGizi/backend/internal/domain/pasien"
 	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
-	userSessionDomain "github.com/stringptr/SiGizi/backend/internal/domain/userSession"
 	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 	"github.com/stringptr/SiGizi/backend/internal/middleware"
 
@@ -19,14 +17,8 @@ import (
 type Dependency struct {
 	AuthConfig         config.AuthConfig
 	JWTUtil            jwtutils.JWT
-	UserAccountRepo    userAccountDomain.Repo
 	UserAccountHandler userAccountDomain.Handler
-	UserSessionRepo    userSessionDomain.Repo
-	AuthRepo           authDomain.Repo
-	AuthService        authDomain.Service
 	AuthHandler        authDomain.Handler
-	BanRepo            bannedipDomain.Repo
-	BanAuthRepo        bannedipDomain.Repo
 	BlacklistRepo      jwtblacklistDomain.Repo
 	NotifPublisher     notificationDomain.Publisher
 	NotifHandler       notificationDomain.Handler

@@ -75,6 +75,10 @@ func main() {
 	blacklistRepo := jwtblacklist.NewRepo(natsutil.NewKV(jwtBlacklistKV))
 	notifPublisher := notification.NewPublisher(natsutil.NewPubSub(natsConn.Conn()))
 
+	notifRepo := notification.NewRepo(pool)
+	notifService := notification.NewService(notifRepo)
+	notifHandler := notification.NewHandler(notifService)
+
 	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo)
 	authHandler := auth.NewHandler(authService, &jwtUtil)
 
@@ -144,6 +148,7 @@ func main() {
 		BanRepo:         banRepo,
 		BlacklistRepo:   blacklistRepo,
 		NotifPublisher:  notifPublisher,
+		NotifHandler:    notifHandler,
 	})
 
 	log.Printf("server starting on %s:%s", cfg.Host, cfg.Port)

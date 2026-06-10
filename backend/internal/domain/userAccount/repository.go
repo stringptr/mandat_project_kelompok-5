@@ -12,7 +12,10 @@ type Repo interface {
 	GetByNIKEmail(ctx context.Context, NIK string, email string) (*model.UserAccount, error)
 	GetByEmail(ctx context.Context, email string) (*model.UserAccount, error)
 	GetAll(ctx context.Context) ([]*model.UserAccount, error)
+	GetAllPaginated(ctx context.Context, page int, perPage int, q string, role string, statusVerifikasi string) ([]*model.UserAccount, int, error)
 	Create(ctx context.Context, dataModel *model.UserAccount) error
+	Update(ctx context.Context, dataModel *model.UserAccount) error
 	UpdateStatusVerifikasi(ctx context.Context, IDUser int32, status model.StatusVerifikasi) error
 	DeleteByID(ctx context.Context, IDUser int32) error
+	GetRolesByUserID(ctx context.Context, IDUser int32) ([]string, error)
 }

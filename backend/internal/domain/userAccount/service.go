@@ -2,10 +2,10 @@ package userAccount
 
 import (
 	"context"
-
-	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 )
 
 type Service interface {
-	GetAll(ctx context.Context) ([]*model.UserAccount, error)
+	GetAllUsers(ctx context.Context, req *GetAllUsersRequest) (*UserListData, error)
+	GetUserByID(ctx context.Context, idUser int32) (*UserDetailResponse, error)
+	UpdateUser(ctx context.Context, idUser int32, req *UpdateUserRequest) error
 }

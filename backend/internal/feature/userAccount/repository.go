@@ -2,6 +2,9 @@ package userAccount
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"time"
 
 	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
@@ -95,6 +98,86 @@ func (r *Repo) GetAll(ctx context.Context) ([]*model.UserAccount, error) {
 	return users, nil
 }
 
+func (r *Repo) GetAllPaginated(ctx context.Context, page int, perPage int, q string, role string, statusVerifikasi string) ([]*model.UserAccount, int, error) {
+	offset := (page - 1) * perPage
+
+	baseQuery := `
+		FROM user_account ua
+		LEFT JOIN dinas_kesehatan dk ON dk.id_user = ua.id_user
+		LEFT JOIN bidan b ON b.id_user = ua.id_user
+		LEFT JOIN kader_posyandu kp ON kp.id_user = ua.id_user
+		LEFT JOIN pasien p ON p.id_pasien = ua.id_user
+	`
+	var conditions []string
+	var args []any
+	argIdx := 1
+
+	if q != "" {
+		conditions = append(conditions, fmt.Sprintf("(ua.nama ILIKE $%d OR ua.nik ILIKE $%d)", argIdx, argIdx))
+		args = append(args, "%"+q+"%")
+		argIdx++
+	}
+
+	if role != "" {
+		switch role {
+		case "Dinkes":
+			conditions = append(conditions, "dk.id_user IS NOT NULL")
+		case "Bidan":
+			conditions = append(conditions, "b.id_user IS NOT NULL")
+		case "Kader":
+			conditions = append(conditions, "kp.id_user IS NOT NULL")
+		case "Pasien":
+			conditions = append(conditions, "p.id_pasien IS NOT NULL")
+		}
+	}
+
+	if statusVerifikasi != "" {
+		conditions = append(conditions, fmt.Sprintf("ua.status_verifikasi = $%d", argIdx))
+		args = append(args, statusVerifikasi)
+		argIdx++
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	var total int
+	countQuery := "SELECT COUNT(*) " + baseQuery + " " + whereClause
+	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	dataQuery := fmt.Sprintf(`SELECT ua.id_user, ua.email, ua.password, ua.no_hp, ua.status_verifikasi, ua.nama, ua.nik, ua.jenis_kelamin, ua.tanggal_lahir, ua.id_lokasi, ua.id_pendidikan, ua.id_pekerjaan, ua.id_pendapatan, ua.jumlah_tanggungan, ua.created_at, ua.updated_at %s %s ORDER BY ua.created_at DESC LIMIT $%d OFFSET $%d`,
+		baseQuery, whereClause, argIdx, argIdx+1)
+	args = append(args, perPage, offset)
+
+	rows, err := r.db.Query(ctx, dataQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var users []*model.UserAccount
+	for rows.Next() {
+		var u model.UserAccount
+		err := rows.Scan(
+			&u.IDUser, &u.Email, &u.Password, &u.NoHp,
+			&u.StatusVerifikasi, &u.Nama, &u.Nik,
+			&u.JenisKelamin, &u.TanggalLahir, &u.IDLokasi,
+			&u.IDPendidikan, &u.IDPekerjaan, &u.IDPendapatan,
+			&u.JumlahTanggungan, &u.CreatedAt, &u.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+		users = append(users, &u)
+	}
+
+	return users, total, nil
+}
+
 func (r *Repo) Create(ctx context.Context, userAccModel *model.UserAccount) error {
 	stmt := UserAccount.INSERT(MutableNonDefaultColumns).MODEL(userAccModel)
 	res, err := pgxV5.Exec(ctx, stmt, r.db)
@@ -104,6 +187,35 @@ func (r *Repo) Create(ctx context.Context, userAccModel *model.UserAccount) erro
 	if res.RowsAffected() == 0 {
 		return userAccountDomain.ErrNotCreated
 	}
+	return nil
+}
+
+func (r *Repo) Update(ctx context.Context, dataModel *model.UserAccount) error {
+	dataModel.UpdatedAt = time.Now()
+
+	stmt := UserAccount.UPDATE(
+		UserAccount.Email,
+		UserAccount.NoHp,
+		UserAccount.Nama,
+		UserAccount.Nik,
+		UserAccount.JenisKelamin,
+		UserAccount.TanggalLahir,
+		UserAccount.IDLokasi,
+		UserAccount.IDPendidikan,
+		UserAccount.IDPekerjaan,
+		UserAccount.IDPendapatan,
+		UserAccount.JumlahTanggungan,
+		UserAccount.UpdatedAt,
+	).MODEL(dataModel).WHERE(UserAccount.IDUser.EQ(Int32(dataModel.IDUser)))
+
+	res, err := pgxV5.Exec(ctx, stmt, r.db)
+	if err != nil {
+		return err
+	}
+	if res.RowsAffected() == 0 {
+		return userAccountDomain.ErrNotUpdated
+	}
+
 	return nil
 }
 
@@ -134,4 +246,46 @@ func (r *Repo) DeleteByID(ctx context.Context, IDUser int32) error {
 	}
 
 	return nil
+}
+
+func (r *Repo) GetRolesByUserID(ctx context.Context, IDUser int32) ([]string, error) {
+	query := `
+		SELECT
+			EXISTS(SELECT 1 FROM dinas_kesehatan WHERE id_user = $1) as is_dinkes,
+			EXISTS(SELECT 1 FROM bidan WHERE id_user = $1) as is_bidan,
+			EXISTS(SELECT 1 FROM kader_posyandu WHERE id_user = $1) as is_kader,
+			EXISTS(SELECT 1 FROM pasien WHERE id_pasien = $1) as is_pasien,
+			EXISTS(SELECT 1 FROM ibu_hamil WHERE id_pasien = $1) as is_ibu_hamil,
+			EXISTS(SELECT 1 FROM anak WHERE id_pasien = $1) as is_anak
+	`
+	var isDinkes, isBidan, isKader, isPasien, isIbuHamil, isAnak bool
+	err := r.db.QueryRow(ctx, query, IDUser).Scan(&isDinkes, &isBidan, &isKader, &isPasien, &isIbuHamil, &isAnak)
+	if err != nil {
+		return nil, err
+	}
+
+	roles := []string{"USER"}
+	if isDinkes {
+		roles = append(roles, "ADMIN_DINKES")
+	}
+	if isBidan {
+		roles = append(roles, "BIDAN")
+	}
+	if isKader {
+		roles = append(roles, "KADER")
+	}
+	if isKader || isBidan {
+		roles = append(roles, "ADMIN")
+	}
+	if isPasien {
+		roles = append(roles, "PASIEN")
+	}
+	if isIbuHamil {
+		roles = append(roles, "IBU_HAMIL")
+	}
+	if isAnak {
+		roles = append(roles, "ANAK")
+	}
+
+	return roles, nil
 }

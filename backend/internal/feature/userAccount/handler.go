@@ -2,11 +2,12 @@ package userAccount
 
 import (
 	"context"
+	"errors"
+	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
 	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
-	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 )
 
 type Handler struct {
@@ -17,15 +18,66 @@ func NewHandler(Service userAccountDomain.Service) *Handler {
 	return &Handler{Service: Service}
 }
 
-type GetAllResponse struct {
-	Body httputils.APIResponse[[]*model.UserAccount]
-}
-
-func (h *Handler) GetAll(ctx context.Context, input *struct{}) (*GetAllResponse, error) {
-	userAccounts, err := h.Service.GetAll(ctx)
+func (h *Handler) GetAllUsers(ctx context.Context, input *httputils.APIRequestInput[*userAccountDomain.GetAllUsersRequest]) (*httputils.APIResponseOutput[*userAccountDomain.UserListData], error) {
+	result, err := h.Service.GetAllUsers(ctx, input.Body)
 	if err != nil {
-		return nil, huma.Error500InternalServerError("Internal Server Error", err)
+		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
 	}
 
-	return &GetAllResponse{Body: httputils.OK(userAccounts)}, nil
+	return &httputils.APIResponseOutput[*userAccountDomain.UserListData]{
+		Body: httputils.Success(http.StatusOK, result, "Daftar pengguna berhasil diambil."),
+	}, nil
+}
+
+func (h *Handler) GetUserByID(ctx context.Context, input *struct{ IDUser int32 `path:"id" minimum:"1"` }) (*httputils.APIResponseOutput[*userAccountDomain.UserDetailResponse], error) {
+	user, err := h.Service.GetUserByID(ctx, input.IDUser)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
+	}
+	if user == nil {
+		return nil, huma.Error404NotFound("Pengguna tidak ditemukan.")
+	}
+
+	return &httputils.APIResponseOutput[*userAccountDomain.UserDetailResponse]{
+		Body: httputils.Success(http.StatusOK, user, "Detail pengguna berhasil diambil."),
+	}, nil
+}
+
+func (h *Handler) UpdateUser(ctx context.Context, input *httputils.APIRequestInput[*userAccountDomain.UpdateUserRequest]) (*httputils.APIResponseOutput[*userAccountDomain.UserDetailResponse], error) {
+	claims := httputils.GetAccessClaim(ctx)
+	if claims == nil {
+		return nil, huma.Error401Unauthorized("Silahkan login terlebih dahulu.")
+	}
+
+	idUser := input.Body.IDUser
+
+	if idUser != claims.IDUser {
+		isAdmin := false
+		for _, r := range claims.Roles {
+			if r == "ADMIN" || r == "ADMIN_DINKES" {
+				isAdmin = true
+				break
+			}
+		}
+		if !isAdmin {
+			return nil, huma.Error403Forbidden("Anda tidak memiliki izin untuk mengubah data pengguna lain.")
+		}
+	}
+
+	err := h.Service.UpdateUser(ctx, idUser, input.Body)
+	if err != nil {
+		if errors.Is(err, userAccountDomain.ErrNotFound) {
+			return nil, huma.Error404NotFound("Pengguna tidak ditemukan.")
+		}
+		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
+	}
+
+	updatedUser, err := h.Service.GetUserByID(ctx, idUser)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
+	}
+
+	return &httputils.APIResponseOutput[*userAccountDomain.UserDetailResponse]{
+		Body: httputils.Success(http.StatusOK, updatedUser, "Profil pengguna berhasil diperbarui."),
+	}, nil
 }

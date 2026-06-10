@@ -7,6 +7,7 @@ import (
 	bannedipDomain "github.com/stringptr/SiGizi/backend/internal/domain/bannedip"
 	jwtblacklistDomain "github.com/stringptr/SiGizi/backend/internal/domain/jwtblacklist"
 	notificationDomain "github.com/stringptr/SiGizi/backend/internal/domain/notification"
+	pasienDomain "github.com/stringptr/SiGizi/backend/internal/domain/pasien"
 	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
 	userSessionDomain "github.com/stringptr/SiGizi/backend/internal/domain/userSession"
 	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
@@ -16,19 +17,20 @@ import (
 )
 
 type Dependency struct {
-	AuthConfig          config.AuthConfig
-	JWTUtil             jwtutils.JWT
-	UserAccountRepo     userAccountDomain.Repo
-	UserAccountHandler  userAccountDomain.Handler
-	UserSessionRepo     userSessionDomain.Repo
-	AuthRepo            authDomain.Repo
-	AuthService         authDomain.Service
-	AuthHandler         authDomain.Handler
-	BanRepo             bannedipDomain.Repo
-	BanAuthRepo         bannedipDomain.Repo
-	BlacklistRepo       jwtblacklistDomain.Repo
-	NotifPublisher      notificationDomain.Publisher
-	NotifHandler        notificationDomain.Handler
+	AuthConfig         config.AuthConfig
+	JWTUtil            jwtutils.JWT
+	UserAccountRepo    userAccountDomain.Repo
+	UserAccountHandler userAccountDomain.Handler
+	UserSessionRepo    userSessionDomain.Repo
+	AuthRepo           authDomain.Repo
+	AuthService        authDomain.Service
+	AuthHandler        authDomain.Handler
+	BanRepo            bannedipDomain.Repo
+	BanAuthRepo        bannedipDomain.Repo
+	BlacklistRepo      jwtblacklistDomain.Repo
+	NotifPublisher     notificationDomain.Publisher
+	NotifHandler       notificationDomain.Handler
+	PasienHandler      pasienDomain.Handler
 }
 
 func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
@@ -46,7 +48,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	adminGroup.UseMiddleware(middleware.RequireRole(authAccess, "ADMIN"))
 	bidanGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN"))
 	kaderGroup.UseMiddleware(middleware.RequireRole(authAccess, "KADER"))
-	dinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "ADMIN_DINKES"))
+	dinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "DINKES"))
 
 	nonAuthenticatedOnlyGroup := huma.NewGroup(api, "")
 	nonAuthenticatedOnlyGroup.UseMiddleware(middleware.NonAuthenticatedOnlyMiddleware(api, &d.JWTUtil, d.BlacklistRepo))
@@ -63,7 +65,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 
 	// User Management routes — ADMIN and DINKES can list all users
 	usermgtGroup := huma.NewGroup(authAccess, "")
-	usermgtGroup.UseMiddleware(middleware.RequireRole(authAccess, "ADMIN", "ADMIN_DINKES"))
+	usermgtGroup.UseMiddleware(middleware.RequireRole(authAccess, "ADMIN", "DINKES"))
 
 	huma.Get(usermgtGroup, "/users", d.UserAccountHandler.GetAllUsers)
 	huma.Get(userGroup, "/users/{id}", d.UserAccountHandler.GetUserByID)
@@ -71,7 +73,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 
 	// Notifikasi routes
 	notifBidanKaderDinkesGroup := huma.NewGroup(authAccess, "")
-	notifBidanKaderDinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN", "KADER", "ADMIN_DINKES"))
+	notifBidanKaderDinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN", "KADER", "DINKES"))
 
 	huma.Get(authAccess, "/notifikasi", d.NotifHandler.GetNotifikasi)
 	huma.Get(authAccess, "/notifikasi/{id}", d.NotifHandler.GetNotifikasiDetail)
@@ -80,4 +82,20 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Get(bidanGroup, "/notifikasi/bidan", d.NotifHandler.GetBidanDashboard)
 	huma.Get(notifBidanKaderDinkesGroup, "/notifikasi/statistik", d.NotifHandler.GetStatistics)
 	huma.Get(notifBidanKaderDinkesGroup, "/notifikasi/aktivitas", d.NotifHandler.GetActivity)
+
+	// Pasien routes
+	pasienKaderBidanGroup := huma.NewGroup(authAccess, "")
+	pasienKaderBidanGroup.UseMiddleware(middleware.RequireRole(authAccess, "KADER", "BIDAN"))
+	pasienBidanGroup := huma.NewGroup(authAccess, "")
+	pasienBidanGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN"))
+	pasienBidanKaderDinkesGroup := huma.NewGroup(authAccess, "")
+	pasienBidanKaderDinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN", "KADER", "DINKES"))
+
+	huma.Post(pasienKaderBidanGroup, "/pasien/daftar-ibu-hamil", d.PasienHandler.DaftarIbuHamil)
+	huma.Post(pasienKaderBidanGroup, "/pasien/daftar-anak", d.PasienHandler.DaftarAnak)
+	huma.Get(authAccess, "/pasien", d.PasienHandler.GetAll)
+	huma.Get(pasienBidanKaderDinkesGroup, "/pasien/search", d.PasienHandler.Search)
+	huma.Get(pasienBidanKaderDinkesGroup, "/pasien/{id}", d.PasienHandler.GetByID)
+	huma.Patch(pasienKaderBidanGroup, "/pasien/{id}", d.PasienHandler.Update)
+	huma.Delete(pasienBidanGroup, "/pasien/{id}", d.PasienHandler.Delete)
 }

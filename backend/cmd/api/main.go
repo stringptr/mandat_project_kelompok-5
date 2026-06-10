@@ -15,6 +15,7 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/feature/bannedip"
 	"github.com/stringptr/SiGizi/backend/internal/feature/jwtblacklist"
 	"github.com/stringptr/SiGizi/backend/internal/feature/notification"
+	pasienFeature "github.com/stringptr/SiGizi/backend/internal/feature/pasien"
 	"github.com/stringptr/SiGizi/backend/internal/feature/userAccount"
 	"github.com/stringptr/SiGizi/backend/internal/feature/userSession"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
@@ -68,11 +69,11 @@ func main() {
 		log.Fatalf("unable to create jwt_blacklist KV bucket: %v", err)
 	}
 
+	authRepo := auth.NewRepo(pool)
 	userAccountRepo := userAccount.NewRepo(pool)
-	userAccountService := userAccount.NewService(userAccountRepo)
+	userAccountService := userAccount.NewService(userAccountRepo, authRepo)
 	userAccountHandler := userAccount.NewHandler(userAccountService)
 	userSessionRepo := userSession.NewRepo(pool)
-	authRepo := auth.NewRepo(pool)
 	banRepo := bannedip.NewRepo(natsutil.NewKV(bannedIPKV))
 	blacklistRepo := jwtblacklist.NewRepo(natsutil.NewKV(jwtBlacklistKV))
 	notifPublisher := notification.NewPublisher(natsutil.NewPubSub(natsConn.Conn()))
@@ -80,6 +81,10 @@ func main() {
 	notifRepo := notification.NewRepo(pool)
 	notifService := notification.NewService(notifRepo)
 	notifHandler := notification.NewHandler(notifService)
+
+	pasienRepo := pasienFeature.NewRepo(pool)
+	pasienService := pasienFeature.NewService(pasienRepo)
+	pasienHandler := pasienFeature.NewHandler(pasienService)
 
 	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo)
 	authHandler := auth.NewHandler(authService, &jwtUtil)
@@ -152,6 +157,7 @@ func main() {
 		BlacklistRepo:      blacklistRepo,
 		NotifPublisher:     notifPublisher,
 		NotifHandler:       notifHandler,
+		PasienHandler:      pasienHandler,
 	})
 
 	log.Printf("server starting on %s:%s", cfg.Host, cfg.Port)

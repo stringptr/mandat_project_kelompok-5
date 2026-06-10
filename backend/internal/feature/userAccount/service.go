@@ -5,27 +5,29 @@ import (
 	"fmt"
 	"time"
 
+	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
 	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 )
 
 type Service struct {
-	Repository userAccountDomain.Repo
+	userAccountRepo userAccountDomain.Repo
+	authRepo        authDomain.Repo
 }
 
-func NewService(Repository userAccountDomain.Repo) *Service {
-	return &Service{Repository: Repository}
+func NewService(userAccountRepo userAccountDomain.Repo, authRepo authDomain.Repo) *Service {
+	return &Service{userAccountRepo: userAccountRepo, authRepo: authRepo}
 }
 
 func (s *Service) GetAllUsers(ctx context.Context, req *userAccountDomain.GetAllUsersRequest) (*userAccountDomain.UserListData, error) {
-	users, total, err := s.Repository.GetAllPaginated(ctx, req.Page, req.PerPage, req.Q, req.Role, req.StatusVerifikasi)
+	users, total, err := s.userAccountRepo.GetAllPaginated(ctx, req.Page, req.PerPage, req.Q, req.Role, req.StatusVerifikasi)
 	if err != nil {
 		return nil, fmt.Errorf("gagal mengambil daftar pengguna: %w", err)
 	}
 
 	items := make([]userAccountDomain.UserListItem, len(users))
 	for i, u := range users {
-		roles, _ := s.Repository.GetRolesByUserID(ctx, u.IDUser)
+		roles, _ := s.authRepo.GetRoles(ctx, u.IDUser)
 		items[i] = userAccountDomain.UserListItem{
 			IDUser:           u.IDUser,
 			Nama:             u.Nama,
@@ -50,7 +52,7 @@ func (s *Service) GetAllUsers(ctx context.Context, req *userAccountDomain.GetAll
 }
 
 func (s *Service) GetUserByID(ctx context.Context, idUser int32) (*userAccountDomain.UserDetailResponse, error) {
-	u, err := s.Repository.GetByID(ctx, idUser)
+	u, err := s.userAccountRepo.GetByID(ctx, idUser)
 	if err != nil {
 		return nil, fmt.Errorf("gagal mengambil detail pengguna: %w", err)
 	}
@@ -58,7 +60,7 @@ func (s *Service) GetUserByID(ctx context.Context, idUser int32) (*userAccountDo
 		return nil, nil
 	}
 
-	roles, _ := s.Repository.GetRolesByUserID(ctx, u.IDUser)
+	roles, _ := s.authRepo.GetRoles(ctx, u.IDUser)
 
 	return &userAccountDomain.UserDetailResponse{
 		IDUser:           u.IDUser,
@@ -81,7 +83,7 @@ func (s *Service) GetUserByID(ctx context.Context, idUser int32) (*userAccountDo
 }
 
 func (s *Service) UpdateUser(ctx context.Context, idUser int32, req *userAccountDomain.UpdateUserRequest) error {
-	u, err := s.Repository.GetByID(ctx, idUser)
+	u, err := s.userAccountRepo.GetByID(ctx, idUser)
 	if err != nil {
 		return fmt.Errorf("gagal mengambil data pengguna: %w", err)
 	}
@@ -123,5 +125,5 @@ func (s *Service) UpdateUser(ctx context.Context, idUser int32, req *userAccount
 		u.JumlahTanggungan = req.JumlahTanggungan
 	}
 
-	return s.Repository.Update(ctx, u)
+	return s.userAccountRepo.Update(ctx, u)
 }

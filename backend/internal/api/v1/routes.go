@@ -55,39 +55,23 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 
 	huma.Patch(adminGroup, "/users/{id_user}/verification", d.AuthHandler.VerifyUser)
 
-	// User Management routes — ADMIN and DINKES can list all users
-	usermgtGroup := huma.NewGroup(authAccess, "")
-	usermgtGroup.UseMiddleware(middleware.RequireRole(authAccess, "ADMIN", "DINKES"))
-
-	huma.Get(usermgtGroup, "/users", d.UserAccountHandler.GetAllUsers)
+	huma.Get(adminGroup, "/users", d.UserAccountHandler.GetAllUsers)
 	huma.Get(userGroup, "/users/{id}", d.UserAccountHandler.GetUserByID)
 	huma.Patch(userGroup, "/users/{id}", d.UserAccountHandler.UpdateUser)
 
-	// Notifikasi routes
-	notifBidanKaderDinkesGroup := huma.NewGroup(authAccess, "")
-	notifBidanKaderDinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN", "KADER", "DINKES"))
-
-	huma.Get(authAccess, "/notifikasi", d.NotifHandler.GetNotifikasi)
-	huma.Get(authAccess, "/notifikasi/{id}", d.NotifHandler.GetNotifikasiDetail)
-	huma.Patch(authAccess, "/notifikasi/{id}/read", d.NotifHandler.MarkRead)
-	huma.Patch(authAccess, "/notifikasi/read-all", d.NotifHandler.MarkAllRead)
+	huma.Get(userGroup, "/notifikasi", d.NotifHandler.GetNotifikasi)
+	huma.Get(userGroup, "/notifikasi/{id}", d.NotifHandler.GetNotifikasiDetail)
+	huma.Patch(userGroup, "/notifikasi/{id}/read", d.NotifHandler.MarkRead)
+	huma.Patch(userGroup, "/notifikasi/read-all", d.NotifHandler.MarkAllRead)
 	huma.Get(bidanGroup, "/notifikasi/bidan", d.NotifHandler.GetBidanDashboard)
-	huma.Get(notifBidanKaderDinkesGroup, "/notifikasi/statistik", d.NotifHandler.GetStatistics)
-	huma.Get(notifBidanKaderDinkesGroup, "/notifikasi/aktivitas", d.NotifHandler.GetActivity)
+	huma.Get(adminGroup, "/notifikasi/statistik", d.NotifHandler.GetStatistics)
+	huma.Get(adminGroup, "/notifikasi/aktivitas", d.NotifHandler.GetActivity)
 
-	// Pasien routes
-	pasienKaderBidanGroup := huma.NewGroup(authAccess, "")
-	pasienKaderBidanGroup.UseMiddleware(middleware.RequireRole(authAccess, "KADER", "BIDAN"))
-	pasienBidanGroup := huma.NewGroup(authAccess, "")
-	pasienBidanGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN"))
-	pasienBidanKaderDinkesGroup := huma.NewGroup(authAccess, "")
-	pasienBidanKaderDinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN", "KADER", "DINKES"))
-
-	huma.Post(pasienKaderBidanGroup, "/pasien/daftar-ibu-hamil", d.PasienHandler.DaftarIbuHamil)
-	huma.Post(pasienKaderBidanGroup, "/pasien/daftar-anak", d.PasienHandler.DaftarAnak)
-	huma.Get(authAccess, "/pasien", d.PasienHandler.GetAll)
-	huma.Get(pasienBidanKaderDinkesGroup, "/pasien/search", d.PasienHandler.Search)
-	huma.Get(pasienBidanKaderDinkesGroup, "/pasien/{id}", d.PasienHandler.GetByID)
-	huma.Patch(pasienKaderBidanGroup, "/pasien/{id}", d.PasienHandler.Update)
-	huma.Delete(pasienBidanGroup, "/pasien/{id}", d.PasienHandler.Delete)
+	huma.Post(adminGroup, "/pasien/ibu-hamil", d.PasienHandler.DaftarIbuHamil)
+	huma.Post(adminGroup, "/pasien/anak", d.PasienHandler.DaftarAnak)
+	huma.Get(adminGroup, "/monitoring/pasien", d.PasienHandler.GetAll)
+	huma.Get(adminGroup, "/monitoring/pasien/search", d.PasienHandler.Search)
+	huma.Get(adminGroup, "/monitoring/pasien/{id}", d.PasienHandler.GetByID)
+	huma.Patch(bidanGroup, "/pasien/{id}", d.PasienHandler.Update)
+	huma.Delete(bidanGroup, "/pasien/{id}", d.PasienHandler.Delete)
 }

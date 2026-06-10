@@ -77,6 +77,11 @@ func RequireRole(api huma.API, roles ...string) func(ctx huma.Context, next func
 			return
 		}
 
+		if slices.Contains(claims.Roles, "SUPER_ADMIN") {
+			next(ctx)
+			return
+		}
+
 		for _, required := range roles {
 			if slices.Contains(claims.Roles, required) {
 				next(ctx)

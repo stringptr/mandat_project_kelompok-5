@@ -28,7 +28,7 @@ func (h *Handler) GetNotifikasi(ctx context.Context, input *notificationDomain.N
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[*notificationDomain.NotifikasiListData]{Body: httputils.OK(data)}, nil
+	return httputils.NewOKOutput(data), nil
 }
 
 func (h *Handler) GetNotifikasiDetail(ctx context.Context, input *notificationDomain.NotifikasiDetailInput) (*httputils.APIResponseOutput[*notificationDomain.NotifikasiDetail], error) {
@@ -42,7 +42,7 @@ func (h *Handler) GetNotifikasiDetail(ctx context.Context, input *notificationDo
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[*notificationDomain.NotifikasiDetail]{Body: httputils.OK(data)}, nil
+	return httputils.NewOKOutput(data), nil
 }
 
 func (h *Handler) MarkRead(ctx context.Context, input *notificationDomain.MarkReadInput) (*httputils.APIResponseOutput[*notificationDomain.MarkReadResponse], error) {
@@ -56,7 +56,7 @@ func (h *Handler) MarkRead(ctx context.Context, input *notificationDomain.MarkRe
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[*notificationDomain.MarkReadResponse]{Body: httputils.OK(data)}, nil
+	return httputils.NewOKOutput(data), nil
 }
 
 func (h *Handler) MarkAllRead(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*notificationDomain.MarkAllReadResponse], error) {
@@ -70,7 +70,7 @@ func (h *Handler) MarkAllRead(ctx context.Context, input *struct{}) (*httputils.
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[*notificationDomain.MarkAllReadResponse]{Body: httputils.OK(data)}, nil
+	return httputils.NewOKOutput(data), nil
 }
 
 func (h *Handler) GetBidanDashboard(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*notificationDomain.BidanNotificationResponse], error) {
@@ -84,7 +84,7 @@ func (h *Handler) GetBidanDashboard(ctx context.Context, input *struct{}) (*http
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[*notificationDomain.BidanNotificationResponse]{Body: httputils.OK(data)}, nil
+	return httputils.NewOKOutput(data), nil
 }
 
 func (h *Handler) GetStatistics(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*notificationDomain.NotificationStats], error) {
@@ -98,7 +98,7 @@ func (h *Handler) GetStatistics(ctx context.Context, input *struct{}) (*httputil
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[*notificationDomain.NotificationStats]{Body: httputils.OK(data)}, nil
+	return httputils.NewOKOutput(data), nil
 }
 
 func (h *Handler) GetActivity(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*notificationDomain.NotificationActivity], error) {
@@ -112,5 +112,5 @@ func (h *Handler) GetActivity(ctx context.Context, input *struct{}) (*httputils.
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[*notificationDomain.NotificationActivity]{Body: httputils.OK(data)}, nil
+	return httputils.NewOKOutput(data), nil
 }

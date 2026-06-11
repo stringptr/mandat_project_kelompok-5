@@ -12,6 +12,6 @@ type Handler interface {
 	GetAll(ctx context.Context, input *httputils.APIRequestInput[*GetAllPasienRequest]) (*httputils.APIResponseOutput[*PasienListData], error)
 	Search(ctx context.Context, input *SearchPasienRequest) (*httputils.APIResponseOutput[[]*PasienListItem], error)
 	GetByID(ctx context.Context, input *struct{ IDPasien int32 `path:"id" minimum:"1"` }) (*httputils.APIResponseOutput[*PasienDetailResponse], error)
-	Update(ctx context.Context, input *httputils.APIRequestInput[*UpdatePasienRequest]) (*httputils.APIResponseOutput[*PasienDetailResponse], error)
+	Update(ctx context.Context, input *UpdatePasienInput) (*httputils.APIResponseOutput[*PasienDetailResponse], error)
 	Delete(ctx context.Context, input *struct{ IDPasien int32 `path:"id" minimum:"1"` }) (*httputils.APIResponseOutput[any], error)
 }

@@ -22,7 +22,7 @@ func (h *Handler) DaftarIbuHamil(ctx context.Context, input *httputils.APIReques
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[any]{Body: httputils.Created[any](nil)}, nil
+	return httputils.NewCreatedOutput[any](nil), nil
 }
 
 func (h *Handler) DaftarAnak(ctx context.Context, input *httputils.APIRequestInput[*pasienDomain.DaftarAnakRequest]) (*httputils.APIResponseOutput[any], error) {
@@ -31,7 +31,7 @@ func (h *Handler) DaftarAnak(ctx context.Context, input *httputils.APIRequestInp
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[any]{Body: httputils.Created[any](nil)}, nil
+	return httputils.NewCreatedOutput[any](nil), nil
 }
 
 func (h *Handler) GetAll(ctx context.Context, input *httputils.APIRequestInput[*pasienDomain.GetAllPasienRequest]) (*httputils.APIResponseOutput[*pasienDomain.PasienListData], error) {
@@ -40,7 +40,7 @@ func (h *Handler) GetAll(ctx context.Context, input *httputils.APIRequestInput[*
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[*pasienDomain.PasienListData]{Body: httputils.OK(res)}, nil
+	return httputils.NewOKOutput(res), nil
 }
 
 func (h *Handler) Search(ctx context.Context, input *pasienDomain.SearchPasienRequest) (*httputils.APIResponseOutput[[]*pasienDomain.PasienListItem], error) {
@@ -52,7 +52,7 @@ func (h *Handler) Search(ctx context.Context, input *pasienDomain.SearchPasienRe
 		res = []*pasienDomain.PasienListItem{}
 	}
 
-	return &httputils.APIResponseOutput[[]*pasienDomain.PasienListItem]{Body: httputils.OK(res)}, nil
+	return httputils.NewOKOutput(res), nil
 }
 
 func (h *Handler) GetByID(ctx context.Context, input *struct {
@@ -64,16 +64,17 @@ func (h *Handler) GetByID(ctx context.Context, input *struct {
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[*pasienDomain.PasienDetailResponse]{Body: httputils.OK(res)}, nil
+	return httputils.NewOKOutput(res), nil
 }
 
-func (h *Handler) Update(ctx context.Context, input *httputils.APIRequestInput[*pasienDomain.UpdatePasienRequest]) (*httputils.APIResponseOutput[*pasienDomain.PasienDetailResponse], error) {
+func (h *Handler) Update(ctx context.Context, input *pasienDomain.UpdatePasienInput) (*httputils.APIResponseOutput[*pasienDomain.PasienDetailResponse], error) {
+	input.Body.IDPasien = input.IDPasien
 	res, err := h.Service.Update(ctx, input.Body)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[*pasienDomain.PasienDetailResponse]{Body: httputils.OK(res)}, nil
+	return httputils.NewOKOutput(res), nil
 }
 
 func (h *Handler) Delete(ctx context.Context, input *struct {
@@ -85,5 +86,5 @@ func (h *Handler) Delete(ctx context.Context, input *struct {
 		return nil, errorutils.ToHumaError(err)
 	}
 
-	return &httputils.APIResponseOutput[any]{Body: httputils.OK[any](nil)}, nil
+	return httputils.NewOKOutput[any](nil), nil
 }

@@ -24,9 +24,7 @@ func (h *Handler) GetAllUsers(ctx context.Context, input *httputils.APIRequestIn
 		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
 	}
 
-	return &httputils.APIResponseOutput[*userAccountDomain.UserListData]{
-		Body: httputils.Success(http.StatusOK, result, "Daftar pengguna berhasil diambil."),
-	}, nil
+	return httputils.NewSuccessOutput(http.StatusOK, result, "Daftar pengguna berhasil diambil."), nil
 }
 
 func (h *Handler) GetUserByID(ctx context.Context, input *struct {
@@ -41,18 +39,17 @@ func (h *Handler) GetUserByID(ctx context.Context, input *struct {
 		return nil, huma.Error404NotFound("Pengguna tidak ditemukan.")
 	}
 
-	return &httputils.APIResponseOutput[*userAccountDomain.UserDetailResponse]{
-		Body: httputils.Success(http.StatusOK, user, "Detail pengguna berhasil diambil."),
-	}, nil
+	return httputils.NewSuccessOutput(http.StatusOK, user, "Detail pengguna berhasil diambil."), nil
 }
 
-func (h *Handler) UpdateUser(ctx context.Context, input *httputils.APIRequestInput[*userAccountDomain.UpdateUserRequest]) (*httputils.APIResponseOutput[*userAccountDomain.UserDetailResponse], error) {
+func (h *Handler) UpdateUser(ctx context.Context, input *userAccountDomain.UpdateUserInput) (*httputils.APIResponseOutput[*userAccountDomain.UserDetailResponse], error) {
 	claims := httputils.GetAccessClaim(ctx)
 	if claims == nil {
 		return nil, huma.Error401Unauthorized("Silahkan login terlebih dahulu.")
 	}
 
-	idUser := input.Body.IDUser
+	idUser := input.IDUser
+	input.Body.IDUser = idUser
 
 	if idUser != claims.IDUser {
 		isAdmin := false
@@ -80,7 +77,5 @@ func (h *Handler) UpdateUser(ctx context.Context, input *httputils.APIRequestInp
 		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
 	}
 
-	return &httputils.APIResponseOutput[*userAccountDomain.UserDetailResponse]{
-		Body: httputils.Success(http.StatusOK, updatedUser, "Profil pengguna berhasil diperbarui."),
-	}, nil
+	return httputils.NewSuccessOutput(http.StatusOK, updatedUser, "Profil pengguna berhasil diperbarui."), nil
 }

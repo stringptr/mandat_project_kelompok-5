@@ -100,7 +100,7 @@ func TestPasienDaftarIbuHamilSuccess(t *testing.T) {
 	resp := testutils.DoRequest(f.handler, http.MethodPost, "/pasien/ibu-hamil", body,
 		testutils.AccessCookie(f.jwtUtil, authIDs.AdminUserID, []string{"ADMIN"}))
 	respBody := testutils.ReadBody(resp)
-	pass := resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated
+	pass := resp.StatusCode == http.StatusCreated
 
 	testutils.TestResult{
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",
@@ -220,7 +220,7 @@ func TestPasienDaftarAnakSuccess(t *testing.T) {
 	resp := testutils.DoRequest(f.handler, http.MethodPost, "/pasien/anak", body,
 		testutils.AccessCookie(f.jwtUtil, authIDs.AdminUserID, []string{"ADMIN"}))
 	respBody := testutils.ReadBody(resp)
-	pass := resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated
+	pass := resp.StatusCode == http.StatusCreated
 
 	testutils.TestResult{
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",

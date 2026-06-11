@@ -98,6 +98,11 @@ type UpdatePasienRequest struct {
 	IDWali           *int32  `json:"id_wali,omitempty" minimum:"1"`
 }
 
+type UpdatePasienInput struct {
+	IDPasien int32 `path:"id" minimum:"1"`
+	Body     *UpdatePasienRequest
+}
+
 type DeletePasienRequest struct {
 	IDPasien int32 `path:"id" minimum:"1"`
 }

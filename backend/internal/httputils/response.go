@@ -18,7 +18,23 @@ type APIResponse[T any] struct {
 }
 
 type APIResponseOutput[T any] struct {
-	Body APIResponse[T]
+	Status int            `json:"-"`
+	Body   APIResponse[T]
+}
+
+func NewOKOutput[T any](data T) *APIResponseOutput[T] {
+	body := OK(data)
+	return &APIResponseOutput[T]{Status: body.Status, Body: body}
+}
+
+func NewCreatedOutput[T any](data T) *APIResponseOutput[T] {
+	body := Created(data)
+	return &APIResponseOutput[T]{Status: body.Status, Body: body}
+}
+
+func NewSuccessOutput[T any](status int, data T, detail string) *APIResponseOutput[T] {
+	body := Success(status, data, detail)
+	return &APIResponseOutput[T]{Status: body.Status, Body: body}
 }
 
 type APIRequestInput[T any] struct {

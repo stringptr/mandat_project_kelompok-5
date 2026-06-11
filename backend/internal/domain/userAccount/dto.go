@@ -66,6 +66,11 @@ type UserDetailResponse struct {
 	UpdatedAt        time.Time `json:"updated_at"`
 }
 
+type UpdateUserInput struct {
+	IDUser int32 `path:"id" minimum:"1"`
+	Body   *UpdateUserRequest
+}
+
 type UpdateUserRequest struct {
 	IDUser           int32      `path:"id" minimum:"1"`
 	Email            *string    `json:"email,omitempty"             format:"email" maxLength:"255"`

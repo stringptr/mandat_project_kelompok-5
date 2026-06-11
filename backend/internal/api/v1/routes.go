@@ -72,6 +72,6 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Get(adminGroup, "/monitoring/pasien", d.PasienHandler.GetAll)
 	huma.Get(adminGroup, "/monitoring/pasien/search", d.PasienHandler.Search)
 	huma.Get(adminGroup, "/monitoring/pasien/{id}", d.PasienHandler.GetByID)
-	huma.Patch(bidanGroup, "/pasien/{id}", d.PasienHandler.Update)
+	huma.Patch(adminGroup, "/pasien/{id}", d.PasienHandler.Update)
 	huma.Delete(bidanGroup, "/pasien/{id}", d.PasienHandler.Delete)
 }

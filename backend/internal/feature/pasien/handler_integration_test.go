@@ -106,7 +106,7 @@ func TestPasienDaftarIbuHamilSuccess(t *testing.T) {
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",
 		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-001",
 		Functional: "Daftar Ibu Hamil — Success", Endpoint: "POST /pasien/ibu-hamil",
-		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: "VerifiedUserID, valid posyandu",
+		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: `{"id_user":"<VerifiedUserID>","id_posyandu":"<PosyanduID>","hamil_ke":1,"bulan_mulai_hamil":"2026-01-01","hpht":"2026-01-15","status_kehamilan":"Trimester 1"}`,
 		ShouldBeSuccess: "true",
 		Expectation:     "Response 201, success:true",
 	}.Log(t, pass, resp, respBody)
@@ -135,7 +135,7 @@ func TestPasienDaftarIbuHamilConflict(t *testing.T) {
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",
 		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-002",
 		Functional: "Daftar Ibu Hamil — Conflict (Already Pasien)", Endpoint: "POST /pasien/ibu-hamil",
-		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: "RegularUserID yang sudah terdaftar sebagai pasien",
+		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: `{"id_user":"<RegularUserID>","id_posyandu":"<PosyanduID>","hamil_ke":1,"bulan_mulai_hamil":"2026-01-01","hpht":"2026-01-15","status_kehamilan":"Trimester 1"}`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 409, success:false",
 	}.Log(t, pass, resp, respBody)
@@ -164,7 +164,7 @@ func TestPasienDaftarIbuHamilUserNotFound(t *testing.T) {
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",
 		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-003",
 		Functional: "Daftar Ibu Hamil — User Not Found", Endpoint: "POST /pasien/ibu-hamil",
-		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: "id_user=99999 (nonexistent)",
+		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: `{"id_user":99999,"id_posyandu":"<PosyanduID>","hamil_ke":1,"bulan_mulai_hamil":"2026-01-01","hpht":"2026-01-15","status_kehamilan":"Trimester 1"}`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 404, success:false, detail: 'User tidak ditemukan.'",
 	}.Log(t, pass, resp, respBody)
@@ -192,7 +192,7 @@ func TestPasienDaftarIbuHamilPosyanduNotFound(t *testing.T) {
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",
 		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-004",
 		Functional: "Daftar Ibu Hamil — Posyandu Not Found", Endpoint: "POST /pasien/ibu-hamil",
-		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: "id_posyandu=99999 (nonexistent)",
+		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: `{"id_user":"<VerifiedUserID>","id_posyandu":99999,"hamil_ke":1,"bulan_mulai_hamil":"2026-01-01","hpht":"2026-01-15","status_kehamilan":"Trimester 1"}`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 404, success:false, detail: 'Posyandu tidak ditemukan.'",
 	}.Log(t, pass, resp, respBody)
@@ -226,7 +226,7 @@ func TestPasienDaftarAnakSuccess(t *testing.T) {
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",
 		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-005",
 		Functional: "Daftar Anak — Success", Endpoint: "POST /pasien/anak",
-		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: "VerifiedUserID, valid posyandu & wali",
+		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: `{"id_user":"<VerifiedUserID>","id_posyandu":"<PosyanduID>","id_wali":"<RegularUserID>","nama_anak":"Bayi Test","berat_lahir":3.2,"panjang_lahir":50.0,"hubungan_dengan_wali":"Kandung"}`,
 		ShouldBeSuccess: "true",
 		Expectation:     "Response 201, success:true",
 	}.Log(t, pass, resp, respBody)
@@ -256,7 +256,7 @@ func TestPasienDaftarAnakConflict(t *testing.T) {
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",
 		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-006",
 		Functional: "Daftar Anak — Conflict (Already Pasien)", Endpoint: "POST /pasien/anak",
-		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: "RegularUserID yang sudah terdaftar sebagai pasien",
+		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: `{"id_user":"<RegularUserID>","id_posyandu":"<PosyanduID>","id_wali":"<RegularUserID>","nama_anak":"Bayi Test","berat_lahir":3.2,"panjang_lahir":50.0,"hubungan_dengan_wali":"Kandung"}`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 409, success:false",
 	}.Log(t, pass, resp, respBody)
@@ -388,7 +388,7 @@ func TestPasienSearchSuccessByNIK(t *testing.T) {
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",
 		TSDRef: "TSD-3.3-22 (baris 623-636)", NoTestScript: "TC-PASIEN-012",
 		Functional: "Cari Pasien — By NIK", Endpoint: "GET /monitoring/pasien/search?q=3201020304050004",
-		ReqType: "Cookie (access_token) + query", Parameter: "Role: ADMIN, q=NIK RegularUser",
+		ReqType: "Cookie (access_token) + query", Parameter: "Role: ADMIN, q=3201020304050004",
 		ShouldBeSuccess: "true",
 		Expectation:     "Response 200, success:true, data contains matching pasien",
 	}.Log(t, pass, resp, respBody)
@@ -449,7 +449,7 @@ func TestPasienSearchForbidden(t *testing.T) {
 		SRSRef: "SRS-SC-03", FSDRef: "FSD-2.2",
 		TSDRef: "TSD-3.3-22 (baris 623-636)", NoTestScript: "TC-PASIEN-015",
 		Functional: "Cari Pasien — Forbidden (Wrong Role)", Endpoint: "GET /monitoring/pasien/search",
-		ReqType: "Cookie (access_token) + query", Parameter: "Role: USER (requires ADMIN)",
+		ReqType: "Cookie (access_token) + query", Parameter: "Role: USER (requires ADMIN), q=test",
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 403, success:false",
 	}.Log(t, pass, resp, respBody)
@@ -566,7 +566,7 @@ func TestPasienUpdateSuccess(t *testing.T) {
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",
 		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-020",
 		Functional: "Update Pasien — Success", Endpoint: "PATCH /pasien/{id}",
-		ReqType: "JSON Body + Cookie (BIDAN)", Parameter: "Update status_kehamilan on existing ibu hamil pasien",
+		ReqType: "JSON Body + Cookie (BIDAN)", Parameter: `{"status_kehamilan":"Trimester 2"}`,
 		ShouldBeSuccess: "true",
 		Expectation:     "Response 200, success:true, data.status_kehamilan updated",
 	}.Log(t, pass, resp, respBody)
@@ -587,7 +587,7 @@ func TestPasienUpdateNotFound(t *testing.T) {
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",
 		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-021",
 		Functional: "Update Pasien — Not Found", Endpoint: "PATCH /pasien/99999",
-		ReqType: "JSON Body + Cookie (BIDAN)", Parameter: "id=99999 (nonexistent)",
+		ReqType: "JSON Body + Cookie (BIDAN)", Parameter: `{"status_kehamilan":"Trimester 2"} (id=99999)`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 404, success:false, detail: 'Pasien tidak ditemukan.'",
 	}.Log(t, pass, resp, respBody)
@@ -610,7 +610,7 @@ func TestPasienUpdateForbidden(t *testing.T) {
 		SRSRef: "SRS-SC-03", FSDRef: "FSD-2.2",
 		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-022",
 		Functional: "Update Pasien — Forbidden (Wrong Role)", Endpoint: "PATCH /pasien/{id}",
-		ReqType: "JSON Body + Cookie (USER)", Parameter: "Role: USER (requires BIDAN)",
+		ReqType: "JSON Body + Cookie (USER)", Parameter: `{"status_kehamilan":"Trimester 2"}, Role: USER (requires BIDAN)`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 403, success:false",
 	}.Log(t, pass, resp, respBody)

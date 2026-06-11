@@ -148,7 +148,7 @@ func TestAuthRegisterSuccess(t *testing.T) {
 		SRSRef: "SRS-7.1(1,2,3)", FSDRef: "FSD-2.1",
 		TSDRef: "TSD-3.3-1 (baris 250-266)", NoTestScript: "TC-AUTH-001",
 		Functional: "Register User - Success", Endpoint: "POST /auth/register",
-		ReqType: "JSON Body", Parameter: `{"email":"newuser@example.com","password":"***","nama":"Test User"}`,
+		ReqType: "JSON Body", Parameter: `{"email":"newuser@example.com","password":"password123","nama":"Test User","nik":"3201020304050010","jenis_kelamin":"Perempuan","tanggal_lahir":"2000-01-01T00:00:00Z","id_lokasi":1,"role":"Ibu Hamil","no_hp":"08123456789"}`,
 		ShouldBeSuccess: "true",
 		Expectation:     "Response 201, success:true, detail: 'Register berhasil. Akun sedang diverifikasi. Silahkan dicek secara berkala.'",
 	}.Log(t, pass, resp, respBody)
@@ -173,7 +173,7 @@ func TestAuthRegisterDuplicate(t *testing.T) {
 		SRSRef: "SRS-7.1(2)", FSDRef: "FSD-2.1",
 		TSDRef: "TSD-3.3-1 (baris 250-266)", NoTestScript: "TC-AUTH-002",
 		Functional: "Register User - Duplicate", Endpoint: "POST /auth/register",
-		ReqType: "JSON Body", Parameter: `{"nik":"3201020304050001","email":"verified@example.com"}`,
+		ReqType: "JSON Body", Parameter: `{"email":"verified@example.com","password":"password123","nama":"Verified User","nik":"3201020304050001","jenis_kelamin":"Perempuan","tanggal_lahir":"2000-01-01T00:00:00Z","id_lokasi":1,"role":"Ibu Hamil","no_hp":"081111111111"}`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 409, success:false, detail: 'Tidak dapat mendaftar dengan identitas yang diberikan.'",
 	}.Log(t, pass, resp, respBody)
@@ -193,7 +193,7 @@ func TestAuthRegisterValidationError(t *testing.T) {
 		TSDRef: "TSD-3.3-1 (baris 250-266)", NoTestScript: "TC-AUTH-003",
 		Functional: "Register User - Validation Error", Endpoint: "POST /auth/register",
 		ReqType:         "JSON Body",
-		Parameter:       `{"email":"invalid","password":"short","nik":"123"}`,
+		Parameter:       `{"email":"invalid","password":"short","nama":"","nik":"123"}`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 422, success:false",
 	}.Log(t, pass, resp, respBody)
@@ -213,7 +213,7 @@ func TestAuthLoginSuccess(t *testing.T) {
 		SRSRef: "SRS-7.2(1,2,3)", FSDRef: "FSD-2.2",
 		TSDRef: "TSD-3.3-2 (baris 269-286)", NoTestScript: "TC-AUTH-004",
 		Functional: "Login User - Success", Endpoint: "POST /auth/login",
-		ReqType: "JSON Body", Parameter: `{"email":"verified@example.com","password":"***"}`,
+		ReqType: "JSON Body", Parameter: `{"email":"verified@example.com","nik":"3201020304050001","password":"password123"}`,
 		ShouldBeSuccess: "true",
 		Expectation:     "Response 200, success:true, data contains access_token & refresh_token, Set-Cookie present",
 	}.Log(t, pass, resp, respBody)
@@ -233,7 +233,7 @@ func TestAuthLoginWrongCredentials(t *testing.T) {
 		SRSRef: "SRS-SC-03", FSDRef: "FSD-2.2",
 		TSDRef: "TSD-3.3-2 (baris 269-286)", NoTestScript: "TC-AUTH-005",
 		Functional: "Login User - Wrong Credentials", Endpoint: "POST /auth/login",
-		ReqType: "JSON Body", Parameter: `{"email":"verified@example.com","password":"***"}`,
+		ReqType: "JSON Body", Parameter: `{"email":"verified@example.com","nik":"3201020304050001","password":"wrongpassword"}`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 401, success:false, detail: 'Email, NIK, atau Password tidak valid'",
 	}.Log(t, pass, resp, respBody)
@@ -253,7 +253,7 @@ func TestAuthLoginPendingVerification(t *testing.T) {
 		SRSRef: "SRS-7.1(3)", FSDRef: "FSD-2.2",
 		TSDRef: "TSD-3.3-2 (baris 269-286)", NoTestScript: "TC-AUTH-006",
 		Functional: "Login User - Pending Verification", Endpoint: "POST /auth/login",
-		ReqType: "JSON Body", Parameter: `{"email":"unverified@example.com","password":"***"}`,
+		ReqType: "JSON Body", Parameter: `{"email":"unverified@example.com","nik":"3201020304050002","password":"password123"}`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 401, success:false, detail: 'Akun sedang dalam proses verifikasi. Silahkan dicek secara berkala.'",
 	}.Log(t, pass, resp, respBody)
@@ -339,7 +339,7 @@ func TestAuthLogoutNoSession(t *testing.T) {
 		SRSRef: "SRS-7.2(5)", FSDRef: "FSD-2.2",
 		TSDRef: "TSD-3.3-4 (baris 310-324)", NoTestScript: "TC-AUTH-011",
 		Functional: "Logout User - Session Not Found", Endpoint: "POST /auth/logout",
-		ReqType: "Cookie (refresh_token)", Parameter: "Cookie: refresh_token=uuid-v7",
+		ReqType: "Cookie (refresh_token)", Parameter: "Cookie: refresh_token=invalid-uuid",
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 404, success:false, detail: 'Sesi login tidak dapat ditemukan.'",
 	}.Log(t, pass, resp, respBody)
@@ -459,7 +459,7 @@ func TestAuthLoginIPLocked(t *testing.T) {
 		SRSRef: "SRS-7.2(2)", FSDRef: "FSD-2.2",
 		TSDRef: "TSD-3.3-2 (baris 269-286)", NoTestScript: "TC-AUTH-007",
 		Functional: "Login User - IP Locked", Endpoint: "POST /auth/login",
-		ReqType: "JSON Body", Parameter: `{"email":"verified@example.com","password":"***"}, 3x failed attempts`,
+		ReqType: "JSON Body", Parameter: `{"email":"verified@example.com","nik":"3201020304050001","password":"wrongpassword"} (3 failed from 192.0.2.1, locked)`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 403, success:false, detail: 'Akses ditolak. Terlalu banyak percobaan...'",
 	}.Log(t, pass, resp, respBody)

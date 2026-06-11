@@ -14,6 +14,7 @@ require (
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/jinzhu/copier v0.4.0
 	github.com/nats-io/nats.go v1.42.0
+	github.com/resend/resend-go/v2 v2.28.0
 	github.com/shopspring/decimal v1.4.0
 	golang.org/x/crypto v0.52.0
 )

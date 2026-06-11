@@ -38,7 +38,7 @@ type Service struct {
 	banRepo         bannedipDomain.Repo
 	blacklistRepo   jwtblacklistDomain.Repo
 	auditRepo       auditlogDomain.Repo
-	mailSender      *mail.Sender
+	mailSender      mail.Sender
 }
 
 func NewService(
@@ -51,7 +51,7 @@ func NewService(
 	banRepo bannedipDomain.Repo,
 	blacklistRepo jwtblacklistDomain.Repo,
 	auditRepo auditlogDomain.Repo,
-	mailSender *mail.Sender,
+	mailSender mail.Sender,
 ) *Service {
 	return &Service{
 		authRepo:        authRepo,

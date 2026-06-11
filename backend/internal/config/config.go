@@ -15,7 +15,7 @@ type Config struct {
 	AuthConfig         AuthConfig
 	NATSConfig         NATSConfig
 	RestrictAuthConfig RestrictAuthConfig
-	SMTPConfig         SMTPConfig
+	MailConfig         MailConfig
 }
 
 type PostgresConfig struct {
@@ -44,13 +44,15 @@ type RestrictAuthConfig struct {
 	Duration   time.Duration
 }
 
-type SMTPConfig struct {
+type MailConfig struct {
+	Provider  string
 	Host      string
 	Port      int
 	Username  string
 	Password  string
 	FromEmail string
 	FromName  string
+	ResendAPIKey string
 }
 
 func Load() *Config {
@@ -75,13 +77,15 @@ func Load() *Config {
 	restrictAuthDurationInt, _ := strconv.Atoi(restrictAuthDuration)
 	restrictAuthMaxAttemptInt, _ := strconv.Atoi(restrictAuthMaxAttempt)
 
-	smtpHost := getEnv("MAILTRAP_HOST", "sandbox.smtp.mailtrap.io")
-	smtpPortStr := getEnv("MAILTRAP_PORT", "2525")
-	smtpUser := getEnv("MAILTRAP_USERNAME", "")
-	smtpPass := getEnv("MAILTRAP_PASSWORD", "")
-	smtpFromEmail := getEnv("MAILTRAP_FROM_EMAIL", "noreply@sigizi.com")
-	smtpFromName := getEnv("MAILTRAP_FROM_NAME", "SiGizi")
-	smtpPortInt, _ := strconv.Atoi(smtpPortStr)
+	mailProvider := getEnv("MAIL_PROVIDER", "smtp")
+	mailHost := getEnv("MAIL_HOST", "sandbox.smtp.mailtrap.io")
+	mailPortStr := getEnv("MAIL_PORT", "2525")
+	mailUser := getEnv("MAIL_USERNAME", "")
+	mailPass := getEnv("MAIL_PASSWORD", "")
+	mailFromEmail := getEnv("MAIL_FROM_EMAIL", "noreply@sigizi.com")
+	mailFromName := getEnv("MAIL_FROM_NAME", "SiGizi")
+	mailPortInt, _ := strconv.Atoi(mailPortStr)
+	resendAPIKey := getEnv("RESEND_API_KEY", "")
 
 	return &Config{
 		Host:        serverHost,
@@ -109,13 +113,15 @@ func Load() *Config {
 			MaxAttempt: restrictAuthMaxAttemptInt,
 			Duration:   time.Duration(restrictAuthDurationInt) * time.Second,
 		},
-		SMTPConfig: SMTPConfig{
-			Host:      smtpHost,
-			Port:      smtpPortInt,
-			Username:  smtpUser,
-			Password:  smtpPass,
-			FromEmail: smtpFromEmail,
-			FromName:  smtpFromName,
+		MailConfig: MailConfig{
+			Provider:     mailProvider,
+			Host:         mailHost,
+			Port:         mailPortInt,
+			Username:     mailUser,
+			Password:     mailPass,
+			FromEmail:    mailFromEmail,
+			FromName:     mailFromName,
+			ResendAPIKey: resendAPIKey,
 		},
 	}
 }

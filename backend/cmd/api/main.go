@@ -89,7 +89,7 @@ func main() {
 	pasienService := pasienFeature.NewService(pasienRepo, auditLogRepo)
 	pasienHandler := pasienFeature.NewHandler(pasienService)
 
-	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo, auditLogRepo, mail.NewSender(cfg.SMTPConfig))
+	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo, auditLogRepo, mail.New(cfg.MailConfig))
 	authHandler := auth.NewHandler(authService, &jwtUtil)
 
 	r := chi.NewMux()

@@ -1,0 +1,557 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pipeline>
+  <info>
+    <name>fact_pemeriksaan</name>
+    <name_sync_with_filename>Y</name_sync_with_filename>
+    <description>Load health examination facts with all dimensions lookup</description>
+    <extended_description/>
+    <pipeline_version/>
+    <pipeline_type>Normal</pipeline_type>
+    <parameters>
+    </parameters>
+    <capture_transform_performance>N</capture_transform_performance>
+    <transform_performance_capturing_delay>1000</transform_performance_capturing_delay>
+    <transform_performance_capturing_size_limit>100</transform_performance_capturing_size_limit>
+    <created_user>-</created_user>
+    <created_date>2026/06/13 13:00:00.000</created_date>
+    <modified_user>-</modified_user>
+    <modified_date>2026/06/13 16:30:00.000</modified_date>
+  </info>
+  <notepads>
+  </notepads>
+  <order>
+    <hop>
+      <from>Read Pemeriksaan Data</from>
+      <to>Lookup id_waktu</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Lookup id_waktu</from>
+      <to>Lookup id_lokasi</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Lookup id_lokasi</from>
+      <to>Lookup id_dim_pasien</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Lookup id_dim_pasien</from>
+      <to>Lookup id_posyandu</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Lookup id_posyandu</from>
+      <to>Lookup id_dim_kehamilan</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Lookup id_dim_kehamilan</from>
+      <to>Lookup id_petugas</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Lookup id_petugas</from>
+      <to>Calculate Flags</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Calculate Flags</from>
+      <to>Write FACT_PEMERIKSAAN</to>
+      <enabled>Y</enabled>
+    </hop>
+  </order>
+  <transform>
+    <name>Read Pemeriksaan Data</name>
+    <type>TableInput</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>Master</connection>
+    <sql>-- Skema Master:
+-- hasil_pemeriksaan: id_hasil_pemeriksaan, id_petugas_input, id_jadwal_imunisasi,
+--                   berat_badan, tinggi_badan, lingkar_kepala, tekanan_darah,
+--                   status_stunting, status_gizi, catatan
+-- jadwal_imunisasi: id_imunisasi, id_pasien, nama_vaksin, tanggal_jadwal,
+--                   tanggal_realisasi, status_imunisasi
+-- pasien: id_pasien, id_posyandu
+-- user_account: id_lokasi (lokasi domisili pasien)
+-- Tidak ada kolom lila/hemoglobin/status_perlu_rujukan di hasil_pemeriksaan
+-- Flag kek dan anemia di-derive dari tindak_lanjut jika ada, atau dari status_gizi
+SELECT
+  hp.id_hasil_pemeriksaan,
+  hp.id_jadwal_imunisasi              AS id_jadwal_imunisasi_oltp,
+  -- Tanggal realisasi imunisasi sebagai tanggal pemeriksaan
+  -- Jika belum terealisasi, pakai tanggal_jadwal sebagai fallback
+  COALESCE(ji.tanggal_realisasi, ji.tanggal_jadwal) AS tanggal_pemeriksaan,
+  ji.id_pasien,
+  p.id_posyandu                       AS id_posyandu_oltp,
+  ua.id_lokasi                        AS id_lokasi_oltp,
+  hp.berat_badan,
+  hp.tinggi_badan,
+  hp.lingkar_kepala,
+  hp.tekanan_darah,
+  hp.status_stunting::VARCHAR,
+  hp.status_gizi::VARCHAR,
+  -- status_perlu_rujukan di-derive: ada di tindak_lanjut.status_pasien
+  COALESCE(tl.status_pasien::VARCHAR, 'Dalam Pemantauan') AS status_perlu_rujukan,
+  -- lila dan hemoglobin tidak ada di skema; set 0 agar flag_kek/flag_anemia = 0 untuk anak
+  -- untuk ibu hamil, derive dari status_gizi
+  0::NUMERIC                          AS lila,
+  0::NUMERIC                          AS hemoglobin,
+  ih.id_ibu_hamil                     AS id_ibu_hamil_oltp,
+  CASE
+    WHEN EXISTS (SELECT 1 FROM anak a WHERE a.id_pasien = ji.id_pasien) THEN 'Anak'
+    ELSE 'Ibu Hamil'
+  END                                 AS tipe_pasien,
+  -- id_petugas_input untuk lookup ke DIM_PETUGAS via user_account
+  hp.id_petugas_input
+FROM hasil_pemeriksaan hp
+JOIN jadwal_imunisasi ji  ON hp.id_jadwal_imunisasi = ji.id_imunisasi
+JOIN pasien p             ON ji.id_pasien           = p.id_pasien
+JOIN user_account ua      ON p.id_pasien            = ua.id_user
+LEFT JOIN ibu_hamil ih    ON ih.id_pasien           = ji.id_pasien
+LEFT JOIN tindak_lanjut tl ON tl.id_hasil_pemeriksaan = hp.id_hasil_pemeriksaan</sql>
+    <limit>0</limit>
+    <lookup/>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>N</variables_active>
+    <lazy_conversion_active>N</lazy_conversion_active>
+    <attributes/>
+    <GUI>
+      <xloc>80</xloc>
+      <yloc>80</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Lookup id_waktu</name>
+    <type>DBLookup</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>Warehouse</connection>
+    <schema>public</schema>
+    <table>DIM_WAKTU</table>
+    <cache>Y</cache>
+    <cache_load_all>Y</cache_load_all>
+    <cache_size>0</cache_size>
+    <lookup>
+      <key>
+        <name>tanggal_pemeriksaan</name>
+        <field>tanggal</field>
+        <condition>=</condition>
+      </key>
+      <value>
+        <name>id_waktu</name>
+        <rename>id_waktu</rename>
+        <default/>
+        <type>Integer</type>
+      </value>
+    </lookup>
+    <attributes/>
+    <GUI>
+      <xloc>200</xloc>
+      <yloc>80</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Lookup id_lokasi</name>
+    <type>DBLookup</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>Warehouse</connection>
+    <schema>public</schema>
+    <table>DIM_LOKASI</table>
+    <cache>Y</cache>
+    <cache_load_all>Y</cache_load_all>
+    <cache_size>0</cache_size>
+    <lookup>
+      <key>
+        <name>id_lokasi_oltp</name>
+        <field>id_lokasi_oltp</field>
+        <condition>=</condition>
+      </key>
+      <value>
+        <name>id_lokasi</name>
+        <rename>id_lokasi</rename>
+        <default/>
+        <type>Integer</type>
+      </value>
+    </lookup>
+    <attributes/>
+    <GUI>
+      <xloc>320</xloc>
+      <yloc>80</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Lookup id_dim_pasien</name>
+    <type>DBLookup</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>Warehouse</connection>
+    <schema>public</schema>
+    <table>DIM_PASIEN</table>
+    <cache>Y</cache>
+    <cache_load_all>Y</cache_load_all>
+    <cache_size>0</cache_size>
+    <lookup>
+      <key>
+        <name>id_pasien</name>
+        <field>id_pasien_oltp</field>
+        <condition>=</condition>
+      </key>
+      <key>
+        <name>tipe_pasien</name>
+        <field>tipe_pasien</field>
+        <condition>=</condition>
+      </key>
+      <value>
+        <name>id_dim_pasien</name>
+        <rename>id_dim_pasien</rename>
+        <default/>
+        <type>Integer</type>
+      </value>
+    </lookup>
+    <attributes/>
+    <GUI>
+      <xloc>440</xloc>
+      <yloc>80</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Lookup id_posyandu</name>
+    <type>DBLookup</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>Warehouse</connection>
+    <schema>public</schema>
+    <table>DIM_POSYANDU</table>
+    <cache>Y</cache>
+    <cache_load_all>Y</cache_load_all>
+    <cache_size>0</cache_size>
+    <lookup>
+      <key>
+        <name>id_posyandu_oltp</name>
+        <field>id_posyandu_oltp</field>
+        <condition>=</condition>
+      </key>
+      <value>
+        <name>id_posyandu</name>
+        <rename>id_posyandu</rename>
+        <default/>
+        <type>Integer</type>
+      </value>
+    </lookup>
+    <attributes/>
+    <GUI>
+      <xloc>560</xloc>
+      <yloc>80</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Lookup id_dim_kehamilan</name>
+    <type>DBLookup</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>Warehouse</connection>
+    <schema>public</schema>
+    <table>DIM_IBU_HAMIL</table>
+    <cache>Y</cache>
+    <cache_load_all>Y</cache_load_all>
+    <cache_size>0</cache_size>
+    <lookup>
+      <key>
+        <name>id_ibu_hamil_oltp</name>
+        <field>id_ibu_hamil_oltp</field>
+        <condition>=</condition>
+      </key>
+      <value>
+        <name>id_dim_ibu_hamil</name>
+        <rename>id_dim_kehamilan</rename>
+        <default/>
+        <type>Integer</type>
+      </value>
+    </lookup>
+    <attributes/>
+    <GUI>
+      <xloc>680</xloc>
+      <yloc>80</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Lookup id_petugas</name>
+    <type>DBLookup</type>
+    <description>Ambil id_petugas dari DIM_POSYANDU berdasarkan id_posyandu yang sudah di-resolve</description>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>Warehouse</connection>
+    <schema>public</schema>
+    <table>DIM_POSYANDU</table>
+    <cache>Y</cache>
+    <cache_load_all>Y</cache_load_all>
+    <cache_size>0</cache_size>
+    <lookup>
+      <key>
+        <name>id_posyandu</name>
+        <field>id_posyandu</field>
+        <condition>=</condition>
+      </key>
+      <value>
+        <name>id_petugas_bidan</name>
+        <rename>id_petugas</rename>
+        <default/>
+        <type>Integer</type>
+      </value>
+    </lookup>
+    <attributes/>
+    <GUI>
+      <xloc>800</xloc>
+      <yloc>80</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Calculate Flags</name>
+    <type>ScriptValueMod</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <compatible>N</compatible>
+    <optimizationLevel>9</optimizationLevel>
+    <jsScripts>
+      <jsScript>
+        <jsScript_type>0</jsScript_type>
+        <jsScript_name>Script 1</jsScript_name>
+        <jsScript_script>// Calculate flags berdasarkan kolom yang tersedia di skema Master
+// status_stunting ENUM: 'Normal','Berisiko Stunting','Stunting','Stunting Berat'
+var flag_stunting = (status_stunting == 'Stunting' || status_stunting == 'Stunting Berat') ? 1 : 0;
+// status_gizi ENUM: 'Gizi Baik','Gizi Kurang','Gizi Buruk','Risiko Gizi Lebih','Gizi Lebih','Obesitas'
+var flag_gizi_buruk = (status_gizi == 'Gizi Buruk') ? 1 : 0;
+// status_perlu_rujukan di-derive dari tindak_lanjut.status_pasien
+var flag_perlu_rujukan = (status_perlu_rujukan == 'Perlu Rujukan') ? 1 : 0;
+// flag_kek dan flag_anemia: lila/hemoglobin tidak ada di skema, derive dari status_gizi untuk ibu
+var flag_kek = (tipe_pasien == 'Ibu Hamil' &amp;&amp; (status_gizi == 'Gizi Kurang' || status_gizi == 'Gizi Buruk')) ? 1 : 0;
+var flag_anemia = 0; // Tidak ada kolom hemoglobin di skema Master
+var flag_risiko_tinggi = ((flag_kek + flag_anemia + flag_perlu_rujukan) &gt; 0) ? 1 : 0;</jsScript_script>
+      </jsScript>
+    </jsScripts>
+    <fields>
+      <field>
+        <name>flag_stunting</name>
+        <rename>flag_stunting</rename>
+        <type>Integer</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+      <field>
+        <name>flag_gizi_buruk</name>
+        <rename>flag_gizi_buruk</rename>
+        <type>Integer</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+      <field>
+        <name>flag_perlu_rujukan</name>
+        <rename>flag_perlu_rujukan</rename>
+        <type>Integer</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+      <field>
+        <name>flag_kek</name>
+        <rename>flag_kek</rename>
+        <type>Integer</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+      <field>
+        <name>flag_anemia</name>
+        <rename>flag_anemia</rename>
+        <type>Integer</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+      <field>
+        <name>flag_risiko_tinggi</name>
+        <rename>flag_risiko_tinggi</rename>
+        <type>Integer</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+    </fields>
+    <attributes/>
+    <GUI>
+      <xloc>920</xloc>
+      <yloc>80</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Write FACT_PEMERIKSAAN</name>
+    <type>TableOutput</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>Warehouse</connection>
+    <schema>public</schema>
+    <table>FACT_PEMERIKSAAN</table>
+    <commit>1000</commit>
+    <truncate>Y</truncate>
+    <ignore_errors>N</ignore_errors>
+    <use_batch>Y</use_batch>
+    <specify_fields>Y</specify_fields>
+    <partitioning_enabled>N</partitioning_enabled>
+    <partitioning_field/>
+    <partitioning_daily>N</partitioning_daily>
+    <partitioning_monthly>Y</partitioning_monthly>
+    <tablename_in_field>N</tablename_in_field>
+    <tablename_field/>
+    <tablename_in_table>Y</tablename_in_table>
+    <return_keys>N</return_keys>
+    <return_field/>
+    <fields>
+      <field>
+        <column_name>id_jadwal_imunisasi_oltp</column_name>
+        <stream_name>id_jadwal_imunisasi_oltp</stream_name>
+      </field>
+      <field>
+        <column_name>id_waktu</column_name>
+        <stream_name>id_waktu</stream_name>
+      </field>
+      <field>
+        <column_name>id_lokasi</column_name>
+        <stream_name>id_lokasi</stream_name>
+      </field>
+      <field>
+        <column_name>id_dim_pasien</column_name>
+        <stream_name>id_dim_pasien</stream_name>
+      </field>
+      <field>
+        <column_name>id_posyandu</column_name>
+        <stream_name>id_posyandu</stream_name>
+      </field>
+      <field>
+        <column_name>id_dim_kehamilan</column_name>
+        <stream_name>id_dim_kehamilan</stream_name>
+      </field>
+      <field>
+        <column_name>tipe_pasien</column_name>
+        <stream_name>tipe_pasien</stream_name>
+      </field>
+      <field>
+        <column_name>id_petugas</column_name>
+        <stream_name>id_petugas</stream_name>
+      </field>
+      <field>
+        <column_name>berat_badan</column_name>
+        <stream_name>berat_badan</stream_name>
+      </field>
+      <field>
+        <column_name>tinggi_badan</column_name>
+        <stream_name>tinggi_badan</stream_name>
+      </field>
+      <field>
+        <column_name>lingkar_kepala</column_name>
+        <stream_name>lingkar_kepala</stream_name>
+      </field>
+      <field>
+        <column_name>tekanan_darah</column_name>
+        <stream_name>tekanan_darah</stream_name>
+      </field>
+      <field>
+        <column_name>status_stunting</column_name>
+        <stream_name>status_stunting</stream_name>
+      </field>
+      <field>
+        <column_name>status_gizi</column_name>
+        <stream_name>status_gizi</stream_name>
+      </field>
+      <field>
+        <column_name>flag_stunting</column_name>
+        <stream_name>flag_stunting</stream_name>
+      </field>
+      <field>
+        <column_name>flag_gizi_buruk</column_name>
+        <stream_name>flag_gizi_buruk</stream_name>
+      </field>
+      <field>
+        <column_name>flag_perlu_rujukan</column_name>
+        <stream_name>flag_perlu_rujukan</stream_name>
+      </field>
+      <field>
+        <column_name>flag_kek</column_name>
+        <stream_name>flag_kek</stream_name>
+      </field>
+      <field>
+        <column_name>flag_anemia</column_name>
+        <stream_name>flag_anemia</stream_name>
+      </field>
+      <field>
+        <column_name>flag_risiko_tinggi</column_name>
+        <stream_name>flag_risiko_tinggi</stream_name>
+      </field>
+    </fields>
+    <attributes/>
+    <GUI>
+      <xloc>1040</xloc>
+      <yloc>80</yloc>
+    </GUI>
+  </transform>
+  <transform_error_handling>
+  </transform_error_handling>
+  <attributes/>
+</pipeline>

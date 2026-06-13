@@ -73,6 +73,7 @@ CREATE TABLE user_account (
    akun_ke INT NOT NULL DEFAULT 1,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
    UNIQUE (nik, akun_ke),
    UNIQUE (email, nik),
    CONSTRAINT fk_user_lokasi
@@ -86,6 +87,7 @@ CREATE TABLE dinas_kesehatan (
    id_user INT PRIMARY KEY,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
    CONSTRAINT fk_dinkes_user
        FOREIGN KEY (id_user)
        REFERENCES user_account(id_user)
@@ -100,6 +102,7 @@ CREATE TABLE bidan (
    wilayah_kerja INT NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
    CONSTRAINT fk_bidan_user
        FOREIGN KEY (id_user)
        REFERENCES user_account(id_user)
@@ -118,6 +121,7 @@ CREATE TABLE posyandu (
    id_bidan INT NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
    CONSTRAINT fk_posyandu_lokasi
        FOREIGN KEY (id_lokasi)
        REFERENCES lokasi(id_lokasi),
@@ -134,6 +138,7 @@ CREATE TABLE kader_posyandu (
    id_posyandu INT NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
    CONSTRAINT fk_kader_user
        FOREIGN KEY (id_user)
        REFERENCES user_account(id_user)
@@ -150,6 +155,7 @@ CREATE TABLE pasien (
    id_posyandu INT NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
    CONSTRAINT fk_pasien_user
        FOREIGN KEY (id_pasien)
        REFERENCES user_account(id_user)
@@ -169,6 +175,7 @@ CREATE TABLE fasilitas_kesehatan (
    id_lokasi INT NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
    CONSTRAINT fk_faskes_lokasi
        FOREIGN KEY (id_lokasi)
        REFERENCES lokasi(id_lokasi)
@@ -236,6 +243,7 @@ CREATE TABLE ibu_hamil (
     status_kehamilan status_kehamilan NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
    CONSTRAINT uq_ibu_hamil
        UNIQUE (id_pasien, hamil_ke),
    CONSTRAINT fk_ibu_hamil_pasien
@@ -257,6 +265,7 @@ CREATE TABLE anak (
     hubungan_dengan_wali hubungan_dengan_wali NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
    CONSTRAINT fk_anak_pasien
        FOREIGN KEY (id_pasien)
        REFERENCES pasien(id_pasien)
@@ -395,6 +404,7 @@ CREATE TABLE notifikasi (
     tipe_notifikasi tipe_notifikasi NOT NULL,
    status_baca BOOLEAN NOT NULL DEFAULT FALSE,
    tanggal_kirim TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
    CONSTRAINT fk_notifikasi_user
        FOREIGN KEY (id_user)
        REFERENCES user_account(id_user)

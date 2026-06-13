@@ -33,6 +33,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	bidanGroup := huma.NewGroup(adminGroup, "")
 	kaderGroup := huma.NewGroup(adminGroup, "")
 	dinkesGroup := huma.NewGroup(userGroup, "")
+	superAdminGroup := huma.NewGroup(adminGroup, "")
 
 	authAccess.UseMiddleware(middleware.AuthAccessMiddleware(api, &d.JWTUtil, d.BlacklistRepo))
 	authRefresh.UseMiddleware(middleware.AuthRefreshMiddleware(api, &d.JWTUtil))
@@ -41,6 +42,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	bidanGroup.UseMiddleware(middleware.RequireRole(authAccess, "BIDAN"))
 	kaderGroup.UseMiddleware(middleware.RequireRole(authAccess, "KADER"))
 	dinkesGroup.UseMiddleware(middleware.RequireRole(authAccess, "DINKES"))
+	superAdminGroup.UseMiddleware(middleware.RequireRole(authAccess, "SUPER_ADMIN"))
 
 	nonAuthenticatedOnlyGroup := huma.NewGroup(api, "")
 	nonAuthenticatedOnlyGroup.UseMiddleware(middleware.NonAuthenticatedOnlyMiddleware(api, &d.JWTUtil, d.BlacklistRepo))
@@ -58,6 +60,10 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Get(adminGroup, "/users", d.UserAccountHandler.GetAllUsers)
 	huma.Get(userGroup, "/users/{id}", d.UserAccountHandler.GetUserByID)
 	huma.Patch(userGroup, "/users/{id}", d.UserAccountHandler.UpdateUser)
+
+	huma.Post(superAdminGroup, "/users", d.UserAccountHandler.CreateUser)
+	huma.Patch(superAdminGroup, "/users/{id}/role", d.UserAccountHandler.UpdateUserRole)
+	huma.Get(superAdminGroup, "/admin/audit-logs", d.UserAccountHandler.GetAuditLogs)
 
 	huma.Get(bidanGroup, "/notifikasi/bidan", d.NotifHandler.GetBidanDashboard)
 	huma.Get(adminGroup, "/notifikasi/statistik", d.NotifHandler.GetStatistics)

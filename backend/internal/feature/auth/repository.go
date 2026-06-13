@@ -134,3 +134,16 @@ func (r *Repo) CreateRoleRecord(ctx context.Context, idUser int32, role string, 
 		return nil
 	}
 }
+
+func (r *Repo) DeleteRoleRecords(ctx context.Context, idUser int32) error {
+	_, err := r.db.Exec(ctx, "DELETE FROM bidan WHERE id_user = $1", idUser)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Exec(ctx, "DELETE FROM kader_posyandu WHERE id_user = $1", idUser)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Exec(ctx, "DELETE FROM dinas_kesehatan WHERE id_user = $1", idUser)
+	return err
+}

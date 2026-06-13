@@ -171,7 +171,11 @@ func (s *Service) CreateUser(ctx context.Context, req *userAccountDomain.CreateU
 	if req.WilayahKerja != nil {
 		wilayahKerja = *req.WilayahKerja
 	}
-	err = s.authRepo.CreateRoleRecord(ctx, idUser, req.Role, req.NoStr, wilayahKerja, req.NoSk)
+	idPosyandu := int32(0)
+	if req.IDPosyandu != nil {
+		idPosyandu = *req.IDPosyandu
+	}
+	err = s.authRepo.CreateRoleRecord(ctx, idUser, req.Role, req.NoStr, wilayahKerja, req.NoSk, idPosyandu)
 	if err != nil {
 		return nil, fmt.Errorf("gagal menetapkan role pengguna: %w", err)
 	}
@@ -198,7 +202,11 @@ func (s *Service) UpdateUserRole(ctx context.Context, idUser int32, req *userAcc
 	if req.WilayahKerja != nil {
 		wilayahKerja = *req.WilayahKerja
 	}
-	err = s.authRepo.CreateRoleRecord(ctx, idUser, req.Role, req.NoStr, wilayahKerja, req.NoSk)
+	idPosyandu := int32(0)
+	if req.IDPosyandu != nil {
+		idPosyandu = *req.IDPosyandu
+	}
+	err = s.authRepo.CreateRoleRecord(ctx, idUser, req.Role, req.NoStr, wilayahKerja, req.NoSk, idPosyandu)
 	if err != nil {
 		return fmt.Errorf("gagal menetapkan role baru: %w", err)
 	}

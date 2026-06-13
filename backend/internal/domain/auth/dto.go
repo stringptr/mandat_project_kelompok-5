@@ -25,6 +25,7 @@ type RegisterRequest struct {
 	NoStr            string    `json:"no_str,omitempty"`
 	WilayahKerja     *int32    `json:"wilayah_kerja,omitempty"     minimum:"1"`
 	NoSk             string    `json:"no_sk,omitempty"`
+	IDPosyandu       *int32    `json:"id_posyandu,omitempty"       minimum:"1"`
 }
 
 type LoginResponse struct {

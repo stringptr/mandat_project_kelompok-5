@@ -18,10 +18,11 @@ import (
 )
 
 type userAccountTestFixture struct {
-	handler http.Handler
-	jwtUtil *jwtutils.JWT
-	pool    *pgxpool.Pool
-	seedIDs *testutils.AuthSeedIDs
+	handler   http.Handler
+	jwtUtil   *jwtutils.JWT
+	pool      *pgxpool.Pool
+	seedIDs   *testutils.AuthSeedIDs
+	posyanduID int32
 }
 
 func setupUserAccountIntegrationTest(t *testing.T) *userAccountTestFixture {
@@ -47,12 +48,14 @@ func setupUserAccountIntegrationTest(t *testing.T) *userAccountTestFixture {
 	huma.Get(groups.UserGroup, "/users/{id}", userAccountH.GetUserByID)
 
 	seedIDs := testutils.SeedAuthData(t, pool)
+	posyanduID := testutils.SeedPosyandu(t, pool, 1, seedIDs.VerifiedUserID)
 
 	return &userAccountTestFixture{
-		handler: handler,
-		jwtUtil: jwtUtil,
-		pool:    pool,
-		seedIDs: seedIDs,
+		handler:    handler,
+		jwtUtil:    jwtUtil,
+		pool:       pool,
+		seedIDs:    seedIDs,
+		posyanduID: posyanduID,
 	}
 }
 
@@ -88,6 +91,7 @@ func TestUserAccountCreateUser_Success_Bidan(t *testing.T) {
 		"id_lokasi":      1,
 		"role":           "Bidan",
 		"no_str":         "67890/STR/2026",
+		"wilayah_kerja":  1,
 	}
 
 	resp := testutils.DoRequest(f.handler, http.MethodPost, "/users", body, superAdminCookie(f))
@@ -102,7 +106,7 @@ func TestUserAccountCreateUser_Success_Bidan(t *testing.T) {
 		Functional:      "Manajemen Pengguna SuperAdmin",
 		Endpoint:        "POST /users",
 		ReqType:         "JSON Body + Cookie (SUPER_ADMIN)",
-		Parameter:       `{"email":"newbidan@example.com","password":"password123","nama":"Bidan Baru","nik":"3201020304050101","no_hp":"081555555555","jenis_kelamin":"Perempuan","tanggal_lahir":"1990-01-01T00:00:00Z","id_lokasi":1,"role":"Bidan","no_str":"67890/STR/2026"}`,
+		Parameter:       `{"email":"newbidan@example.com","password":"password123","nama":"Bidan Baru","nik":"3201020304050101","no_hp":"081555555555","jenis_kelamin":"Perempuan","tanggal_lahir":"1990-01-01T00:00:00Z","id_lokasi":1,"role":"Bidan","no_str":"67890/STR/2026","wilayah_kerja":1}`,
 		ShouldBeSuccess: "true",
 		Expectation:     "Response 201, success:true",
 	}.Log(t, pass, resp, respBody)
@@ -123,6 +127,7 @@ func TestUserAccountCreateUser_Success_Kader(t *testing.T) {
 		"id_lokasi":      1,
 		"role":           "Kader",
 		"no_sk":          "SK/001/2026",
+		"id_posyandu":    f.posyanduID,
 	}
 
 	resp := testutils.DoRequest(f.handler, http.MethodPost, "/users", body, superAdminCookie(f))
@@ -137,7 +142,7 @@ func TestUserAccountCreateUser_Success_Kader(t *testing.T) {
 		Functional:      "Manajemen Pengguna SuperAdmin",
 		Endpoint:        "POST /users",
 		ReqType:         "JSON Body + Cookie (SUPER_ADMIN)",
-		Parameter:       `{"email":"newkader@example.com","password":"password123","nama":"Kader Baru","nik":"3201020304050102","no_hp":"081666666666","jenis_kelamin":"Laki-Laki","tanggal_lahir":"1992-05-15T00:00:00Z","id_lokasi":1,"role":"Kader","no_sk":"SK/001/2026"}`,
+		Parameter:       fmt.Sprintf(`{"email":"newkader@example.com","password":"password123","nama":"Kader Baru","nik":"3201020304050102","no_hp":"081666666666","jenis_kelamin":"Laki-Laki","tanggal_lahir":"1992-05-15T00:00:00Z","id_lokasi":1,"role":"Kader","no_sk":"SK/001/2026","id_posyandu":%d}`, f.posyanduID),
 		ShouldBeSuccess: "true",
 		Expectation:     "Response 201, success:true",
 	}.Log(t, pass, resp, respBody)
@@ -250,8 +255,9 @@ func TestUserAccountUpdateUserRole_Success_BidanToKader(t *testing.T) {
 	defer cleanupUserAccountTest(t, f.pool)
 
 	body := map[string]any{
-		"role":  "Kader",
-		"no_sk": "SK/002/2026",
+		"role":        "Kader",
+		"no_sk":       "SK/002/2026",
+		"id_posyandu": f.posyanduID,
 	}
 	path := userRolePath(f.seedIDs.VerifiedUserID, "/role")
 
@@ -267,7 +273,7 @@ func TestUserAccountUpdateUserRole_Success_BidanToKader(t *testing.T) {
 		Functional:      "Manajemen Pengguna SuperAdmin",
 		Endpoint:        "PATCH /users/{id}/role",
 		ReqType:         "JSON Body + Cookie (SUPER_ADMIN)",
-		Parameter:       `{"role":"Kader","no_sk":"SK/002/2026"}`,
+		Parameter:       fmt.Sprintf(`{"role":"Kader","no_sk":"SK/002/2026","id_posyandu":%d}`, f.posyanduID),
 		ShouldBeSuccess: "true",
 		Expectation:     "Response 200, success:true",
 	}.Log(t, pass, resp, respBody)
@@ -395,6 +401,7 @@ func TestUserAccountGetAuditLogs_Success(t *testing.T) {
 		"id_lokasi":      1,
 		"role":           "Bidan",
 		"no_str":         "STR/001/2026",
+		"wilayah_kerja":  1,
 	}
 	createResp := testutils.DoRequest(f.handler, http.MethodPost, "/users", createBody, superAdminCookie(f))
 	testutils.ReadBody(createResp)

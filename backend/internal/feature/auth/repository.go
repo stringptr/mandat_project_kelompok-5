@@ -99,7 +99,7 @@ func (r *Repo) CreateUser(ctx context.Context, data *model.UserAccount) (int32, 
 	return users[0].IDUser, nil
 }
 
-func (r *Repo) CreateRoleRecord(ctx context.Context, idUser int32, role string, noStr string, wilayahKerja int32, noSk string) error {
+func (r *Repo) CreateRoleRecord(ctx context.Context, idUser int32, role string, noStr string, wilayahKerja int32, noSk string, idPosyandu int32) error {
 	now := time.Now()
 	switch role {
 	case "Bidan":
@@ -116,7 +116,7 @@ func (r *Repo) CreateRoleRecord(ctx context.Context, idUser int32, role string, 
 		stmt := KaderPosyandu.INSERT(KaderPosyandu.IDUser, KaderPosyandu.NoSk, KaderPosyandu.IDPosyandu, KaderPosyandu.CreatedAt, KaderPosyandu.UpdatedAt).MODEL(&model.KaderPosyandu{
 			IDUser:     idUser,
 			NoSk:       noSk,
-			IDPosyandu: 0,
+			IDPosyandu: idPosyandu,
 			CreatedAt:  now,
 			UpdatedAt:  now,
 		})

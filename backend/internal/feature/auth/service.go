@@ -137,7 +137,11 @@ func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequ
 		if dataDTO.WilayahKerja != nil {
 			wilayahKerja = *dataDTO.WilayahKerja
 		}
-		err = s.authRepo.CreateRoleRecord(ctx, idUser, dataDTO.Role, dataDTO.NoStr, wilayahKerja, dataDTO.NoSk)
+		idPosyandu := int32(0)
+		if dataDTO.IDPosyandu != nil {
+			idPosyandu = *dataDTO.IDPosyandu
+		}
+		err = s.authRepo.CreateRoleRecord(ctx, idUser, dataDTO.Role, dataDTO.NoStr, wilayahKerja, dataDTO.NoSk, idPosyandu)
 		if err != nil {
 			if isDBConnectionError(err) {
 				errs := []*httputils.ErrorItem{{ID: "ERR-SYS-01", Message: "Layanan tidak tersedia. Silakan coba lagi."}}

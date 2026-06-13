@@ -73,6 +73,8 @@ CREATE TABLE user_account (
    akun_ke INT NOT NULL DEFAULT 1,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+   deleted_at TIMESTAMPTZ,
    UNIQUE (nik, akun_ke),
    UNIQUE (email, nik),
    CONSTRAINT fk_user_lokasi
@@ -86,6 +88,8 @@ CREATE TABLE dinas_kesehatan (
    id_user INT PRIMARY KEY,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+   deleted_at TIMESTAMPTZ,
    CONSTRAINT fk_dinkes_user
        FOREIGN KEY (id_user)
        REFERENCES user_account(id_user)
@@ -100,6 +104,8 @@ CREATE TABLE bidan (
    wilayah_kerja INT NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+   deleted_at TIMESTAMPTZ,
    CONSTRAINT fk_bidan_user
        FOREIGN KEY (id_user)
        REFERENCES user_account(id_user)
@@ -118,6 +124,8 @@ CREATE TABLE posyandu (
    id_bidan INT NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+   deleted_at TIMESTAMPTZ,
    CONSTRAINT fk_posyandu_lokasi
        FOREIGN KEY (id_lokasi)
        REFERENCES lokasi(id_lokasi),
@@ -134,6 +142,8 @@ CREATE TABLE kader_posyandu (
    id_posyandu INT NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+   deleted_at TIMESTAMPTZ,
    CONSTRAINT fk_kader_user
        FOREIGN KEY (id_user)
        REFERENCES user_account(id_user)
@@ -150,6 +160,8 @@ CREATE TABLE pasien (
    id_posyandu INT NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+   deleted_at TIMESTAMPTZ,
    CONSTRAINT fk_pasien_user
        FOREIGN KEY (id_pasien)
        REFERENCES user_account(id_user)
@@ -165,10 +177,12 @@ CREATE TYPE tipe_faskes AS ENUM ('Faskes Tingkat Pertama', 'Faskes Rujukan Tingk
 CREATE TABLE fasilitas_kesehatan (
    id_faskes SERIAL PRIMARY KEY,
    nama_faskes VARCHAR(255) NOT NULL,
-    tipe_faskes tipe_faskes NOT NULL,
+   tipe_faskes tipe_faskes NOT NULL,
    id_lokasi INT NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+   deleted_at TIMESTAMPTZ,
    CONSTRAINT fk_faskes_lokasi
        FOREIGN KEY (id_lokasi)
        REFERENCES lokasi(id_lokasi)
@@ -194,7 +208,7 @@ CREATE TYPE sektor AS ENUM ('Formal', 'Informal', 'Pemerintah', 'Kesehatan', 'Pe
 CREATE TABLE pekerjaan (
    id_pekerjaan SERIAL PRIMARY KEY,
    nama_pekerjaan VARCHAR(100) NOT NULL UNIQUE,
-    sektor sektor NOT NULL
+   sektor sektor NOT NULL
 );
 -- ============================================================
 -- 3. REFERENSI KATEGORI PENDAPATAN
@@ -233,9 +247,11 @@ CREATE TABLE ibu_hamil (
        CHECK (hamil_ke > 0),
    bulan_mulai_hamil DATE NOT NULL,
    hpht DATE NOT NULL,
-    status_kehamilan status_kehamilan NOT NULL,
+   status_kehamilan status_kehamilan NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+   deleted_at TIMESTAMPTZ,
    CONSTRAINT uq_ibu_hamil
        UNIQUE (id_pasien, hamil_ke),
    CONSTRAINT fk_ibu_hamil_pasien
@@ -254,9 +270,11 @@ CREATE TABLE anak (
    nama_anak VARCHAR(255) NOT NULL,
    berat_lahir NUMERIC(5,2) NOT NULL,
    panjang_lahir NUMERIC(5,2) NOT NULL,
-    hubungan_dengan_wali hubungan_dengan_wali NOT NULL,
+   hubungan_dengan_wali hubungan_dengan_wali NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+   deleted_at TIMESTAMPTZ,
    CONSTRAINT fk_anak_pasien
        FOREIGN KEY (id_pasien)
        REFERENCES pasien(id_pasien)
@@ -280,7 +298,7 @@ CREATE TABLE jadwal_imunisasi (
    nama_vaksin VARCHAR(255) NOT NULL,
    tanggal_jadwal DATE NOT NULL,
    tanggal_realisasi DATE,
-    status_imunisasi status_imunisasi NOT NULL,
+   status_imunisasi status_imunisasi NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT fk_jadwal_imunisasi_pasien
@@ -297,7 +315,7 @@ CREATE TABLE artikel (
    judul VARCHAR(255) NOT NULL,
    isi_artikel TEXT NOT NULL,
    kategori VARCHAR(100),
-    status_artikel status_artikel NOT NULL DEFAULT 'Draft',
+   status_artikel status_artikel NOT NULL DEFAULT 'Draft',
    id_penulis INT NOT NULL,
    id_verifikator INT,
    tanggal_publish DATE,
@@ -327,8 +345,8 @@ CREATE TABLE hasil_pemeriksaan (
    tinggi_badan NUMERIC(5,2) NOT NULL,
    lingkar_kepala NUMERIC(5,2) NOT NULL,
    tekanan_darah VARCHAR(20) NOT NULL,
-    status_stunting status_stunting NOT NULL,
-    status_gizi status_gizi NOT NULL,
+   status_stunting status_stunting NOT NULL,
+   status_gizi status_gizi NOT NULL,
    catatan VARCHAR(1000),
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -350,7 +368,7 @@ CREATE TABLE tindak_lanjut (
    catatan_medis VARCHAR(1000),
    rekomendasi VARCHAR(1000),
    jadwal_kontrol DATE NOT NULL,
-    status_pasien status_pasien NOT NULL,
+   status_pasien status_pasien NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    CONSTRAINT fk_tindak_hasil
@@ -371,7 +389,7 @@ CREATE TABLE rujukan (
    id_tindak_lanjut INT UNIQUE NOT NULL,
    alasan_rujukan VARCHAR(1000) NOT NULL,
    tanggal_rujukan DATE NOT NULL,
-    status_rujukan status_rujukan NOT NULL,
+   status_rujukan status_rujukan NOT NULL,
    id_faskes INT NOT NULL,
    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -392,9 +410,11 @@ CREATE TABLE notifikasi (
    id_user INT NOT NULL,
    judul VARCHAR(255) NOT NULL,
    pesan VARCHAR(1000),
-    tipe_notifikasi tipe_notifikasi NOT NULL,
+   tipe_notifikasi tipe_notifikasi NOT NULL,
    status_baca BOOLEAN NOT NULL DEFAULT FALSE,
    tanggal_kirim TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+   deleted_at TIMESTAMPTZ,
    CONSTRAINT fk_notifikasi_user
        FOREIGN KEY (id_user)
        REFERENCES user_account(id_user)
@@ -567,24 +587,30 @@ EXECUTE FUNCTION update_updated_at_column();
 
 -- +goose Down
 
-TRUNCATE TABLE audit_log;
-TRUNCATE TABLE user_session;
-TRUNCATE TABLE notifikasi;
-TRUNCATE TABLE rujukan;
-TRUNCATE TABLE tindak_lanjut;
-TRUNCATE TABLE hasil_pemeriksaan;
-TRUNCATE TABLE artikel;
-TRUNCATE TABLE jadwal_imunisasi;
-TRUNCATE TABLE anak;
-TRUNCATE TABLE ibu_hamil;
-TRUNCATE TABLE kategori_pendapatan;
-TRUNCATE TABLE pekerjaan;
-TRUNCATE TABLE pendidikan;
-TRUNCATE TABLE fasilitas_kesehatan;
-TRUNCATE TABLE pasien;
-TRUNCATE TABLE kader_posyandu;
-TRUNCATE TABLE posyandu;
-TRUNCATE TABLE bidan;
-TRUNCATE TABLE dinas_kesehatan;
-TRUNCATE TABLE user_account;
-TRUNCATE TABLE lokasi;
+TRUNCATE TABLE audit_log CASCADE;
+TRUNCATE TABLE user_session CASCADE;
+TRUNCATE TABLE notifikasi CASCADE;
+TRUNCATE TABLE rujukan CASCADE;
+TRUNCATE TABLE tindak_lanjut CASCADE;
+TRUNCATE TABLE hasil_pemeriksaan CASCADE;
+TRUNCATE TABLE artikel CASCADE;
+TRUNCATE TABLE jadwal_imunisasi CASCADE;
+TRUNCATE TABLE anak CASCADE;
+TRUNCATE TABLE ibu_hamil CASCADE;
+TRUNCATE TABLE kategori_pendapatan CASCADE;
+TRUNCATE TABLE pekerjaan CASCADE;
+TRUNCATE TABLE pendidikan CASCADE;
+TRUNCATE TABLE fasilitas_kesehatan CASCADE;
+TRUNCATE TABLE pasien CASCADE;
+TRUNCATE TABLE kader_posyandu CASCADE;
+TRUNCATE TABLE posyandu CASCADE;
+TRUNCATE TABLE bidan CASCADE;
+TRUNCATE TABLE dinas_kesehatan CASCADE;
+TRUNCATE TABLE user_account CASCADE;
+TRUNCATE TABLE lokasi CASCADE;
+
+DROP TYPE tipe_lokasi CASCADE;
+DROP TYPE tipe_aktivitas CASCADE;
+DROP TYPE tipe_notifikasi CASCADE;
+DROP TYPE tipe_aktor CASCADE;
+DROP TYPE tipe_faskes CASCADE;

@@ -103,7 +103,7 @@ func (r *Repo) CreateRoleRecord(ctx context.Context, idUser int32, role string, 
 	now := time.Now()
 	switch role {
 	case "Bidan":
-		stmt := Bidan.INSERT(Bidan.MutableColumns).MODEL(&model.Bidan{
+		stmt := Bidan.INSERT(Bidan.IDUser, Bidan.NoStr, Bidan.WilayahKerja, Bidan.CreatedAt, Bidan.UpdatedAt).MODEL(&model.Bidan{
 			IDUser:       idUser,
 			NoStr:        noStr,
 			WilayahKerja: wilayahKerja,
@@ -113,7 +113,7 @@ func (r *Repo) CreateRoleRecord(ctx context.Context, idUser int32, role string, 
 		_, err := pgxV5.Exec(ctx, stmt, r.db)
 		return err
 	case "Kader":
-		stmt := KaderPosyandu.INSERT(KaderPosyandu.MutableColumns).MODEL(&model.KaderPosyandu{
+		stmt := KaderPosyandu.INSERT(KaderPosyandu.IDUser, KaderPosyandu.NoSk, KaderPosyandu.IDPosyandu, KaderPosyandu.CreatedAt, KaderPosyandu.UpdatedAt).MODEL(&model.KaderPosyandu{
 			IDUser:     idUser,
 			NoSk:       noSk,
 			IDPosyandu: 0,
@@ -123,7 +123,7 @@ func (r *Repo) CreateRoleRecord(ctx context.Context, idUser int32, role string, 
 		_, err := pgxV5.Exec(ctx, stmt, r.db)
 		return err
 	case "Dinkes":
-		stmt := DinasKesehatan.INSERT(DinasKesehatan.MutableColumns).MODEL(&model.DinasKesehatan{
+		stmt := DinasKesehatan.INSERT(DinasKesehatan.IDUser, DinasKesehatan.CreatedAt, DinasKesehatan.UpdatedAt).MODEL(&model.DinasKesehatan{
 			IDUser:    idUser,
 			CreatedAt: now,
 			UpdatedAt: now,

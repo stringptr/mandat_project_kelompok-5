@@ -73,7 +73,8 @@ func main() {
 
 	authRepo := auth.NewRepo(pool)
 	userAccountRepo := userAccount.NewRepo(pool)
-	userAccountService := userAccount.NewService(userAccountRepo, authRepo)
+	auditLogRepo := auditlog.NewRepo(pool)
+	userAccountService := userAccount.NewService(userAccountRepo, authRepo, auditLogRepo)
 	userAccountHandler := userAccount.NewHandler(userAccountService)
 	userSessionRepo := userSession.NewRepo(pool)
 	banRepo := bannedip.NewRepo(natsutil.NewKV(bannedIPKV))
@@ -85,7 +86,6 @@ func main() {
 	notifHandler := notification.NewHandler(notifService)
 
 	pasienRepo := pasienFeature.NewRepo(pool)
-	auditLogRepo := auditlog.NewRepo(pool)
 	pasienService := pasienFeature.NewService(pasienRepo, auditLogRepo)
 	pasienHandler := pasienFeature.NewHandler(pasienService)
 

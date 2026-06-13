@@ -85,3 +85,69 @@ type UpdateUserRequest struct {
 	IDPendapatan     *int32     `json:"id_pendapatan,omitempty"     minimum:"1"`
 	JumlahTanggungan *int32     `json:"jumlah_tanggungan,omitempty" minimum:"0"`
 }
+
+type CreateUserRequest struct {
+	Email            string    `json:"email"                       format:"email"`
+	Password         string    `json:"password"                    minLength:"8" maxLength:"255"`
+	NoHp             string    `json:"no_hp"                       maxLength:"20"`
+	Nama             string    `json:"nama"                        minLength:"1" maxLength:"255"`
+	NIK              string    `json:"nik"                         minLength:"16" maxLength:"16" pattern:"^[0-9]{16}$"`
+	JenisKelamin     string    `json:"jenis_kelamin"               enum:"Laki-Laki,Perempuan"`
+	TanggalLahir     time.Time `json:"tanggal_lahir"               format:"date-time"`
+	IDLokasi         int32     `json:"id_lokasi"                   minimum:"1"`
+	IDPendidikan     *int32    `json:"id_pendidikan,omitempty"     minimum:"1"`
+	IDPekerjaan      *int32    `json:"id_pekerjaan,omitempty"      minimum:"1"`
+	IDPendapatan     *int32    `json:"id_pendapatan,omitempty"     minimum:"1"`
+	JumlahTanggungan *int32    `json:"jumlah_tanggungan,omitempty" minimum:"0"`
+	Role             string    `json:"role"                        enum:"Bidan,Kader,Dinkes"`
+	NoStr            string    `json:"no_str,omitempty"`
+	WilayahKerja     *int32    `json:"wilayah_kerja,omitempty"     minimum:"1"`
+	NoSk             string    `json:"no_sk,omitempty"`
+}
+
+type CreateUserResponse struct {
+	IDUser int32 `json:"id_user"`
+}
+
+type UpdateUserRoleInput struct {
+	IDUser int32 `path:"id" minimum:"1"`
+	Body   *UpdateUserRoleRequest
+}
+
+type UpdateUserRoleRequest struct {
+	Role         string `json:"role"            enum:"Bidan,Kader,Dinkes"`
+	NoStr        string `json:"no_str,omitempty"`
+	WilayahKerja *int32 `json:"wilayah_kerja,omitempty" minimum:"1"`
+	NoSk         string `json:"no_sk,omitempty"`
+}
+
+type CreateUserInput struct {
+	Body *CreateUserRequest
+}
+
+type AuditLogFilter struct {
+	Page    int `query:"page"    minimum:"1" default:"1"`
+	PerPage int `query:"per_page" minimum:"1" maximum:"100" default:"20"`
+}
+
+type AuditLogItem struct {
+	IDLog          int32  `json:"id_log"`
+	TipeAktor      string `json:"tipe_aktor"`
+	IDUser         *int32 `json:"id_user,omitempty"`
+	TipeAktivitas  string `json:"tipe_aktivitas"`
+	Berhasil       *bool  `json:"berhasil,omitempty"`
+	Endpoint       string `json:"endpoint"`
+	TableName      string `json:"table_name"`
+	RecordID       string `json:"record_id"`
+	Detail         string `json:"detail"`
+	IPAddress      string `json:"ip_address"`
+	UserAgent      string `json:"user_agent"`
+	WaktuAktivitas string `json:"waktu_aktivitas"`
+}
+
+type AuditLogListData struct {
+	AuditLogs []AuditLogItem `json:"audit_logs"`
+	TotalData int            `json:"total_data"`
+	Page      int            `json:"page"`
+	PerPage   int            `json:"per_page"`
+}

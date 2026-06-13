@@ -79,3 +79,33 @@ func (h *Handler) UpdateUser(ctx context.Context, input *userAccountDomain.Updat
 
 	return httputils.NewSuccessOutput(http.StatusOK, updatedUser, "Profil pengguna berhasil diperbarui."), nil
 }
+
+func (h *Handler) CreateUser(ctx context.Context, input *userAccountDomain.CreateUserInput) (*httputils.APIResponseOutput[*userAccountDomain.CreateUserResponse], error) {
+	result, err := h.Service.CreateUser(ctx, input.Body)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
+	}
+
+	return httputils.NewSuccessOutput(http.StatusCreated, result, "Pengguna berhasil dibuat."), nil
+}
+
+func (h *Handler) UpdateUserRole(ctx context.Context, input *userAccountDomain.UpdateUserRoleInput) (*httputils.APIResponseOutput[any], error) {
+	err := h.Service.UpdateUserRole(ctx, input.IDUser, input.Body)
+	if err != nil {
+		if errors.Is(err, userAccountDomain.ErrNotFound) {
+			return nil, huma.Error404NotFound("Pengguna tidak ditemukan.")
+		}
+		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
+	}
+
+	return httputils.NewOKOutput[any](nil), nil
+}
+
+func (h *Handler) GetAuditLogs(ctx context.Context, input *httputils.APIRequestInput[*userAccountDomain.AuditLogFilter]) (*httputils.APIResponseOutput[*userAccountDomain.AuditLogListData], error) {
+	result, err := h.Service.GetAuditLogs(ctx, input.Body)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
+	}
+
+	return httputils.NewSuccessOutput(http.StatusOK, result, "Daftar audit log berhasil diambil."), nil
+}

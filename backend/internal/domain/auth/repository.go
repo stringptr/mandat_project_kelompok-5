@@ -11,4 +11,5 @@ type Repo interface {
 	GetByEmailNIK(ctx context.Context, email string, nik string) (*model.UserAccount, error)
 	CreateUser(ctx context.Context, data *model.UserAccount) (int32, error)
 	CreateRoleRecord(ctx context.Context, idUser int32, role string, noStr string, wilayahKerja int32, noSk string) error
+	DeleteRoleRecords(ctx context.Context, idUser int32) error
 }

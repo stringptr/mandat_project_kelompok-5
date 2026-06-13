@@ -102,6 +102,9 @@ func (h *Handler) UpdateUserRole(ctx context.Context, input *userAccountDomain.U
 }
 
 func (h *Handler) GetAuditLogs(ctx context.Context, input *httputils.APIRequestInput[*userAccountDomain.AuditLogFilter]) (*httputils.APIResponseOutput[*userAccountDomain.AuditLogListData], error) {
+	if input.Body == nil {
+		input.Body = &userAccountDomain.AuditLogFilter{Page: 1, PerPage: 20}
+	}
 	result, err := h.Service.GetAuditLogs(ctx, input.Body)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)

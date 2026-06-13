@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -38,6 +39,7 @@ type integrationTestFixture struct {
 	banRepo       *bannedip.Repo
 	bannedKV      jetstream.KeyValue
 	blacklistKV   jetstream.KeyValue
+	captureSender *testutils.CaptureSender
 }
 
 func setupAuthIntegrationTest(t *testing.T) *integrationTestFixture {
@@ -79,7 +81,8 @@ func setupAuthIntegrationTest(t *testing.T) *integrationTestFixture {
 	br := jwtblacklist.NewRepo(natsutil.NewKV(blacklistKV))
 	auditLogRepo := auditlog.NewRepo(pool)
 
-	svc := NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, authCfg, restrictCfg, banRepo, br, auditLogRepo, nil)
+	captureSender := testutils.NewCaptureSender()
+	svc := NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, authCfg, restrictCfg, banRepo, br, auditLogRepo, captureSender)
 	h := NewHandler(svc, &jwtUtil)
 
 	testHandler, api := humatest.New(t, huma.DefaultConfig("Test", "1.0.0"))
@@ -114,6 +117,7 @@ func setupAuthIntegrationTest(t *testing.T) *integrationTestFixture {
 		banRepo:       banRepo,
 		bannedKV:      bannedKV,
 		blacklistKV:   blacklistKV,
+		captureSender: captureSender,
 	}
 }
 
@@ -420,6 +424,69 @@ func TestAuthVerifyUserForbidden(t *testing.T) {
 		ReqType: "JSON Body + Cookie (USER)", Parameter: `{"status":"Aktif"}, Role: USER`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 403, success:false, detail: 'Tidak mempunyai akses untuk halaman ini.'",
+	}.Log(t, pass, resp, respBody)
+}
+
+func TestAuthVerifyUserSendsActivationEmail(t *testing.T) {
+	f := setupAuthIntegrationTest(t)
+	defer f.cleanup(t)
+	ids := f.seed(t)
+
+	body := map[string]any{"status": "Aktif"}
+	path := "/users/" + fmt.Sprint(ids.UnverifiedUserID) + "/verification"
+	resp := testutils.DoRequest(f.handler, http.MethodPatch, path, body, testutils.AccessCookie(f.jwtUtil, ids.AdminUserID, []string{"ADMIN"}))
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusOK
+
+	time.Sleep(100 * time.Millisecond)
+
+	emails := f.captureSender.SentEmails()
+	emailSent := len(emails) == 1
+	if emailSent {
+		pass = pass && emails[0].To == "unverified@example.com"
+		pass = pass && emails[0].Subject == "Akun Anda telah diaktifkan - SiGizi"
+		pass = pass && strings.Contains(emails[0].Body, "Unverified User")
+	}
+
+	testutils.TestResult{
+		SRSRef: "SRS-7.1(3), SRS-4.3(d)", FSDRef: "FSD-2.1",
+		TSDRef: "TSD-3.3 (baris verifikasi admin)", NoTestScript: "TC-AUTH-016",
+		Functional: "Verify User - Sends Activation Email", Endpoint: "PATCH /users/{id_user}/verification",
+		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: `{"status":"Aktif"}, Role: ADMIN`,
+		ShouldBeSuccess: "true",
+		Expectation:     "Response 200, activation email sent to unverified@example.com",
+	}.Log(t, pass, resp, respBody)
+}
+
+func TestAuthVerifyUserSendsRejectionEmail(t *testing.T) {
+	f := setupAuthIntegrationTest(t)
+	defer f.cleanup(t)
+	ids := f.seed(t)
+
+	body := map[string]any{"status": "Ditolak", "alasan_penolakan": "Dokumen tidak lengkap"}
+	path := "/users/" + fmt.Sprint(ids.UnverifiedUserID) + "/verification"
+	resp := testutils.DoRequest(f.handler, http.MethodPatch, path, body, testutils.AccessCookie(f.jwtUtil, ids.AdminUserID, []string{"ADMIN"}))
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusOK
+
+	time.Sleep(100 * time.Millisecond)
+
+	emails := f.captureSender.SentEmails()
+	emailSent := len(emails) == 1
+	if emailSent {
+		pass = pass && emails[0].To == "unverified@example.com"
+		pass = pass && emails[0].Subject == "Akun Anda ditolak - SiGizi"
+		pass = pass && strings.Contains(emails[0].Body, "Unverified User")
+		pass = pass && strings.Contains(emails[0].Body, "Dokumen tidak lengkap")
+	}
+
+	testutils.TestResult{
+		SRSRef: "SRS-7.1(3), SRS-4.3(d)", FSDRef: "FSD-2.1",
+		TSDRef: "TSD-3.3 (baris verifikasi admin)", NoTestScript: "TC-AUTH-017",
+		Functional: "Verify User - Sends Rejection Email", Endpoint: "PATCH /users/{id_user}/verification",
+		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: `{"status":"Ditolak","alasan_penolakan":"Dokumen tidak lengkap"}, Role: ADMIN`,
+		ShouldBeSuccess: "true",
+		Expectation:     "Response 200, rejection email sent to unverified@example.com",
 	}.Log(t, pass, resp, respBody)
 }
 

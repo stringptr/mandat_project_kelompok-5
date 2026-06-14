@@ -15,6 +15,7 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/feature/auth"
 	"github.com/stringptr/SiGizi/backend/internal/feature/bannedip"
 	"github.com/stringptr/SiGizi/backend/internal/feature/jwtblacklist"
+	lokasiFeature "github.com/stringptr/SiGizi/backend/internal/feature/lokasi"
 	"github.com/stringptr/SiGizi/backend/internal/feature/notification"
 	pasienFeature "github.com/stringptr/SiGizi/backend/internal/feature/pasien"
 	"github.com/stringptr/SiGizi/backend/internal/feature/userAccount"
@@ -89,6 +90,10 @@ func main() {
 	pasienService := pasienFeature.NewService(pasienRepo, auditLogRepo)
 	pasienHandler := pasienFeature.NewHandler(pasienService)
 
+	lokasiRepo := lokasiFeature.NewRepo(pool)
+	lokasiService := lokasiFeature.NewService(lokasiRepo)
+	lokasiHandler := lokasiFeature.NewHandler(lokasiService)
+
 	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo, auditLogRepo, mail.New(cfg.MailConfig))
 	authHandler := auth.NewHandler(authService, &jwtUtil)
 
@@ -156,6 +161,7 @@ func main() {
 		NotifPublisher:     notifPublisher,
 		NotifHandler:       notifHandler,
 		PasienHandler:      pasienHandler,
+		LokasiHandler:      lokasiHandler,
 	})
 
 	log.Printf("server starting on %s:%s", cfg.Host, cfg.Port)

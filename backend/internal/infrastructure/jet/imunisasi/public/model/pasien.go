@@ -17,4 +17,5 @@ type Pasien struct {
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	IsDeleted  bool
+	DeletedAt  *time.Time
 }

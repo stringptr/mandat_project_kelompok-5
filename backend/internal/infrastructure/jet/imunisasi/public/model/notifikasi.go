@@ -20,4 +20,5 @@ type Notifikasi struct {
 	StatusBaca     bool
 	TanggalKirim   time.Time
 	IsDeleted      bool
+	DeletedAt      *time.Time
 }

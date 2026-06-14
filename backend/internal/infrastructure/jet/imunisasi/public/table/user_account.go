@@ -35,6 +35,7 @@ type userAccountTable struct {
 	CreatedAt        postgres.ColumnTimestampz
 	UpdatedAt        postgres.ColumnTimestampz
 	IsDeleted        postgres.ColumnBool
+	DeletedAt        postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -94,8 +95,9 @@ func newUserAccountTableImpl(schemaName, tableName, alias string) userAccountTab
 		CreatedAtColumn        = postgres.TimestampzColumn("created_at")
 		UpdatedAtColumn        = postgres.TimestampzColumn("updated_at")
 		IsDeletedColumn        = postgres.BoolColumn("is_deleted")
-		allColumns             = postgres.ColumnList{IDUserColumn, EmailColumn, PasswordColumn, NoHpColumn, StatusVerifikasiColumn, NamaColumn, NikColumn, JenisKelaminColumn, TanggalLahirColumn, IDLokasiColumn, IDPendidikanColumn, IDPekerjaanColumn, IDPendapatanColumn, JumlahTanggunganColumn, AkunKeColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
-		mutableColumns         = postgres.ColumnList{EmailColumn, PasswordColumn, NoHpColumn, StatusVerifikasiColumn, NamaColumn, NikColumn, JenisKelaminColumn, TanggalLahirColumn, IDLokasiColumn, IDPendidikanColumn, IDPekerjaanColumn, IDPendapatanColumn, JumlahTanggunganColumn, AkunKeColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		DeletedAtColumn        = postgres.TimestampzColumn("deleted_at")
+		allColumns             = postgres.ColumnList{IDUserColumn, EmailColumn, PasswordColumn, NoHpColumn, StatusVerifikasiColumn, NamaColumn, NikColumn, JenisKelaminColumn, TanggalLahirColumn, IDLokasiColumn, IDPendidikanColumn, IDPekerjaanColumn, IDPendapatanColumn, JumlahTanggunganColumn, AkunKeColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn, DeletedAtColumn}
+		mutableColumns         = postgres.ColumnList{EmailColumn, PasswordColumn, NoHpColumn, StatusVerifikasiColumn, NamaColumn, NikColumn, JenisKelaminColumn, TanggalLahirColumn, IDLokasiColumn, IDPendidikanColumn, IDPekerjaanColumn, IDPendapatanColumn, JumlahTanggunganColumn, AkunKeColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn, DeletedAtColumn}
 		defaultColumns         = postgres.ColumnList{IDUserColumn, StatusVerifikasiColumn, AkunKeColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
 	)
 
@@ -121,6 +123,7 @@ func newUserAccountTableImpl(schemaName, tableName, alias string) userAccountTab
 		CreatedAt:        CreatedAtColumn,
 		UpdatedAt:        UpdatedAtColumn,
 		IsDeleted:        IsDeletedColumn,
+		DeletedAt:        DeletedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

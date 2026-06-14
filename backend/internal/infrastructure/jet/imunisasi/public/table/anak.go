@@ -27,6 +27,7 @@ type anakTable struct {
 	CreatedAt          postgres.ColumnTimestampz
 	UpdatedAt          postgres.ColumnTimestampz
 	IsDeleted          postgres.ColumnBool
+	DeletedAt          postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -78,8 +79,9 @@ func newAnakTableImpl(schemaName, tableName, alias string) anakTable {
 		CreatedAtColumn          = postgres.TimestampzColumn("created_at")
 		UpdatedAtColumn          = postgres.TimestampzColumn("updated_at")
 		IsDeletedColumn          = postgres.BoolColumn("is_deleted")
-		allColumns               = postgres.ColumnList{IDPasienColumn, IDIbuHamilColumn, IDWaliColumn, NamaAnakColumn, BeratLahirColumn, PanjangLahirColumn, HubunganDenganWaliColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
-		mutableColumns           = postgres.ColumnList{IDIbuHamilColumn, IDWaliColumn, NamaAnakColumn, BeratLahirColumn, PanjangLahirColumn, HubunganDenganWaliColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		DeletedAtColumn          = postgres.TimestampzColumn("deleted_at")
+		allColumns               = postgres.ColumnList{IDPasienColumn, IDIbuHamilColumn, IDWaliColumn, NamaAnakColumn, BeratLahirColumn, PanjangLahirColumn, HubunganDenganWaliColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn, DeletedAtColumn}
+		mutableColumns           = postgres.ColumnList{IDIbuHamilColumn, IDWaliColumn, NamaAnakColumn, BeratLahirColumn, PanjangLahirColumn, HubunganDenganWaliColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn, DeletedAtColumn}
 		defaultColumns           = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
 	)
 
@@ -97,6 +99,7 @@ func newAnakTableImpl(schemaName, tableName, alias string) anakTable {
 		CreatedAt:          CreatedAtColumn,
 		UpdatedAt:          UpdatedAtColumn,
 		IsDeleted:          IsDeletedColumn,
+		DeletedAt:          DeletedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

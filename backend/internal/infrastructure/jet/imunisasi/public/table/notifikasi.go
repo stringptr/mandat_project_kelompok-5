@@ -25,6 +25,7 @@ type notifikasiTable struct {
 	StatusBaca     postgres.ColumnBool
 	TanggalKirim   postgres.ColumnTimestampz
 	IsDeleted      postgres.ColumnBool
+	DeletedAt      postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -74,8 +75,9 @@ func newNotifikasiTableImpl(schemaName, tableName, alias string) notifikasiTable
 		StatusBacaColumn     = postgres.BoolColumn("status_baca")
 		TanggalKirimColumn   = postgres.TimestampzColumn("tanggal_kirim")
 		IsDeletedColumn      = postgres.BoolColumn("is_deleted")
-		allColumns           = postgres.ColumnList{IDNotifikasiColumn, IDUserColumn, JudulColumn, PesanColumn, TipeNotifikasiColumn, StatusBacaColumn, TanggalKirimColumn, IsDeletedColumn}
-		mutableColumns       = postgres.ColumnList{IDUserColumn, JudulColumn, PesanColumn, TipeNotifikasiColumn, StatusBacaColumn, TanggalKirimColumn, IsDeletedColumn}
+		DeletedAtColumn      = postgres.TimestampzColumn("deleted_at")
+		allColumns           = postgres.ColumnList{IDNotifikasiColumn, IDUserColumn, JudulColumn, PesanColumn, TipeNotifikasiColumn, StatusBacaColumn, TanggalKirimColumn, IsDeletedColumn, DeletedAtColumn}
+		mutableColumns       = postgres.ColumnList{IDUserColumn, JudulColumn, PesanColumn, TipeNotifikasiColumn, StatusBacaColumn, TanggalKirimColumn, IsDeletedColumn, DeletedAtColumn}
 		defaultColumns       = postgres.ColumnList{IDNotifikasiColumn, StatusBacaColumn, TanggalKirimColumn, IsDeletedColumn}
 	)
 
@@ -91,6 +93,7 @@ func newNotifikasiTableImpl(schemaName, tableName, alias string) notifikasiTable
 		StatusBaca:     StatusBacaColumn,
 		TanggalKirim:   TanggalKirimColumn,
 		IsDeleted:      IsDeletedColumn,
+		DeletedAt:      DeletedAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

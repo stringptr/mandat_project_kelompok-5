@@ -22,32 +22,12 @@
   <order>
     <hop>
       <from>Read Imunisasi Data</from>
-      <to>Lookup id_waktu</to>
+      <to>Build SQL</to>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>Lookup id_waktu</from>
-      <to>Lookup id_lokasi</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Lookup id_lokasi</from>
-      <to>Lookup id_dim_pasien</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Lookup id_dim_pasien</from>
-      <to>Lookup id_posyandu</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Lookup id_posyandu</from>
-      <to>Calculate Flags</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Calculate Flags</from>
-      <to>Write FACT_IMUNISASI</to>
+      <from>Build SQL</from>
+      <to>Execute INSERT</to>
       <enabled>Y</enabled>
     </hop>
   </order>
@@ -94,151 +74,7 @@ JOIN user_account ua ON p.id_pasien  = ua.id_user</sql>
     </GUI>
   </transform>
   <transform>
-    <name>Lookup id_waktu</name>
-    <type>DBLookup</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <connection>Warehouse</connection>
-    <schema>public</schema>
-    <table>DIM_WAKTU</table>
-    <cache>Y</cache>
-    <cache_load_all>Y</cache_load_all>
-    <cache_size>0</cache_size>
-    <lookup>
-      <key>
-        <name>tanggal_imunisasi</name>
-        <field>tanggal</field>
-        <condition>=</condition>
-      </key>
-      <value>
-        <name>id_waktu</name>
-        <rename>id_waktu</rename>
-        <default/>
-        <type>Integer</type>
-      </value>
-    </lookup>
-    <attributes/>
-    <GUI>
-      <xloc>200</xloc>
-      <yloc>80</yloc>
-    </GUI>
-  </transform>
-  <transform>
-    <name>Lookup id_lokasi</name>
-    <type>DBLookup</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <connection>Warehouse</connection>
-    <schema>public</schema>
-    <table>DIM_LOKASI</table>
-    <cache>Y</cache>
-    <cache_load_all>Y</cache_load_all>
-    <cache_size>0</cache_size>
-    <lookup>
-      <key>
-        <name>id_lokasi_oltp</name>
-        <field>id_lokasi_oltp</field>
-        <condition>=</condition>
-      </key>
-      <value>
-        <name>id_lokasi</name>
-        <rename>id_lokasi</rename>
-        <default/>
-        <type>Integer</type>
-      </value>
-    </lookup>
-    <attributes/>
-    <GUI>
-      <xloc>320</xloc>
-      <yloc>80</yloc>
-    </GUI>
-  </transform>
-  <transform>
-    <name>Lookup id_dim_pasien</name>
-    <type>DBLookup</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <connection>Warehouse</connection>
-    <schema>public</schema>
-    <table>DIM_PASIEN</table>
-    <cache>Y</cache>
-    <cache_load_all>Y</cache_load_all>
-    <cache_size>0</cache_size>
-    <lookup>
-      <key>
-        <name>id_pasien</name>
-        <field>id_pasien_oltp</field>
-        <condition>=</condition>
-      </key>
-      <value>
-        <name>id_dim_pasien</name>
-        <rename>id_dim_pasien</rename>
-        <default/>
-        <type>Integer</type>
-      </value>
-    </lookup>
-    <attributes/>
-    <GUI>
-      <xloc>440</xloc>
-      <yloc>80</yloc>
-    </GUI>
-  </transform>
-  <transform>
-    <name>Lookup id_posyandu</name>
-    <type>DBLookup</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <connection>Warehouse</connection>
-    <schema>public</schema>
-    <table>DIM_POSYANDU</table>
-    <cache>Y</cache>
-    <cache_load_all>Y</cache_load_all>
-    <cache_size>0</cache_size>
-    <lookup>
-      <key>
-        <name>id_posyandu_oltp</name>
-        <field>id_posyandu_oltp</field>
-        <condition>=</condition>
-      </key>
-      <value>
-        <name>id_posyandu</name>
-        <rename>id_posyandu</rename>
-        <default/>
-        <type>Integer</type>
-      </value>
-    </lookup>
-    <attributes/>
-    <GUI>
-      <xloc>560</xloc>
-      <yloc>80</yloc>
-    </GUI>
-  </transform>
-  <transform>
-    <name>Calculate Flags</name>
+    <name>Build SQL</name>
     <type>ScriptValueMod</type>
     <description/>
     <distribute>Y</distribute>
@@ -248,16 +84,13 @@ JOIN user_account ua ON p.id_pasien  = ua.id_user</sql>
       <method>none</method>
       <schema_name/>
     </partitioning>
-    <compatible>N</compatible>
     <optimizationLevel>9</optimizationLevel>
     <jsScripts>
       <jsScript>
         <jsScript_type>0</jsScript_type>
         <jsScript_name>Script 1</jsScript_name>
-        <jsScript_script>// status_imunisasi ENUM di Master: 'Sudah', 'Belum'
+        <jsScript_script>//Script here
 var flag_terlaksana = (status_imunisasi == 'Sudah') ? 1 : 0;
-
-// Hitung keterlambatan
 var flag_terlambat = 0;
 var hari_keterlambatan = 0;
 
@@ -269,7 +102,23 @@ if (tanggal_imunisasi != null &amp;&amp; tanggal_target != null) {
         flag_terlambat = 1;
         hari_keterlambatan = Math.floor((dateImun - dateTarget) / (1000 * 60 * 60 * 24));
     }
-}</jsScript_script>
+}
+
+sql =
+&quot;INSERT INTO public.FACT_IMUNISASI (&quot; +
+&quot;id_waktu,id_lokasi,id_dim_pasien,id_posyandu,nama_vaksin,status_imunisasi,flag_terlaksana,flag_terlambat,hari_keterlambatan&quot; +
+&quot;) VALUES (&quot; +
+&quot;(SELECT id_waktu FROM DIM_WAKTU WHERE tanggal = '&quot; + tanggal_imunisasi + &quot;'::date),&quot; +
+&quot;(SELECT id_lokasi FROM DIM_LOKASI WHERE id_lokasi_oltp = '&quot; + id_lokasi_oltp + &quot;'::int),&quot; +
+&quot;(SELECT id_dim_pasien FROM DIM_PASIEN WHERE id_pasien_oltp = '&quot; + id_pasien + &quot;'::int),&quot; +
+&quot;(SELECT id_posyandu FROM DIM_POSYANDU WHERE id_posyandu_oltp = '&quot; + id_posyandu_oltp + &quot;'::int),&quot; +
+&quot;'&quot; + nama_vaksin.replace(/'/g,&quot;''&quot;) + &quot;',&quot; +
+&quot;'&quot; + status_imunisasi.replace(/'/g,&quot;''&quot;) + &quot;',&quot; +
+&quot;'&quot; + flag_terlaksana + &quot;'::int,&quot; +
+&quot;'&quot; + flag_terlambat + &quot;'::int,&quot; +
+&quot;'&quot; + hari_keterlambatan + &quot;'::int&quot; +
+&quot;)&quot;;
+</jsScript_script>
       </jsScript>
     </jsScripts>
     <fields>
@@ -297,16 +146,24 @@ if (tanggal_imunisasi != null &amp;&amp; tanggal_target != null) {
         <precision>-1</precision>
         <replace>N</replace>
       </field>
+      <field>
+        <name>sql</name>
+        <rename>sql</rename>
+        <type>String</type>
+        <length>3000</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
     </fields>
     <attributes/>
     <GUI>
-      <xloc>680</xloc>
+      <xloc>240</xloc>
       <yloc>80</yloc>
     </GUI>
   </transform>
   <transform>
-    <name>Write FACT_IMUNISASI</name>
-    <type>TableOutput</type>
+    <name>Execute INSERT</name>
+    <type>ExecSqlRow</type>
     <description/>
     <distribute>Y</distribute>
     <custom_distribution/>
@@ -315,64 +172,14 @@ if (tanggal_imunisasi != null &amp;&amp; tanggal_target != null) {
       <method>none</method>
       <schema_name/>
     </partitioning>
-    <connection>Warehouse</connection>
-    <schema>public</schema>
-    <table>FACT_IMUNISASI</table>
     <commit>1000</commit>
-    <truncate>N</truncate>
-    <ignore_errors>N</ignore_errors>
-    <use_batch>Y</use_batch>
-    <specify_fields>Y</specify_fields>
-    <partitioning_enabled>N</partitioning_enabled>
-    <partitioning_field/>
-    <partitioning_daily>N</partitioning_daily>
-    <partitioning_monthly>Y</partitioning_monthly>
-    <tablename_in_field>N</tablename_in_field>
-    <tablename_field/>
-    <tablename_in_table>Y</tablename_in_table>
-    <return_keys>N</return_keys>
-    <return_field/>
-    <fields>
-      <field>
-        <column_name>id_waktu</column_name>
-        <stream_name>id_waktu</stream_name>
-      </field>
-      <field>
-        <column_name>id_lokasi</column_name>
-        <stream_name>id_lokasi</stream_name>
-      </field>
-      <field>
-        <column_name>id_dim_pasien</column_name>
-        <stream_name>id_dim_pasien</stream_name>
-      </field>
-      <field>
-        <column_name>id_posyandu</column_name>
-        <stream_name>id_posyandu</stream_name>
-      </field>
-      <field>
-        <column_name>nama_vaksin</column_name>
-        <stream_name>nama_vaksin</stream_name>
-      </field>
-      <field>
-        <column_name>status_imunisasi</column_name>
-        <stream_name>status_imunisasi</stream_name>
-      </field>
-      <field>
-        <column_name>flag_terlaksana</column_name>
-        <stream_name>flag_terlaksana</stream_name>
-      </field>
-      <field>
-        <column_name>flag_terlambat</column_name>
-        <stream_name>flag_terlambat</stream_name>
-      </field>
-      <field>
-        <column_name>hari_keterlambatan</column_name>
-        <stream_name>hari_keterlambatan</stream_name>
-      </field>
-    </fields>
+    <connection>Warehouse</connection>
+    <sendOneStatement>Y</sendOneStatement>
+    <sqlFromfile>N</sqlFromfile>
+    <sql_field>sql</sql_field>
     <attributes/>
     <GUI>
-      <xloc>800</xloc>
+      <xloc>400</xloc>
       <yloc>80</yloc>
     </GUI>
   </transform>

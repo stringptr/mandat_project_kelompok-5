@@ -22,7 +22,12 @@
   <order>
     <hop>
       <from>Read Pasien with Calculations</from>
-      <to>Write DIM_PASIEN</to>
+      <to>Build SQL</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Build SQL</from>
+      <to>Execute INSERT</to>
       <enabled>Y</enabled>
     </hop>
   </order>
@@ -85,8 +90,8 @@ LEFT JOIN kategori_pendapatan kp ON ua.id_pendapatan = kp.id_pendapatan</sql>
     </GUI>
   </transform>
   <transform>
-    <name>Write DIM_PASIEN</name>
-    <type>TableOutput</type>
+    <name>Build SQL</name>
+    <type>ScriptValueMod</type>
     <description/>
     <distribute>Y</distribute>
     <custom_distribution/>
@@ -95,26 +100,65 @@ LEFT JOIN kategori_pendapatan kp ON ua.id_pendapatan = kp.id_pendapatan</sql>
       <method>none</method>
       <schema_name/>
     </partitioning>
-    <connection>Warehouse</connection>
-    <schema>public</schema>
-    <table>DIM_PASIEN</table>
-    <commit>1000</commit>
-    <truncate>N</truncate>
-    <ignore_errors>N</ignore_errors>
-    <use_batch>Y</use_batch>
-    <specify_fields>N</specify_fields>
-    <partitioning_enabled>N</partitioning_enabled>
-    <partitioning_field/>
-    <partitioning_daily>N</partitioning_daily>
-    <partitioning_monthly>Y</partitioning_monthly>
-    <tablename_in_field>N</tablename_in_field>
-    <tablename_field/>
-    <tablename_in_table>Y</tablename_in_table>
-    <return_keys>N</return_keys>
-    <return_field/>
+    <optimizationLevel>9</optimizationLevel>
+    <jsScripts>
+      <jsScript>
+        <jsScript_type>0</jsScript_type>
+        <jsScript_name>Script 1</jsScript_name>
+        <jsScript_script>//Script here
+sql =
+&quot;INSERT INTO public.DIM_PASIEN (&quot; +
+&quot;tipe_pasien,id_pasien_oltp,jenis_kelamin,usia,satuan_usia,kategori_usia,pendidikan,pekerjaan,kategori_pendapatan,jumlah_tanggungan&quot; +
+&quot;) VALUES (&quot; +
+&quot;'&quot; + tipe_pasien + &quot;'::tipe_pasien,&quot; +
+( id_pasien_oltp==null ? &quot;NULL&quot; : &quot;'&quot; + id_pasien_oltp + &quot;'::int8&quot; ) + &quot;,&quot; +
+( jenis_kelamin==null ? &quot;NULL&quot; : &quot;'&quot; + jenis_kelamin.replace(/'/g,&quot;''&quot;) + &quot;'&quot; ) + &quot;,&quot; +
+( usia==null ? &quot;NULL&quot; : &quot;'&quot; + usia + &quot;'::int8&quot; ) + &quot;,&quot; +
+( satuan_usia==null ? &quot;NULL&quot; : &quot;'&quot; + satuan_usia.replace(/'/g,&quot;''&quot;) + &quot;'&quot; ) + &quot;,&quot; +
+&quot;'&quot; + kategori_usia + &quot;'::kategori_usia,&quot; +
+( pendidikan==null ? &quot;NULL&quot; : &quot;'&quot; + pendidikan.replace(/'/g,&quot;''&quot;) + &quot;'&quot; ) + &quot;,&quot; +
+( pekerjaan==null ? &quot;NULL&quot; : &quot;'&quot; + pekerjaan.replace(/'/g,&quot;''&quot;) + &quot;'&quot; ) + &quot;,&quot; +
+( kategori_pendapatan==null ? &quot;NULL&quot; : &quot;'&quot; + kategori_pendapatan.replace(/'/g,&quot;''&quot;) + &quot;'&quot; ) + &quot;,&quot; +
+( jumlah_tanggungan==null ? &quot;NULL&quot; : &quot;'&quot; + jumlah_tanggungan + &quot;'::int8&quot; ) +
+&quot;)&quot;;
+</jsScript_script>
+      </jsScript>
+    </jsScripts>
+    <fields>
+      <field>
+        <name>sql</name>
+        <rename>sql</rename>
+        <type>String</type>
+        <length>2000</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+    </fields>
     <attributes/>
     <GUI>
       <xloc>320</xloc>
+      <yloc>80</yloc>
+    </GUI>
+  </transform>
+  <transform>
+    <name>Execute INSERT</name>
+    <type>ExecSqlRow</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <commit>1000</commit>
+    <connection>Warehouse</connection>
+    <sendOneStatement>Y</sendOneStatement>
+    <sqlFromfile>N</sqlFromfile>
+    <sql_field>sql</sql_field>
+    <attributes/>
+    <GUI>
+      <xloc>480</xloc>
       <yloc>80</yloc>
     </GUI>
   </transform>

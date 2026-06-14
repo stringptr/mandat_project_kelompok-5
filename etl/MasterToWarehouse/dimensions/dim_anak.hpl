@@ -22,17 +22,12 @@
   <order>
     <hop>
       <from>Read Anak Data</from>
-      <to>Add Tipe Pasien Const</to>
+      <to>Build SQL</to>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>Add Tipe Pasien Const</from>
-      <to>Lookup id_dim_pasien</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Lookup id_dim_pasien</from>
-      <to>Write DIM_ANAK</to>
+      <from>Build SQL</from>
+      <to>Execute INSERT</to>
       <enabled>Y</enabled>
     </hop>
   </order>
@@ -52,7 +47,7 @@
   a.id_pasien,
   a.berat_lahir,
   a.panjang_lahir,
-  a.hubungan_dengan_wali,
+  a.hubungan_dengan_wali::VARCHAR,
   a.id_ibu_hamil as id_ibu_hamil_oltp
 FROM anak a</sql>
     <limit>0</limit>
@@ -67,9 +62,9 @@ FROM anak a</sql>
     </GUI>
   </transform>
   <transform>
-    <name>Add Tipe Pasien Const</name>
-    <type>Constant</type>
-    <description>Inject literal 'Anak' untuk digunakan sebagai key lookup kedua ke DIM_PASIEN</description>
+    <name>Build SQL</name>
+    <type>ScriptValueMod</type>
+    <description/>
     <distribute>Y</distribute>
     <custom_distribution/>
     <copies>1</copies>
@@ -77,18 +72,35 @@ FROM anak a</sql>
       <method>none</method>
       <schema_name/>
     </partitioning>
+    <optimizationLevel>9</optimizationLevel>
+    <jsScripts>
+      <jsScript>
+        <jsScript_type>0</jsScript_type>
+        <jsScript_name>Script 1</jsScript_name>
+        <jsScript_script>//Script here
+var ibuHamilVal = (id_ibu_hamil_oltp != null) ? &quot;'&quot; + id_ibu_hamil_oltp + &quot;'::int&quot; : &quot;NULL&quot;;
+
+sql =
+&quot;INSERT INTO public.DIM_ANAK (&quot; +
+&quot;id_dim_pasien,berat_lahir,panjang_lahir,hubungan_dengan_wali,id_ibu_hamil_oltp&quot; +
+&quot;) VALUES (&quot; +
+&quot;(SELECT id_dim_pasien FROM DIM_PASIEN WHERE id_pasien_oltp = '&quot; + id_pasien + &quot;' AND tipe_pasien = 'Anak'::tipe_pasien),&quot; +
+&quot;'&quot; + berat_lahir + &quot;'::numeric(5,2),&quot; +
+&quot;'&quot; + panjang_lahir + &quot;'::numeric(5,2),&quot; +
+&quot;'&quot; + hubungan_dengan_wali.replace(/'/g,&quot;''&quot;) + &quot;',&quot; +
+ibuHamilVal +
+&quot;)&quot;;
+</jsScript_script>
+      </jsScript>
+    </jsScripts>
     <fields>
       <field>
-        <name>tipe_pasien_const</name>
+        <name>sql</name>
+        <rename>sql</rename>
         <type>String</type>
-        <format/>
-        <currency/>
-        <decimal/>
-        <group/>
-        <nullif>Anak</nullif>
-        <length>-1</length>
+        <length>2000</length>
         <precision>-1</precision>
-        <set_empty_string>N</set_empty_string>
+        <replace>N</replace>
       </field>
     </fields>
     <attributes/>
@@ -98,8 +110,8 @@ FROM anak a</sql>
     </GUI>
   </transform>
   <transform>
-    <name>Lookup id_dim_pasien</name>
-    <type>DBLookup</type>
+    <name>Execute INSERT</name>
+    <type>ExecSqlRow</type>
     <description/>
     <distribute>Y</distribute>
     <custom_distribution/>
@@ -108,89 +120,14 @@ FROM anak a</sql>
       <method>none</method>
       <schema_name/>
     </partitioning>
+    <commit>1000</commit>
     <connection>Warehouse</connection>
-    <schema>public</schema>
-    <table>DIM_PASIEN</table>
-    <cache>Y</cache>
-    <cache_load_all>Y</cache_load_all>
-    <cache_size>0</cache_size>
-    <lookup>
-      <key>
-        <name>id_pasien</name>
-        <field>id_pasien_oltp</field>
-        <condition>=</condition>
-      </key>
-      <key>
-        <name>tipe_pasien_const</name>
-        <field>tipe_pasien</field>
-        <condition>=</condition>
-      </key>
-      <value>
-        <name>id_dim_pasien</name>
-        <rename>id_dim_pasien</rename>
-        <default/>
-        <type>Integer</type>
-      </value>
-    </lookup>
+    <sendOneStatement>Y</sendOneStatement>
+    <sqlFromfile>N</sqlFromfile>
+    <sql_field>sql</sql_field>
     <attributes/>
     <GUI>
       <xloc>400</xloc>
-      <yloc>80</yloc>
-    </GUI>
-  </transform>
-  <transform>
-    <name>Write DIM_ANAK</name>
-    <type>TableOutput</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <connection>Warehouse</connection>
-    <schema>public</schema>
-    <table>DIM_ANAK</table>
-    <commit>1000</commit>
-    <truncate>N</truncate>
-    <ignore_errors>N</ignore_errors>
-    <use_batch>Y</use_batch>
-    <specify_fields>Y</specify_fields>
-    <partitioning_enabled>N</partitioning_enabled>
-    <partitioning_field/>
-    <partitioning_daily>N</partitioning_daily>
-    <partitioning_monthly>Y</partitioning_monthly>
-    <tablename_in_field>N</tablename_in_field>
-    <tablename_field/>
-    <tablename_in_table>Y</tablename_in_table>
-    <return_keys>N</return_keys>
-    <return_field/>
-    <fields>
-      <field>
-        <column_name>id_dim_pasien</column_name>
-        <stream_name>id_dim_pasien</stream_name>
-      </field>
-      <field>
-        <column_name>berat_lahir</column_name>
-        <stream_name>berat_lahir</stream_name>
-      </field>
-      <field>
-        <column_name>panjang_lahir</column_name>
-        <stream_name>panjang_lahir</stream_name>
-      </field>
-      <field>
-        <column_name>hubungan_dengan_wali</column_name>
-        <stream_name>hubungan_dengan_wali</stream_name>
-      </field>
-      <field>
-        <column_name>id_ibu_hamil_oltp</column_name>
-        <stream_name>id_ibu_hamil_oltp</stream_name>
-      </field>
-    </fields>
-    <attributes/>
-    <GUI>
-      <xloc>560</xloc>
       <yloc>80</yloc>
     </GUI>
   </transform>

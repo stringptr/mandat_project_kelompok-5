@@ -26,7 +26,7 @@
       <repeat>N</repeat>
       <schedulerType>0</schedulerType>
       <weekDay>1</weekDay>
-      <parallel>N</parallel>
+      <parallel>Y</parallel>
       <xloc>80</xloc>
       <yloc>160</yloc>
       <attributes_hac/>
@@ -156,8 +156,8 @@
       <set_append_logfile>N</set_append_logfile>
       <set_logfile>N</set_logfile>
       <wait_until_finished>Y</wait_until_finished>
-      <parallel>N</parallel>
-      <xloc>640</xloc>
+      <parallel>Y</parallel>
+      <xloc>736</xloc>
       <yloc>160</yloc>
       <attributes_hac/>
     </action>
@@ -265,9 +265,28 @@
       <yloc>240</yloc>
       <attributes_hac/>
     </action>
+    <action>
+      <name>Join</name>
+      <description/>
+      <type>JOIN</type>
+      <attributes/>
+      <parallel>Y</parallel>
+      <xloc>944</xloc>
+      <yloc>160</yloc>
+      <attributes_hac/>
+    </action>
+    <action>
+      <name>Join 2</name>
+      <description/>
+      <type>JOIN</type>
+      <attributes/>
+      <parallel>N</parallel>
+      <xloc>592</xloc>
+      <yloc>160</yloc>
+      <attributes_hac/>
+    </action>
   </actions>
   <hops>
-    <!-- Phase 1: Dimensi independen berjalan paralel dari START -->
     <hop>
       <from>START</from>
       <to>dim_waktu</to>
@@ -289,7 +308,6 @@
       <evaluation>Y</evaluation>
       <unconditional>Y</unconditional>
     </hop>
-    <!-- Phase 2: dim_posyandu bergantung dim_petugas (FK ke DIM_PETUGAS) -->
     <hop>
       <from>dim_petugas</from>
       <to>dim_posyandu</to>
@@ -297,15 +315,6 @@
       <evaluation>Y</evaluation>
       <unconditional>N</unconditional>
     </hop>
-    <!-- Phase 3: dim_pasien bergantung dim_posyandu (agar data konsisten) -->
-    <hop>
-      <from>dim_posyandu</from>
-      <to>dim_pasien</to>
-      <enabled>Y</enabled>
-      <evaluation>Y</evaluation>
-      <unconditional>N</unconditional>
-    </hop>
-    <!-- Phase 4: Outrigger bergantung dim_pasien (FK ke DIM_PASIEN) -->
     <hop>
       <from>dim_pasien</from>
       <to>dim_anak</to>
@@ -320,51 +329,61 @@
       <evaluation>Y</evaluation>
       <unconditional>N</unconditional>
     </hop>
-    <!-- Phase 5: Fact tables bergantung pada SEMUA outrigger selesai -->
-    <!-- fact_pemeriksaan butuh: dim_waktu, dim_lokasi, dim_pasien, dim_posyandu, dim_anak, dim_ibu_hamil -->
+    <hop>
+      <from>dim_ibu_hamil</from>
+      <to>Join</to>
+      <enabled>Y</enabled>
+      <evaluation>Y</evaluation>
+      <unconditional>N</unconditional>
+    </hop>
     <hop>
       <from>dim_anak</from>
+      <to>Join</to>
+      <enabled>Y</enabled>
+      <evaluation>Y</evaluation>
+      <unconditional>N</unconditional>
+    </hop>
+    <hop>
+      <from>Join</from>
       <to>fact_pemeriksaan</to>
       <enabled>Y</enabled>
       <evaluation>Y</evaluation>
-      <unconditional>N</unconditional>
+      <unconditional>Y</unconditional>
     </hop>
     <hop>
-      <from>dim_ibu_hamil</from>
-      <to>fact_pemeriksaan</to>
-      <enabled>Y</enabled>
-      <evaluation>Y</evaluation>
-      <unconditional>N</unconditional>
-    </hop>
-    <!-- fact_imunisasi butuh: dim_waktu, dim_lokasi, dim_pasien, dim_posyandu -->
-    <hop>
-      <from>dim_anak</from>
+      <from>Join</from>
       <to>fact_imunisasi</to>
       <enabled>Y</enabled>
       <evaluation>Y</evaluation>
-      <unconditional>N</unconditional>
+      <unconditional>Y</unconditional>
     </hop>
     <hop>
-      <from>dim_ibu_hamil</from>
-      <to>fact_imunisasi</to>
-      <enabled>Y</enabled>
-      <evaluation>Y</evaluation>
-      <unconditional>N</unconditional>
-    </hop>
-    <!-- dim_waktu dan dim_lokasi juga menjadi prasyarat untuk fact table -->
-    <hop>
-      <from>dim_waktu</from>
-      <to>dim_pasien</to>
+      <from>dim_posyandu</from>
+      <to>Join 2</to>
       <enabled>Y</enabled>
       <evaluation>Y</evaluation>
       <unconditional>N</unconditional>
     </hop>
     <hop>
       <from>dim_lokasi</from>
-      <to>dim_pasien</to>
+      <to>Join 2</to>
       <enabled>Y</enabled>
       <evaluation>Y</evaluation>
       <unconditional>N</unconditional>
+    </hop>
+    <hop>
+      <from>dim_waktu</from>
+      <to>Join 2</to>
+      <enabled>Y</enabled>
+      <evaluation>Y</evaluation>
+      <unconditional>N</unconditional>
+    </hop>
+    <hop>
+      <from>Join 2</from>
+      <to>dim_pasien</to>
+      <enabled>Y</enabled>
+      <evaluation>Y</evaluation>
+      <unconditional>Y</unconditional>
     </hop>
   </hops>
   <notepads>

@@ -5,6 +5,7 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/config"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
 	jwtblacklistDomain "github.com/stringptr/SiGizi/backend/internal/domain/jwtblacklist"
+	lokasiDomain "github.com/stringptr/SiGizi/backend/internal/domain/lokasi"
 	notificationDomain "github.com/stringptr/SiGizi/backend/internal/domain/notification"
 	pasienDomain "github.com/stringptr/SiGizi/backend/internal/domain/pasien"
 	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
@@ -23,6 +24,7 @@ type Dependency struct {
 	NotifPublisher     notificationDomain.Publisher
 	NotifHandler       notificationDomain.Handler
 	PasienHandler      pasienDomain.Handler
+	LokasiHandler      lokasiDomain.Handler
 }
 
 func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
@@ -49,6 +51,8 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 
 	huma.Post(nonAuthenticatedOnlyGroup, "/auth/register", d.AuthHandler.Register)
 	huma.Post(nonAuthenticatedOnlyGroup, "/auth/login", d.AuthHandler.Login)
+
+	huma.Get(nonAuthenticatedOnlyGroup, "/lokasi", d.LokasiHandler.GetLokasi)
 
 	huma.Post(authRefresh, "/auth/refresh", d.AuthHandler.Refresh)
 	huma.Post(authRefresh, "/auth/logout", d.AuthHandler.Logout)

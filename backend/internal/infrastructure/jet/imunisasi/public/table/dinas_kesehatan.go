@@ -20,6 +20,7 @@ type dinasKesehatanTable struct {
 	IDUser    postgres.ColumnInteger
 	CreatedAt postgres.ColumnTimestampz
 	UpdatedAt postgres.ColumnTimestampz
+	IsDeleted postgres.ColumnBool
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -64,9 +65,10 @@ func newDinasKesehatanTableImpl(schemaName, tableName, alias string) dinasKeseha
 		IDUserColumn    = postgres.IntegerColumn("id_user")
 		CreatedAtColumn = postgres.TimestampzColumn("created_at")
 		UpdatedAtColumn = postgres.TimestampzColumn("updated_at")
-		allColumns      = postgres.ColumnList{IDUserColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns  = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns  = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn}
+		IsDeletedColumn = postgres.BoolColumn("is_deleted")
+		allColumns      = postgres.ColumnList{IDUserColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		mutableColumns  = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		defaultColumns  = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
 	)
 
 	return dinasKesehatanTable{
@@ -76,6 +78,7 @@ func newDinasKesehatanTableImpl(schemaName, tableName, alias string) dinasKeseha
 		IDUser:    IDUserColumn,
 		CreatedAt: CreatedAtColumn,
 		UpdatedAt: UpdatedAtColumn,
+		IsDeleted: IsDeletedColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

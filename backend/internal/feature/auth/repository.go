@@ -22,20 +22,29 @@ func NewRepo(db *pgxpool.Pool) *Repo {
 }
 
 func (r *Repo) GetRoles(ctx context.Context, idUser int32) ([]string, error) {
-	query := `
-        SELECT
-            EXISTS(SELECT 1 FROM dinas_kesehatan WHERE id_user = $1) as is_dinkes,
-            EXISTS(SELECT 1 FROM bidan WHERE id_user = $1) as is_bidan,
-            EXISTS(SELECT 1 FROM kader_posyandu WHERE id_user = $1) as is_kader,
-            EXISTS(SELECT 1 FROM pasien WHERE id_pasien = $1) as is_pasien,
-            EXISTS(SELECT 1 FROM ibu_hamil WHERE id_pasien = $1) as is_ibu_hamil,
-            EXISTS(SELECT 1 FROM anak WHERE id_pasien = $1) as is_anak
-    `
-	var isDinkes, isBidan, isKader, isPasien, isIbuHamil, isAnak bool
-	err := r.db.QueryRow(ctx, query, idUser).Scan(&isDinkes, &isBidan, &isKader, &isPasien, &isIbuHamil, &isAnak)
+	stmt := SELECT(
+		Raw("EXISTS(SELECT 1 FROM dinas_kesehatan WHERE id_user = #1 AND is_deleted = false)", RawArgs{"#1": idUser}).AS("is_dinkes"),
+		Raw("EXISTS(SELECT 1 FROM bidan WHERE id_user = #1 AND is_deleted = false)", RawArgs{"#1": idUser}).AS("is_bidan"),
+		Raw("EXISTS(SELECT 1 FROM kader_posyandu WHERE id_user = #1 AND is_deleted = false)", RawArgs{"#1": idUser}).AS("is_kader"),
+		Raw("EXISTS(SELECT 1 FROM pasien WHERE id_pasien = #1 AND is_deleted = false)", RawArgs{"#1": idUser}).AS("is_pasien"),
+		Raw("EXISTS(SELECT 1 FROM ibu_hamil WHERE id_pasien = #1 AND is_deleted = false)", RawArgs{"#1": idUser}).AS("is_ibu_hamil"),
+		Raw("EXISTS(SELECT 1 FROM anak WHERE id_pasien = #1 AND is_deleted = false)", RawArgs{"#1": idUser}).AS("is_anak"),
+	)
+
+	var result struct {
+		IsDinkes   bool
+		IsBidan    bool
+		IsKader    bool
+		IsPasien   bool
+		IsIbuHamil bool
+		IsAnak     bool
+	}
+	err := pgxV5.Query(ctx, stmt, r.db, &result)
 	if err != nil {
 		return nil, err
 	}
+
+	isDinkes, isBidan, isKader, isPasien, isIbuHamil, isAnak := result.IsDinkes, result.IsBidan, result.IsKader, result.IsPasien, result.IsIbuHamil, result.IsAnak
 
 	roles := []string{"USER"}
 	if isDinkes {
@@ -71,7 +80,8 @@ func (r *Repo) GetByEmailNIK(ctx context.Context, email string, nik string) (*mo
 	stmt := SELECT(UserAccount.AllColumns).
 		FROM(UserAccount).
 		WHERE(UserAccount.Email.EQ(String(email)).
-			AND(UserAccount.Nik.EQ(String(nik)))).
+			AND(UserAccount.Nik.EQ(String(nik)).
+				AND(UserAccount.IsDeleted.EQ(Bool(false))))).
 		LIMIT(1)
 
 	err := pgxV5.Query(ctx, stmt, r.db, &users)
@@ -136,14 +146,25 @@ func (r *Repo) CreateRoleRecord(ctx context.Context, idUser int32, role string, 
 }
 
 func (r *Repo) DeleteRoleRecords(ctx context.Context, idUser int32) error {
-	_, err := r.db.Exec(ctx, "DELETE FROM bidan WHERE id_user = $1", idUser)
+	bidanStmt := Bidan.UPDATE(Bidan.IsDeleted, Bidan.DeletedAt).
+		SET(Bool(true), RawTimestampz("NOW()")).
+		WHERE(Bidan.IDUser.EQ(Int32(idUser)))
+	_, err := pgxV5.Exec(ctx, bidanStmt, r.db)
 	if err != nil {
 		return err
 	}
-	_, err = r.db.Exec(ctx, "DELETE FROM kader_posyandu WHERE id_user = $1", idUser)
+
+	kaderStmt := KaderPosyandu.UPDATE(KaderPosyandu.IsDeleted, KaderPosyandu.DeletedAt).
+		SET(Bool(true), RawTimestampz("NOW()")).
+		WHERE(KaderPosyandu.IDUser.EQ(Int32(idUser)))
+	_, err = pgxV5.Exec(ctx, kaderStmt, r.db)
 	if err != nil {
 		return err
 	}
-	_, err = r.db.Exec(ctx, "DELETE FROM dinas_kesehatan WHERE id_user = $1", idUser)
+
+	dinkesStmt := DinasKesehatan.UPDATE(DinasKesehatan.IsDeleted, DinasKesehatan.DeletedAt).
+		SET(Bool(true), RawTimestampz("NOW()")).
+		WHERE(DinasKesehatan.IDUser.EQ(Int32(idUser)))
+	_, err = pgxV5.Exec(ctx, dinkesStmt, r.db)
 	return err
 }

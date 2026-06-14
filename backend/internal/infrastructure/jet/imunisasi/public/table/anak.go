@@ -26,6 +26,7 @@ type anakTable struct {
 	HubunganDenganWali postgres.ColumnString
 	CreatedAt          postgres.ColumnTimestampz
 	UpdatedAt          postgres.ColumnTimestampz
+	IsDeleted          postgres.ColumnBool
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -76,9 +77,10 @@ func newAnakTableImpl(schemaName, tableName, alias string) anakTable {
 		HubunganDenganWaliColumn = postgres.StringColumn("hubungan_dengan_wali")
 		CreatedAtColumn          = postgres.TimestampzColumn("created_at")
 		UpdatedAtColumn          = postgres.TimestampzColumn("updated_at")
-		allColumns               = postgres.ColumnList{IDPasienColumn, IDIbuHamilColumn, IDWaliColumn, NamaAnakColumn, BeratLahirColumn, PanjangLahirColumn, HubunganDenganWaliColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns           = postgres.ColumnList{IDIbuHamilColumn, IDWaliColumn, NamaAnakColumn, BeratLahirColumn, PanjangLahirColumn, HubunganDenganWaliColumn, CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns           = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn}
+		IsDeletedColumn          = postgres.BoolColumn("is_deleted")
+		allColumns               = postgres.ColumnList{IDPasienColumn, IDIbuHamilColumn, IDWaliColumn, NamaAnakColumn, BeratLahirColumn, PanjangLahirColumn, HubunganDenganWaliColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		mutableColumns           = postgres.ColumnList{IDIbuHamilColumn, IDWaliColumn, NamaAnakColumn, BeratLahirColumn, PanjangLahirColumn, HubunganDenganWaliColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		defaultColumns           = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
 	)
 
 	return anakTable{
@@ -94,6 +96,7 @@ func newAnakTableImpl(schemaName, tableName, alias string) anakTable {
 		HubunganDenganWali: HubunganDenganWaliColumn,
 		CreatedAt:          CreatedAtColumn,
 		UpdatedAt:          UpdatedAtColumn,
+		IsDeleted:          IsDeletedColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

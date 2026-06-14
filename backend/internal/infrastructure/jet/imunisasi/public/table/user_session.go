@@ -21,9 +21,9 @@ type userSessionTable struct {
 	IDUser        postgres.ColumnInteger
 	StatusSession postgres.ColumnString
 	IPAddress     postgres.ColumnString
-	ExpiredAt     postgres.ColumnTimestampz
 	CreatedAt     postgres.ColumnTimestampz
 	UpdatedAt     postgres.ColumnTimestampz
+	ExpiredAt     postgres.ColumnTimestampz
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -69,12 +69,12 @@ func newUserSessionTableImpl(schemaName, tableName, alias string) userSessionTab
 		IDUserColumn        = postgres.IntegerColumn("id_user")
 		StatusSessionColumn = postgres.StringColumn("status_session")
 		IPAddressColumn     = postgres.StringColumn("ip_address")
-		ExpiredAtColumn     = postgres.TimestampzColumn("expired_at")
 		CreatedAtColumn     = postgres.TimestampzColumn("created_at")
 		UpdatedAtColumn     = postgres.TimestampzColumn("updated_at")
-		allColumns          = postgres.ColumnList{IDSessionColumn, IDUserColumn, StatusSessionColumn, IPAddressColumn, ExpiredAtColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns      = postgres.ColumnList{IDUserColumn, StatusSessionColumn, IPAddressColumn, ExpiredAtColumn, CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns      = postgres.ColumnList{IDSessionColumn, StatusSessionColumn, ExpiredAtColumn, CreatedAtColumn, UpdatedAtColumn}
+		ExpiredAtColumn     = postgres.TimestampzColumn("expired_at")
+		allColumns          = postgres.ColumnList{IDSessionColumn, IDUserColumn, StatusSessionColumn, IPAddressColumn, CreatedAtColumn, UpdatedAtColumn, ExpiredAtColumn}
+		mutableColumns      = postgres.ColumnList{IDUserColumn, StatusSessionColumn, IPAddressColumn, CreatedAtColumn, UpdatedAtColumn, ExpiredAtColumn}
+		defaultColumns      = postgres.ColumnList{IDSessionColumn, StatusSessionColumn, CreatedAtColumn, UpdatedAtColumn, ExpiredAtColumn}
 	)
 
 	return userSessionTable{
@@ -85,9 +85,9 @@ func newUserSessionTableImpl(schemaName, tableName, alias string) userSessionTab
 		IDUser:        IDUserColumn,
 		StatusSession: StatusSessionColumn,
 		IPAddress:     IPAddressColumn,
-		ExpiredAt:     ExpiredAtColumn,
 		CreatedAt:     CreatedAtColumn,
 		UpdatedAt:     UpdatedAtColumn,
+		ExpiredAt:     ExpiredAtColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

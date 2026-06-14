@@ -29,4 +29,5 @@ type UserAccount struct {
 	AkunKe           int32
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	IsDeleted        bool
 }

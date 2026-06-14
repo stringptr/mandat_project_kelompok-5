@@ -19,4 +19,5 @@ type Notifikasi struct {
 	TipeNotifikasi TipeNotifikasi
 	StatusBaca     bool
 	TanggalKirim   time.Time
+	IsDeleted      bool
 }

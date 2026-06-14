@@ -2,7 +2,6 @@ package pasien
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -10,8 +9,8 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 	. "github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/table"
 
-	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/go-jet/jet/v2/pgxV5"
+	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -25,7 +24,7 @@ func NewRepo(db *pgxpool.Pool) *Repo {
 
 func (r *Repo) GetUserByID(ctx context.Context, idUser int32) (*model.UserAccount, error) {
 	var users []*model.UserAccount
-	stmt := SELECT(UserAccount.AllColumns).FROM(UserAccount).WHERE(UserAccount.IDUser.EQ(Int32(idUser)))
+	stmt := SELECT(UserAccount.AllColumns).FROM(UserAccount).WHERE(UserAccount.IDUser.EQ(Int32(idUser)).AND(UserAccount.IsDeleted.EQ(Bool(false))))
 	err := pgxV5.Query(ctx, stmt, r.db, &users)
 	if err != nil {
 		return nil, err
@@ -38,7 +37,7 @@ func (r *Repo) GetUserByID(ctx context.Context, idUser int32) (*model.UserAccoun
 
 func (r *Repo) GetPasienByUserID(ctx context.Context, idUser int32) (*model.Pasien, error) {
 	var pasien []*model.Pasien
-	stmt := SELECT(Pasien.AllColumns).FROM(Pasien).WHERE(Pasien.IDPasien.EQ(Int32(idUser)))
+	stmt := SELECT(Pasien.AllColumns).FROM(Pasien).WHERE(Pasien.IDPasien.EQ(Int32(idUser)).AND(Pasien.IsDeleted.EQ(Bool(false))))
 	err := pgxV5.Query(ctx, stmt, r.db, &pasien)
 	if err != nil {
 		return nil, err
@@ -51,7 +50,7 @@ func (r *Repo) GetPasienByUserID(ctx context.Context, idUser int32) (*model.Pasi
 
 func (r *Repo) GetPosyanduByID(ctx context.Context, idPosyandu int32) (*model.Posyandu, error) {
 	var posyandu []*model.Posyandu
-	stmt := SELECT(Posyandu.AllColumns).FROM(Posyandu).WHERE(Posyandu.IDPosyandu.EQ(Int32(idPosyandu)))
+	stmt := SELECT(Posyandu.AllColumns).FROM(Posyandu).WHERE(Posyandu.IDPosyandu.EQ(Int32(idPosyandu)).AND(Posyandu.IsDeleted.EQ(Bool(false))))
 	err := pgxV5.Query(ctx, stmt, r.db, &posyandu)
 	if err != nil {
 		return nil, err
@@ -64,7 +63,7 @@ func (r *Repo) GetPosyanduByID(ctx context.Context, idPosyandu int32) (*model.Po
 
 func (r *Repo) GetIbuHamilByPasienID(ctx context.Context, idPasien int32) ([]*model.IbuHamil, error) {
 	var hasil []*model.IbuHamil
-	stmt := SELECT(IbuHamil.AllColumns).FROM(IbuHamil).WHERE(IbuHamil.IDPasien.EQ(Int32(idPasien)))
+	stmt := SELECT(IbuHamil.AllColumns).FROM(IbuHamil).WHERE(IbuHamil.IDPasien.EQ(Int32(idPasien)).AND(IbuHamil.IsDeleted.EQ(Bool(false))))
 	err := pgxV5.Query(ctx, stmt, r.db, &hasil)
 	if err != nil {
 		return nil, err
@@ -74,7 +73,7 @@ func (r *Repo) GetIbuHamilByPasienID(ctx context.Context, idPasien int32) ([]*mo
 
 func (r *Repo) GetAnakByPasienID(ctx context.Context, idPasien int32) (*model.Anak, error) {
 	var hasil []*model.Anak
-	stmt := SELECT(Anak.AllColumns).FROM(Anak).WHERE(Anak.IDPasien.EQ(Int32(idPasien)))
+	stmt := SELECT(Anak.AllColumns).FROM(Anak).WHERE(Anak.IDPasien.EQ(Int32(idPasien)).AND(Anak.IsDeleted.EQ(Bool(false))))
 	err := pgxV5.Query(ctx, stmt, r.db, &hasil)
 	if err != nil {
 		return nil, err
@@ -107,105 +106,104 @@ func (r *Repo) CreateAnak(ctx context.Context, data *model.Anak) error {
 }
 
 func (r *Repo) GetAllPaginated(ctx context.Context, page int, perPage int, q string) ([]*pasienDomain.PasienJoinRow, int, error) {
-	offset := (page - 1) * perPage
+	offset := int64((page - 1) * perPage)
 
-	fromClause := `
-		FROM pasien p
-		JOIN user_account ua ON ua.id_user = p.id_pasien
-		JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu
-		LEFT JOIN LATERAL (
-			SELECT 'Ibu Hamil' AS jenis, ih.status_kehamilan::text AS sub_status
-			FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien LIMIT 1
-		) ih_data ON true
-		LEFT JOIN LATERAL (
-			SELECT 'Anak' AS jenis, NULL AS sub_status
-			FROM anak a WHERE a.id_pasien = p.id_pasien LIMIT 1
-		) anak_data ON true
-	`
-	whereClause := ""
-	args := []any{}
-	argIdx := 1
+	p := Pasien.AS("p")
+	ua := UserAccount.AS("ua")
+	pos := Posyandu.AS("pos")
+
+	fromClause := p.
+		INNER_JOIN(ua, ua.IDUser.EQ(p.IDPasien).AND(ua.IsDeleted.EQ(Bool(false)))).
+		INNER_JOIN(pos, pos.IDPosyandu.EQ(p.IDPosyandu).AND(pos.IsDeleted.EQ(Bool(false))))
+
+	conditions := []BoolExpression{p.IsDeleted.EQ(Bool(false))}
 
 	if q != "" {
-		whereClause = fmt.Sprintf("WHERE (ua.nama ILIKE $%d OR ua.nik ILIKE $%d)", argIdx, argIdx)
-		args = append(args, "%"+q+"%")
-		argIdx++
+		pattern := "%" + q + "%"
+		nameILike := BoolExp(CustomExpression(ua.Nama, Token("ILIKE"), String(pattern)))
+		nikILike := BoolExp(CustomExpression(ua.Nik, Token("ILIKE"), String(pattern)))
+		conditions = append(conditions, nameILike.OR(nikILike))
 	}
 
-	var total int
-	countQuery := "SELECT COUNT(*) " + fromClause + " " + whereClause
-	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
+	whereCond := conditions[0]
+	for _, c := range conditions[1:] {
+		whereCond = whereCond.AND(c)
+	}
+
+	var countResult struct{ Count int64 }
+	countStmt := SELECT(COUNT(STAR)).FROM(fromClause).WHERE(whereCond)
+	err := pgxV5.Query(ctx, countStmt, r.db, &countResult)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	jenisCol := "COALESCE(ih_data.jenis, anak_data.jenis, 'Pasien')"
-	subStatusCol := "ih_data.sub_status"
-
-	dataQuery := fmt.Sprintf(`SELECT p.id_pasien, ua.nama, ua.nik, ua.jenis_kelamin::text, ua.tanggal_lahir::text, pos.nama_posyandu, %s AS jenis_pasien, %s AS status_kehamilan %s %s ORDER BY ua.nama ASC LIMIT $%d OFFSET $%d`,
-		jenisCol, subStatusCol, fromClause, whereClause, argIdx, argIdx+1)
-	args = append(args, perPage, offset)
-
-	rows, err := r.db.Query(ctx, dataQuery, args...)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer rows.Close()
+	jenisIbuHamil := Raw("(SELECT 'Ibu Hamil' FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1)")
+	jenisAnak := Raw("(SELECT 'Anak' FROM anak a WHERE a.id_pasien = p.id_pasien AND a.is_deleted = false LIMIT 1)")
+	subStatus := Raw("(SELECT ih.status_kehamilan::text FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1)")
 
 	var result []*pasienDomain.PasienJoinRow
-	for rows.Next() {
-		row := &pasienDomain.PasienJoinRow{}
-		err := rows.Scan(&row.IDPasien, &row.Nama, &row.NIK, &row.JenisKelamin, &row.TanggalLahir, &row.NamaPosyandu, &row.JenisPasien, &row.StatusKehamilan)
-		if err != nil {
-			return nil, 0, err
-		}
-		result = append(result, row)
+	dataStmt := SELECT(
+		p.IDPasien,
+		ua.Nama,
+		ua.Nik,
+		Raw("ua.jenis_kelamin::text"),
+		Raw("ua.tanggal_lahir::text"),
+		pos.NamaPosyandu,
+		COALESCE(jenisIbuHamil, jenisAnak, String("Pasien")).AS("jenis_pasien"),
+		subStatus.AS("status_kehamilan"),
+	).FROM(fromClause).WHERE(whereCond).
+		ORDER_BY(ua.Nama.ASC()).
+		LIMIT(int64(perPage)).
+		OFFSET(offset)
+	err = pgxV5.Query(ctx, dataStmt, r.db, &result)
+	if err != nil {
+		return nil, 0, err
 	}
 
-	return result, total, nil
+	return result, int(countResult.Count), nil
 }
 
 func (r *Repo) Search(ctx context.Context, q string) ([]*pasienDomain.PasienJoinRow, error) {
-	fromClause := `
-		FROM pasien p
-		JOIN user_account ua ON ua.id_user = p.id_pasien
-		JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu
-		LEFT JOIN LATERAL (
-			SELECT 'Ibu Hamil' AS jenis, ih.status_kehamilan::text AS sub_status
-			FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien LIMIT 1
-		) ih_data ON true
-		LEFT JOIN LATERAL (
-			SELECT 'Anak' AS jenis, NULL AS sub_status
-			FROM anak a WHERE a.id_pasien = p.id_pasien LIMIT 1
-		) anak_data ON true
-	`
-	jenisCol := "COALESCE(ih_data.jenis, anak_data.jenis, 'Pasien')"
-	subStatusCol := "ih_data.sub_status"
+	p := Pasien.AS("p")
+	ua := UserAccount.AS("ua")
+	pos := Posyandu.AS("pos")
 
-	query := fmt.Sprintf(`SELECT p.id_pasien, ua.nama, ua.nik, ua.jenis_kelamin::text, ua.tanggal_lahir::text, pos.nama_posyandu, %s AS jenis_pasien, %s AS status_kehamilan %s WHERE (ua.nama ILIKE $1 OR ua.nik ILIKE $1) ORDER BY ua.nama ASC LIMIT 20`,
-		jenisCol, subStatusCol, fromClause)
+	fromClause := p.
+		INNER_JOIN(ua, ua.IDUser.EQ(p.IDPasien).AND(ua.IsDeleted.EQ(Bool(false)))).
+		INNER_JOIN(pos, pos.IDPosyandu.EQ(p.IDPosyandu).AND(pos.IsDeleted.EQ(Bool(false))))
 
-	rows, err := r.db.Query(ctx, query, "%"+q+"%")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+	pattern := "%" + q + "%"
+	whereCond := p.IsDeleted.EQ(Bool(false)).AND(
+		BoolExp(CustomExpression(ua.Nama, Token("ILIKE"), String(pattern))).
+			OR(BoolExp(CustomExpression(ua.Nik, Token("ILIKE"), String(pattern)))),
+	)
+
+	jenisIbuHamil := Raw("(SELECT 'Ibu Hamil' FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1)")
+	jenisAnak := Raw("(SELECT 'Anak' FROM anak a WHERE a.id_pasien = p.id_pasien AND a.is_deleted = false LIMIT 1)")
+	subStatus := Raw("(SELECT ih.status_kehamilan::text FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1)")
 
 	var result []*pasienDomain.PasienJoinRow
-	for rows.Next() {
-		row := &pasienDomain.PasienJoinRow{}
-		err := rows.Scan(&row.IDPasien, &row.Nama, &row.NIK, &row.JenisKelamin, &row.TanggalLahir, &row.NamaPosyandu, &row.JenisPasien, &row.StatusKehamilan)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, row)
+	err := pgxV5.Query(ctx,
+		SELECT(
+			p.IDPasien,
+			ua.Nama,
+			ua.Nik,
+			Raw("ua.jenis_kelamin::text"),
+			Raw("ua.tanggal_lahir::text"),
+			pos.NamaPosyandu,
+			COALESCE(jenisIbuHamil, jenisAnak, String("Pasien")).AS("jenis_pasien"),
+			subStatus.AS("status_kehamilan"),
+		).FROM(fromClause).WHERE(whereCond).ORDER_BY(ua.Nama.ASC()).LIMIT(20),
+		r.db, &result)
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil
 }
 
 func (r *Repo) GetDetailByID(ctx context.Context, idPasien int32) (*pasienDomain.PasienDetailJoinRow, error) {
-	query := `
+	dataSQL := `
 		SELECT
 			p.id_pasien,
 			ua.nama,
@@ -265,18 +263,11 @@ func (r *Repo) GetDetailByID(ctx context.Context, idPasien int32) (*pasienDomain
 			JOIN user_account w ON w.id_user = a.id_wali
 			WHERE a.id_pasien = p.id_pasien LIMIT 1
 		) anak_data ON true
-		WHERE p.id_pasien = $1
+		WHERE p.id_pasien = #1 AND p.is_deleted = false
 	`
 
-	row := &pasienDomain.PasienDetailJoinRow{}
-	err := r.db.QueryRow(ctx, query, idPasien).Scan(
-		&row.IDPasien, &row.Nama, &row.NIK, &row.Email, &row.NoHp,
-		&row.JenisKelamin, &row.TanggalLahir, &row.IDLokasi,
-		&row.NamaPosyandu, &row.IDPosyandu, &row.JenisPasien,
-		&row.CreatedAt, &row.UpdatedAt,
-		&row.IDIbuHamil, &row.HamilKe, &row.BulanMulaiHamil, &row.Hpht, &row.StatusKehamilan,
-		&row.NamaAnak, &row.BeratLahir, &row.PanjangLahir, &row.HubunganDenganWali, &row.NamaWali,
-	)
+	var row pasienDomain.PasienDetailJoinRow
+	err := pgxV5.Query(ctx, RawStatement(dataSQL, RawArgs{"#1": idPasien}), r.db, &row)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows") {
 			return nil, nil
@@ -284,7 +275,7 @@ func (r *Repo) GetDetailByID(ctx context.Context, idPasien int32) (*pasienDomain
 		return nil, err
 	}
 
-	return row, nil
+	return &row, nil
 }
 
 func (r *Repo) UpdatePasien(ctx context.Context, data *model.Pasien) error {
@@ -321,15 +312,26 @@ func (r *Repo) DeletePasien(ctx context.Context, idPasien int32) error {
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, "DELETE FROM anak WHERE id_pasien = $1", idPasien)
+	anakStmt := Anak.UPDATE(Anak.IsDeleted, Anak.DeletedAt).
+		SET(Bool(true), RawTimestampz("NOW()")).
+		WHERE(Anak.IDPasien.EQ(Int32(idPasien)))
+	_, err = pgxV5.Exec(ctx, anakStmt, tx)
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, "DELETE FROM ibu_hamil WHERE id_pasien = $1", idPasien)
+
+	ibuHamilStmt := IbuHamil.UPDATE(IbuHamil.IsDeleted, IbuHamil.DeletedAt).
+		SET(Bool(true), RawTimestampz("NOW()")).
+		WHERE(IbuHamil.IDPasien.EQ(Int32(idPasien)))
+	_, err = pgxV5.Exec(ctx, ibuHamilStmt, tx)
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, "DELETE FROM pasien WHERE id_pasien = $1", idPasien)
+
+	pasienStmt := Pasien.UPDATE(Pasien.IsDeleted, Pasien.DeletedAt).
+		SET(Bool(true), RawTimestampz("NOW()")).
+		WHERE(Pasien.IDPasien.EQ(Int32(idPasien)))
+	_, err = pgxV5.Exec(ctx, pasienStmt, tx)
 	if err != nil {
 		return err
 	}

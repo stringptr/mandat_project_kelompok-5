@@ -22,4 +22,5 @@ type Anak struct {
 	HubunganDenganWali HubunganDenganWali
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	IsDeleted          bool
 }

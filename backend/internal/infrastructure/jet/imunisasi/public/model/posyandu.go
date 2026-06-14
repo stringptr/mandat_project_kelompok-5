@@ -18,4 +18,5 @@ type Posyandu struct {
 	IDBidan      int32
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	IsDeleted    bool
 }

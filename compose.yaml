@@ -83,7 +83,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2025-CU3-ubuntu-22.04
     restart: unless-stopped
     volumes:
-      - ./storage/staging:/var/opt/mssql:z
+     # - ./storage/staging:/var/opt/mssql:z
       - ./migrations/data:/data:z
     environment:
       ACCEPT_EULA: Y
@@ -255,6 +255,7 @@ services:
     volumes:
       - ./frontend:/app:z
       - node_cache:/app/node_modules
+    command: sh -c "bun install && bun dev --host"
     env_file: .env
     environment:
       - NODE_ENV=development

@@ -32,7 +32,7 @@ func AccessTokenMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo jwtbla
 			return
 		}
 
-		if claims.ID != "" {
+		if claims.ID == "" {
 			blacklisted, err := blacklistRepo.IsBlacklisted(ctx.Context(), claims.ID)
 			if err == nil && blacklisted {
 				huma.WriteErr(api, ctx, http.StatusUnauthorized, "Sesi telah berakhir. Silahkan login ulang.", nil)

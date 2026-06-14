@@ -1,4 +1,4 @@
-
+import React from 'react';
 import { X, MapPin, Clock, FileText, User } from 'lucide-react';
 import type { Rujukan } from './RujukanAktif';
 

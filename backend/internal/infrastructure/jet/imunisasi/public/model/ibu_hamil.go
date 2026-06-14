@@ -20,4 +20,5 @@ type IbuHamil struct {
 	StatusKehamilan StatusKehamilan
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+	IsDeleted       bool
 }

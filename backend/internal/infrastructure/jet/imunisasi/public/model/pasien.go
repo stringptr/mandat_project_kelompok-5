@@ -16,4 +16,5 @@ type Pasien struct {
 	IDPosyandu int32
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+	IsDeleted  bool
 }

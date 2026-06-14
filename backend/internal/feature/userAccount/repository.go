@@ -2,8 +2,6 @@ package userAccount
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
@@ -29,7 +27,7 @@ var MutableNonDefaultColumns ColumnList = UserAccount.MutableColumns.Except(User
 func (r *Repo) GetByID(ctx context.Context, IDUser int32) (*model.UserAccount, error) {
 	var user []*model.UserAccount
 
-	stmt := SELECT(UserAccount.AllColumns).FROM(UserAccount).WHERE(UserAccount.IDUser.EQ(Int32(IDUser)))
+	stmt := SELECT(UserAccount.AllColumns).FROM(UserAccount).WHERE(UserAccount.IDUser.EQ(Int32(IDUser)).AND(UserAccount.IsDeleted.EQ(Bool(false))))
 	err := pgxV5.Query(ctx, stmt, r.db, &user)
 	if err != nil {
 		return nil, err
@@ -44,7 +42,7 @@ func (r *Repo) GetByID(ctx context.Context, IDUser int32) (*model.UserAccount, e
 func (r *Repo) GetByNIK(ctx context.Context, NIK string) (*model.UserAccount, error) {
 	var user []*model.UserAccount
 
-	stmt := SELECT(UserAccount.AllColumns).FROM(UserAccount).WHERE(UserAccount.Nik.EQ(String(NIK)))
+	stmt := SELECT(UserAccount.AllColumns).FROM(UserAccount).WHERE(UserAccount.Nik.EQ(String(NIK)).AND(UserAccount.IsDeleted.EQ(Bool(false))))
 	err := pgxV5.Query(ctx, stmt, r.db, &user)
 	if err != nil {
 		return nil, err
@@ -59,7 +57,7 @@ func (r *Repo) GetByNIK(ctx context.Context, NIK string) (*model.UserAccount, er
 func (r *Repo) GetByEmail(ctx context.Context, email string) (*model.UserAccount, error) {
 	var user []*model.UserAccount
 
-	stmt := SELECT(UserAccount.AllColumns).FROM(UserAccount).WHERE(UserAccount.Email.EQ(String(email)))
+	stmt := SELECT(UserAccount.AllColumns).FROM(UserAccount).WHERE(UserAccount.Email.EQ(String(email)).AND(UserAccount.IsDeleted.EQ(Bool(false))))
 	err := pgxV5.Query(ctx, stmt, r.db, &user)
 	if err != nil {
 		return nil, err
@@ -74,7 +72,7 @@ func (r *Repo) GetByEmail(ctx context.Context, email string) (*model.UserAccount
 func (r *Repo) GetByNIKEmail(ctx context.Context, NIK string, email string) (*model.UserAccount, error) {
 	var user []*model.UserAccount
 
-	stmt := SELECT(UserAccount.AllColumns).FROM(UserAccount).WHERE(UserAccount.Nik.EQ(String(NIK)).AND(UserAccount.Email.EQ(String(email))))
+	stmt := SELECT(UserAccount.AllColumns).FROM(UserAccount).WHERE(UserAccount.Nik.EQ(String(NIK)).AND(UserAccount.Email.EQ(String(email)).AND(UserAccount.IsDeleted.EQ(Bool(false)))))
 	err := pgxV5.Query(ctx, stmt, r.db, &user)
 	if err != nil {
 		return nil, err
@@ -99,83 +97,63 @@ func (r *Repo) GetAll(ctx context.Context) ([]*model.UserAccount, error) {
 }
 
 func (r *Repo) GetAllPaginated(ctx context.Context, page int, perPage int, q string, role string, statusVerifikasi string) ([]*model.UserAccount, int, error) {
-	offset := (page - 1) * perPage
+	offset := int64((page - 1) * perPage)
 
-	baseQuery := `
-		FROM user_account ua
-		LEFT JOIN dinas_kesehatan dk ON dk.id_user = ua.id_user
-		LEFT JOIN bidan b ON b.id_user = ua.id_user
-		LEFT JOIN kader_posyandu kp ON kp.id_user = ua.id_user
-		LEFT JOIN pasien p ON p.id_pasien = ua.id_user
-	`
-	var conditions []string
-	var args []any
-	argIdx := 1
+	fromClause := UserAccount.
+		LEFT_JOIN(DinasKesehatan, DinasKesehatan.IDUser.EQ(UserAccount.IDUser)).
+		LEFT_JOIN(Bidan, Bidan.IDUser.EQ(UserAccount.IDUser)).
+		LEFT_JOIN(KaderPosyandu, KaderPosyandu.IDUser.EQ(UserAccount.IDUser)).
+		LEFT_JOIN(Pasien, Pasien.IDPasien.EQ(UserAccount.IDUser))
+
+	conditions := []BoolExpression{UserAccount.IsDeleted.EQ(Bool(false))}
 
 	if q != "" {
-		conditions = append(conditions, fmt.Sprintf("(ua.nama ILIKE $%d OR ua.nik ILIKE $%d)", argIdx, argIdx))
-		args = append(args, "%"+q+"%")
-		argIdx++
+		pattern := "%" + q + "%"
+		nameILike := BoolExp(CustomExpression(UserAccount.Nama, Token("ILIKE"), String(pattern)))
+		nikILike := BoolExp(CustomExpression(UserAccount.Nik, Token("ILIKE"), String(pattern)))
+		conditions = append(conditions, nameILike.OR(nikILike))
 	}
 
 	if role != "" {
 		switch role {
 		case "Dinkes":
-			conditions = append(conditions, "dk.id_user IS NOT NULL")
+			conditions = append(conditions, DinasKesehatan.IDUser.IS_NOT_NULL())
 		case "Bidan":
-			conditions = append(conditions, "b.id_user IS NOT NULL")
+			conditions = append(conditions, Bidan.IDUser.IS_NOT_NULL())
 		case "Kader":
-			conditions = append(conditions, "kp.id_user IS NOT NULL")
+			conditions = append(conditions, KaderPosyandu.IDUser.IS_NOT_NULL())
 		case "Pasien":
-			conditions = append(conditions, "p.id_pasien IS NOT NULL")
+			conditions = append(conditions, Pasien.IDPasien.IS_NOT_NULL())
 		}
 	}
 
 	if statusVerifikasi != "" {
-		conditions = append(conditions, fmt.Sprintf("ua.status_verifikasi = $%d", argIdx))
-		args = append(args, statusVerifikasi)
-		argIdx++
+		conditions = append(conditions, UserAccount.StatusVerifikasi.EQ(String(statusVerifikasi)))
 	}
 
-	whereClause := ""
-	if len(conditions) > 0 {
-		whereClause = "WHERE " + strings.Join(conditions, " AND ")
+	whereCond := conditions[0]
+	for _, c := range conditions[1:] {
+		whereCond = whereCond.AND(c)
 	}
 
-	var total int
-	countQuery := "SELECT COUNT(*) " + baseQuery + " " + whereClause
-	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total)
+	var countResult struct{ Count int64 }
+	countStmt := SELECT(COUNT(STAR)).FROM(fromClause).WHERE(whereCond)
+	err := pgxV5.Query(ctx, countStmt, r.db, &countResult)
 	if err != nil {
 		return nil, 0, err
 	}
-
-	dataQuery := fmt.Sprintf(`SELECT ua.id_user, ua.email, ua.password, ua.no_hp, ua.status_verifikasi, ua.nama, ua.nik, ua.jenis_kelamin, ua.tanggal_lahir, ua.id_lokasi, ua.id_pendidikan, ua.id_pekerjaan, ua.id_pendapatan, ua.jumlah_tanggungan, ua.created_at, ua.updated_at %s %s ORDER BY ua.created_at DESC LIMIT $%d OFFSET $%d`,
-		baseQuery, whereClause, argIdx, argIdx+1)
-	args = append(args, perPage, offset)
-
-	rows, err := r.db.Query(ctx, dataQuery, args...)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer rows.Close()
 
 	var users []*model.UserAccount
-	for rows.Next() {
-		var u model.UserAccount
-		err := rows.Scan(
-			&u.IDUser, &u.Email, &u.Password, &u.NoHp,
-			&u.StatusVerifikasi, &u.Nama, &u.Nik,
-			&u.JenisKelamin, &u.TanggalLahir, &u.IDLokasi,
-			&u.IDPendidikan, &u.IDPekerjaan, &u.IDPendapatan,
-			&u.JumlahTanggungan, &u.CreatedAt, &u.UpdatedAt,
-		)
-		if err != nil {
-			return nil, 0, err
-		}
-		users = append(users, &u)
+	dataStmt := SELECT(UserAccount.AllColumns).FROM(fromClause).WHERE(whereCond).
+		ORDER_BY(UserAccount.CreatedAt.DESC()).
+		LIMIT(int64(perPage)).
+		OFFSET(offset)
+	err = pgxV5.Query(ctx, dataStmt, r.db, &users)
+	if err != nil {
+		return nil, 0, err
 	}
 
-	return users, total, nil
+	return users, int(countResult.Count), nil
 }
 
 func (r *Repo) Create(ctx context.Context, userAccModel *model.UserAccount) error {
@@ -233,14 +211,9 @@ func (r *Repo) UpdateStatusVerifikasi(ctx context.Context, IDUser int32, status 
 }
 
 func (r *Repo) DeleteByID(ctx context.Context, IDUser int32) error {
-	stmt := UserAccount.DELETE().WHERE(UserAccount.IDUser.EQ(Int32(IDUser)))
-	res, err := pgxV5.Exec(ctx, stmt, r.db)
-	if err != nil {
-		return err
-	}
-	if res.RowsAffected() == 0 {
-		return userAccountDomain.ErrNotDeleted
-	}
-
-	return nil
+	stmt := UserAccount.UPDATE(UserAccount.IsDeleted, UserAccount.DeletedAt).
+		SET(Bool(true), RawTimestampz("NOW()")).
+		WHERE(UserAccount.IDUser.EQ(Int32(IDUser)).AND(UserAccount.IsDeleted.EQ(Bool(false))))
+	_, err := pgxV5.Exec(ctx, stmt, r.db)
+	return err
 }

@@ -15,4 +15,5 @@ type DinasKesehatan struct {
 	IDUser    int32 `sql:"primary_key"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	IsDeleted bool
 }

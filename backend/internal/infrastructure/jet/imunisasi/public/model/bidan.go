@@ -17,4 +17,5 @@ type Bidan struct {
 	WilayahKerja int32
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	IsDeleted    bool
 }

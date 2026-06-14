@@ -29,7 +29,8 @@ func (r *Repo) GetByID(ctx context.Context, idNotifikasi int32, idUser int32) (*
 	stmt := SELECT(Notifikasi.AllColumns).
 		FROM(Notifikasi).
 		WHERE(Notifikasi.IDNotifikasi.EQ(Int32(idNotifikasi)).
-			AND(Notifikasi.IDUser.EQ(Int32(idUser))))
+			AND(Notifikasi.IDUser.EQ(Int32(idUser)).
+				AND(Notifikasi.IsDeleted.EQ(Bool(false)))))
 
 	err := pgxV5.Query(ctx, stmt, r.db, &notif)
 	if err != nil {
@@ -44,7 +45,7 @@ func (r *Repo) GetByID(ctx context.Context, idNotifikasi int32, idUser int32) (*
 func (r *Repo) GetByUserID(ctx context.Context, idUser int32, search string, limit int32, offset int32) ([]*model.Notifikasi, error) {
 	var notif []*model.Notifikasi
 
-	conditions := Notifikasi.IDUser.EQ(Int32(idUser))
+	conditions := Notifikasi.IDUser.EQ(Int32(idUser)).AND(Notifikasi.IsDeleted.EQ(Bool(false)))
 	if search != "" {
 		searchPattern := "%" + strings.ToLower(search) + "%"
 		conditions = conditions.AND(
@@ -72,7 +73,7 @@ func (r *Repo) CountByUserID(ctx context.Context, idUser int32, search string) (
 		Count int32
 	}
 
-	conditions := Notifikasi.IDUser.EQ(Int32(idUser))
+	conditions := Notifikasi.IDUser.EQ(Int32(idUser)).AND(Notifikasi.IsDeleted.EQ(Bool(false)))
 	if search != "" {
 		searchPattern := "%" + strings.ToLower(search) + "%"
 		conditions = conditions.AND(
@@ -100,7 +101,8 @@ func (r *Repo) CountUnreadByUserID(ctx context.Context, idUser int32) (int32, er
 	stmt := SELECT(COUNT(STAR).AS("count")).
 		FROM(Notifikasi).
 		WHERE(Notifikasi.IDUser.EQ(Int32(idUser)).
-			AND(Notifikasi.StatusBaca.EQ(Bool(false))))
+			AND(Notifikasi.StatusBaca.EQ(Bool(false)).
+				AND(Notifikasi.IsDeleted.EQ(Bool(false)))))
 
 	err := pgxV5.Query(ctx, stmt, r.db, &count)
 	if err != nil {
@@ -337,7 +339,7 @@ func (r *Repo) getBidanJadwalMonitoringList(ctx context.Context, idBidan int32) 
 				INNER_JOIN(Anak, Pasien.IDPasien.EQ(Anak.IDPasien)),
 		).
 		WHERE(TindakLanjut.IDBidan.EQ(Int32(idBidan)).
-			AND(TindakLanjut.JadwalKontrol.GT_EQ(RawDate("CURRENT_DATE")))).
+			AND(TindakLanjut.JadwalKontrol.GT_EQ(CURRENT_DATE()))).
 		ORDER_BY(TindakLanjut.JadwalKontrol.ASC())
 
 	err := pgxV5.Query(ctx, stmt, r.db, &rows)

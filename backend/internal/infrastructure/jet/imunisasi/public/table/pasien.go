@@ -21,6 +21,7 @@ type pasienTable struct {
 	IDPosyandu postgres.ColumnInteger
 	CreatedAt  postgres.ColumnTimestampz
 	UpdatedAt  postgres.ColumnTimestampz
+	IsDeleted  postgres.ColumnBool
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -66,9 +67,10 @@ func newPasienTableImpl(schemaName, tableName, alias string) pasienTable {
 		IDPosyanduColumn = postgres.IntegerColumn("id_posyandu")
 		CreatedAtColumn  = postgres.TimestampzColumn("created_at")
 		UpdatedAtColumn  = postgres.TimestampzColumn("updated_at")
-		allColumns       = postgres.ColumnList{IDPasienColumn, IDPosyanduColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns   = postgres.ColumnList{IDPosyanduColumn, CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns   = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn}
+		IsDeletedColumn  = postgres.BoolColumn("is_deleted")
+		allColumns       = postgres.ColumnList{IDPasienColumn, IDPosyanduColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		mutableColumns   = postgres.ColumnList{IDPosyanduColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		defaultColumns   = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
 	)
 
 	return pasienTable{
@@ -79,6 +81,7 @@ func newPasienTableImpl(schemaName, tableName, alias string) pasienTable {
 		IDPosyandu: IDPosyanduColumn,
 		CreatedAt:  CreatedAtColumn,
 		UpdatedAt:  UpdatedAtColumn,
+		IsDeleted:  IsDeletedColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

@@ -25,6 +25,7 @@ type ibuHamilTable struct {
 	StatusKehamilan postgres.ColumnString
 	CreatedAt       postgres.ColumnTimestampz
 	UpdatedAt       postgres.ColumnTimestampz
+	IsDeleted       postgres.ColumnBool
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -74,9 +75,10 @@ func newIbuHamilTableImpl(schemaName, tableName, alias string) ibuHamilTable {
 		StatusKehamilanColumn = postgres.StringColumn("status_kehamilan")
 		CreatedAtColumn       = postgres.TimestampzColumn("created_at")
 		UpdatedAtColumn       = postgres.TimestampzColumn("updated_at")
-		allColumns            = postgres.ColumnList{IDIbuHamilColumn, IDPasienColumn, HamilKeColumn, BulanMulaiHamilColumn, HphtColumn, StatusKehamilanColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns        = postgres.ColumnList{IDPasienColumn, HamilKeColumn, BulanMulaiHamilColumn, HphtColumn, StatusKehamilanColumn, CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns        = postgres.ColumnList{IDIbuHamilColumn, CreatedAtColumn, UpdatedAtColumn}
+		IsDeletedColumn       = postgres.BoolColumn("is_deleted")
+		allColumns            = postgres.ColumnList{IDIbuHamilColumn, IDPasienColumn, HamilKeColumn, BulanMulaiHamilColumn, HphtColumn, StatusKehamilanColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		mutableColumns        = postgres.ColumnList{IDPasienColumn, HamilKeColumn, BulanMulaiHamilColumn, HphtColumn, StatusKehamilanColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		defaultColumns        = postgres.ColumnList{IDIbuHamilColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
 	)
 
 	return ibuHamilTable{
@@ -91,6 +93,7 @@ func newIbuHamilTableImpl(schemaName, tableName, alias string) ibuHamilTable {
 		StatusKehamilan: StatusKehamilanColumn,
 		CreatedAt:       CreatedAtColumn,
 		UpdatedAt:       UpdatedAtColumn,
+		IsDeleted:       IsDeletedColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

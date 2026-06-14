@@ -22,6 +22,7 @@ type bidanTable struct {
 	WilayahKerja postgres.ColumnInteger
 	CreatedAt    postgres.ColumnTimestampz
 	UpdatedAt    postgres.ColumnTimestampz
+	IsDeleted    postgres.ColumnBool
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -68,9 +69,10 @@ func newBidanTableImpl(schemaName, tableName, alias string) bidanTable {
 		WilayahKerjaColumn = postgres.IntegerColumn("wilayah_kerja")
 		CreatedAtColumn    = postgres.TimestampzColumn("created_at")
 		UpdatedAtColumn    = postgres.TimestampzColumn("updated_at")
-		allColumns         = postgres.ColumnList{IDUserColumn, NoStrColumn, WilayahKerjaColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns     = postgres.ColumnList{NoStrColumn, WilayahKerjaColumn, CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns     = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn}
+		IsDeletedColumn    = postgres.BoolColumn("is_deleted")
+		allColumns         = postgres.ColumnList{IDUserColumn, NoStrColumn, WilayahKerjaColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		mutableColumns     = postgres.ColumnList{NoStrColumn, WilayahKerjaColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		defaultColumns     = postgres.ColumnList{CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
 	)
 
 	return bidanTable{
@@ -82,6 +84,7 @@ func newBidanTableImpl(schemaName, tableName, alias string) bidanTable {
 		WilayahKerja: WilayahKerjaColumn,
 		CreatedAt:    CreatedAtColumn,
 		UpdatedAt:    UpdatedAtColumn,
+		IsDeleted:    IsDeletedColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

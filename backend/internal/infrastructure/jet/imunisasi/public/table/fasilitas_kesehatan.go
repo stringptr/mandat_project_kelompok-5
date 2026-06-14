@@ -23,6 +23,7 @@ type fasilitasKesehatanTable struct {
 	IDLokasi   postgres.ColumnInteger
 	CreatedAt  postgres.ColumnTimestampz
 	UpdatedAt  postgres.ColumnTimestampz
+	IsDeleted  postgres.ColumnBool
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -70,9 +71,10 @@ func newFasilitasKesehatanTableImpl(schemaName, tableName, alias string) fasilit
 		IDLokasiColumn   = postgres.IntegerColumn("id_lokasi")
 		CreatedAtColumn  = postgres.TimestampzColumn("created_at")
 		UpdatedAtColumn  = postgres.TimestampzColumn("updated_at")
-		allColumns       = postgres.ColumnList{IDFaskesColumn, NamaFaskesColumn, TipeFaskesColumn, IDLokasiColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns   = postgres.ColumnList{NamaFaskesColumn, TipeFaskesColumn, IDLokasiColumn, CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns   = postgres.ColumnList{IDFaskesColumn, CreatedAtColumn, UpdatedAtColumn}
+		IsDeletedColumn  = postgres.BoolColumn("is_deleted")
+		allColumns       = postgres.ColumnList{IDFaskesColumn, NamaFaskesColumn, TipeFaskesColumn, IDLokasiColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		mutableColumns   = postgres.ColumnList{NamaFaskesColumn, TipeFaskesColumn, IDLokasiColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		defaultColumns   = postgres.ColumnList{IDFaskesColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
 	)
 
 	return fasilitasKesehatanTable{
@@ -85,6 +87,7 @@ func newFasilitasKesehatanTableImpl(schemaName, tableName, alias string) fasilit
 		IDLokasi:   IDLokasiColumn,
 		CreatedAt:  CreatedAtColumn,
 		UpdatedAt:  UpdatedAtColumn,
+		IsDeleted:  IsDeletedColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

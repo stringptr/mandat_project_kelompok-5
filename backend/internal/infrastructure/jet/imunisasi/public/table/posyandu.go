@@ -23,6 +23,7 @@ type posyanduTable struct {
 	IDBidan      postgres.ColumnInteger
 	CreatedAt    postgres.ColumnTimestampz
 	UpdatedAt    postgres.ColumnTimestampz
+	IsDeleted    postgres.ColumnBool
 
 	AllColumns     postgres.ColumnList
 	MutableColumns postgres.ColumnList
@@ -70,9 +71,10 @@ func newPosyanduTableImpl(schemaName, tableName, alias string) posyanduTable {
 		IDBidanColumn      = postgres.IntegerColumn("id_bidan")
 		CreatedAtColumn    = postgres.TimestampzColumn("created_at")
 		UpdatedAtColumn    = postgres.TimestampzColumn("updated_at")
-		allColumns         = postgres.ColumnList{IDPosyanduColumn, NamaPosyanduColumn, IDLokasiColumn, IDBidanColumn, CreatedAtColumn, UpdatedAtColumn}
-		mutableColumns     = postgres.ColumnList{NamaPosyanduColumn, IDLokasiColumn, IDBidanColumn, CreatedAtColumn, UpdatedAtColumn}
-		defaultColumns     = postgres.ColumnList{IDPosyanduColumn, CreatedAtColumn, UpdatedAtColumn}
+		IsDeletedColumn    = postgres.BoolColumn("is_deleted")
+		allColumns         = postgres.ColumnList{IDPosyanduColumn, NamaPosyanduColumn, IDLokasiColumn, IDBidanColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		mutableColumns     = postgres.ColumnList{NamaPosyanduColumn, IDLokasiColumn, IDBidanColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
+		defaultColumns     = postgres.ColumnList{IDPosyanduColumn, CreatedAtColumn, UpdatedAtColumn, IsDeletedColumn}
 	)
 
 	return posyanduTable{
@@ -85,6 +87,7 @@ func newPosyanduTableImpl(schemaName, tableName, alias string) posyanduTable {
 		IDBidan:      IDBidanColumn,
 		CreatedAt:    CreatedAtColumn,
 		UpdatedAt:    UpdatedAtColumn,
+		IsDeleted:    IsDeletedColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,

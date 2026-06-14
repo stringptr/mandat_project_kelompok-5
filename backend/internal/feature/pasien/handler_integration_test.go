@@ -640,6 +640,15 @@ func TestPasienDeleteSuccess(t *testing.T) {
 		ShouldBeSuccess: "true",
 		Expectation:     "Response 200, success:true",
 	}.Log(t, pass, resp, respBody)
+
+	// Verify soft-delete: record should no longer be retrievable
+	getPath := fmt.Sprintf("/monitoring/pasien/%d", seed.PasienAnakID)
+	getResp := testutils.DoRequest(f.handler, http.MethodGet, getPath, nil,
+		testutils.AccessCookie(f.jwtUtil, authIDs.AdminUserID, []string{"ADMIN"}))
+	getPass := getResp.StatusCode == http.StatusNotFound
+	if !getPass {
+		t.Errorf("expected 404 after soft-delete, got %d", getResp.StatusCode)
+	}
 }
 
 func TestPasienDeleteNotFound(t *testing.T) {

@@ -27,7 +27,8 @@ func AccessTokenMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo jwtbla
 		token := cookie.Value
 		claims, err := jwt.Decode(token)
 		if err != nil {
-			huma.WriteErr(api, ctx, http.StatusInternalServerError, "Terjadi kesalahan. Silahkan dicoba kembali.", nil)
+			newCtx := context.WithValue(ctx.Context(), httputils.AccessKey, nil)
+			next(huma.WithContext(ctx, newCtx))
 			return
 		}
 
@@ -37,6 +38,9 @@ func AccessTokenMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo jwtbla
 				huma.WriteErr(api, ctx, http.StatusUnauthorized, "Sesi telah berakhir. Silahkan login ulang.", nil)
 				return
 			}
+			newCtx := context.WithValue(ctx.Context(), httputils.AccessKey, nil)
+			next(huma.WithContext(ctx, newCtx))
+			return
 		}
 
 		newCtx := context.WithValue(ctx.Context(), httputils.AccessKey, claims)
@@ -63,6 +67,7 @@ func NonAuthenticatedOnlyMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRe
 
 		if claims != nil {
 			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Anda sudah login. Silahkan logout terlebih dahulu.", nil)
+			return
 		}
 
 		next(ctx)

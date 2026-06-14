@@ -153,7 +153,7 @@ FROM anak a</sql>
     <schema>public</schema>
     <table>DIM_ANAK</table>
     <commit>1000</commit>
-    <truncate>Y</truncate>
+    <truncate>N</truncate>
     <ignore_errors>N</ignore_errors>
     <use_batch>Y</use_batch>
     <specify_fields>Y</specify_fields>

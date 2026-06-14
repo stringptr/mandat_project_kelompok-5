@@ -77,7 +77,7 @@ WHERE kel.tipe_lokasi IN ('Kelurahan')</sql>
     <schema>public</schema>
     <table>DIM_LOKASI</table>
     <commit>1000</commit>
-    <truncate>Y</truncate>
+    <truncate>N</truncate>
     <ignore_errors>N</ignore_errors>
     <use_batch>Y</use_batch>
     <specify_fields>N</specify_fields>

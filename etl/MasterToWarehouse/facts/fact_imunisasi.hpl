@@ -319,7 +319,7 @@ if (tanggal_imunisasi != null &amp;&amp; tanggal_target != null) {
     <schema>public</schema>
     <table>FACT_IMUNISASI</table>
     <commit>1000</commit>
-    <truncate>Y</truncate>
+    <truncate>N</truncate>
     <ignore_errors>N</ignore_errors>
     <use_batch>Y</use_batch>
     <specify_fields>Y</specify_fields>

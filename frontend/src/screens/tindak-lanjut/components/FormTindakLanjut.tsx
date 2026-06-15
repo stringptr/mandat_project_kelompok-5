@@ -4,6 +4,7 @@ import {
     X, CheckCircle2, AlertTriangle, Stethoscope
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { apiGet } from '../../../lib/api';
 
 // ─── Types ───────────────────────────────────────────────────────────
 export interface Pasien {
@@ -12,8 +13,8 @@ export interface Pasien {
     umur: string;
     statusGizi: string;
     statusPasien: string;
-    bb: number;           // Berat Badan (kg)
-    tb: number;           // Tinggi Badan (cm)
+    bb: number;
+    tb: number;
     urgency: 'Rendah' | 'Sedang' | 'Tinggi' | 'Mendesak';
     avatarUrl?: string;
     namaIbu?: string;
@@ -33,85 +34,16 @@ export interface FormData {
     catatanMedis: string;
 }
 
-// ─── Dummy Data Pasien yang Butuh Rujukan ───────────────────────────
-const PASIEN_DATABASE: Pasien[] = [
-    {
-        id: 'PSN-001',
-        nama: 'Ananda Revan',
-        umur: '24 Bulan',
-        statusGizi: 'Gizi Kurang',
-        statusPasien: 'Perlu Rujukan',
-        bb: 9.2,
-        tb: 80,
-        urgency: 'Mendesak',
-        namaIbu: 'Ny. Rina Marlina',
-        tanggalPeriksa: '15 Juni 2026',
-        avatarUrl: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    },
-    {
-        id: 'PSN-002',
-        nama: 'Siti Aminah',
-        umur: 'Hamil: 28 Minggu',
-        statusGizi: 'Anemia Ringan',
-        statusPasien: 'Dirujuk',
-        bb: 58.5,
-        tb: 162,
-        urgency: 'Sedang',
-        namaIbu: 'Ibu Sendiri',
-        tanggalPeriksa: '14 Juni 2026',
-        avatarUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    },
-    {
-        id: 'PSN-003',
-        nama: 'Laila Kirana',
-        umur: '6 Bulan',
-        statusGizi: 'Stunting',
-        statusPasien: 'Perlu Rujukan',
-        bb: 5.8,
-        tb: 62,
-        urgency: 'Tinggi',
-        namaIbu: 'Ny. Dewi Kusuma',
-        tanggalPeriksa: '12 Juni 2026',
-        avatarUrl: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    },
-    {
-        id: 'PSN-004',
-        nama: 'Budi Santoso',
-        umur: '3 Tahun',
-        statusGizi: 'Gizi Buruk',
-        statusPasien: 'Dirujuk',
-        bb: 10.5,
-        tb: 88,
-        urgency: 'Mendesak',
-        namaIbu: 'Ny. Siti Rahayu',
-        tanggalPeriksa: '10 Juni 2026',
-        avatarUrl: 'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    },
-    {
-        id: 'PSN-005',
-        nama: 'Dewi Anggraini',
-        umur: '18 Bulan',
-        statusGizi: 'Gizi Kurang',
-        statusPasien: 'Perlu Rujukan',
-        bb: 8.1,
-        tb: 75,
-        urgency: 'Sedang',
-        namaIbu: 'Ny. Maya Sari',
-        tanggalPeriksa: '09 Juni 2026',
-    },
-    {
-        id: 'PSN-006',
-        nama: 'Fajar Nugraha',
-        umur: '4 Tahun',
-        statusGizi: 'Obesitas',
-        statusPasien: 'Kontrol',
-        bb: 22.3,
-        tb: 102,
-        urgency: 'Rendah',
-        namaIbu: 'Ny. Indah Permata',
-        tanggalPeriksa: '08 Juni 2026',
-    },
-];
+interface PasienSearchResult {
+    id_pasien: number;
+    nama: string;
+    nik: string;
+    jenis_kelamin: string;
+    umur: string;
+    nama_posyandu: string;
+    jenis_pasien: string;
+    status_kehamilan: string | null;
+}
 
 // ─── Urgency Badge Helper ───────────────────────────────────────────
 const getUrgencyClasses = (urgency: string) => {
@@ -145,20 +77,39 @@ export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanju
     const [catatanMedis, setCatatanMedis] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    const [searchResults, setSearchResults] = useState<Pasien[]>([]);
 
     const dropdownRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Filter pasien berdasarkan search query
-    const filteredPatients = searchQuery.trim()
-        ? PASIEN_DATABASE.filter((p) =>
-            p.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (p.namaIbu && p.namaIbu.toLowerCase().includes(searchQuery.toLowerCase()))
-        )
-        : PASIEN_DATABASE.filter((p) =>
-            p.statusPasien === 'Perlu Rujukan' || p.statusPasien === 'Dirujuk'
-        );
+    // Search pasien via API
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setSearchResults([]);
+            return;
+        }
+        const timer = setTimeout(async () => {
+            try {
+                const res = await apiGet<PasienSearchResult[]>(`/monitoring/pasien/search?q=${encodeURIComponent(searchQuery)}`);
+                setSearchResults(res.map((p) => ({
+                    id: `PST-${p.id_pasien}`,
+                    nama: p.nama,
+                    umur: p.umur,
+                    statusGizi: '',
+                    statusPasien: 'Perlu Rujukan',
+                    bb: 0,
+                    tb: 0,
+                    urgency: 'Sedang' as const,
+                    tanggalPeriksa: '',
+                })));
+            } catch {
+                setSearchResults([]);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const filteredPatients = searchQuery.trim() ? searchResults : searchResults;
 
     // Close dropdown on click outside
     useEffect(() => {

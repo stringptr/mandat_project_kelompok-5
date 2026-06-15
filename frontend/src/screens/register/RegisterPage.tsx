@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, ShieldCheck, Headset, ArrowLeft, ArrowRight, User, Mail, Lock, Phone, Calendar, MapPin, BookOpen, Briefcase, Users } from 'lucide-react';
+import { CheckCircle, ShieldCheck, Headset, ArrowLeft, ArrowRight, User, Mail, Lock, Phone, Calendar, MapPin, BookOpen, Briefcase, Users, CreditCard } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type RegisterRole = 'Ibu/Wali' | 'Bidan' | 'Kader Posyandu';
@@ -123,11 +124,14 @@ function VerifNotice(): JSX.Element {
 // ── Main component ─────────────────────────────────────────────────────────
 export default function RegisterPage(): JSX.Element {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const [step, setStep] = useState<Step>('role');
   const [selectedRole, setSelectedRole] = useState<RegisterRole>('Ibu/Wali');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   // Form state
-  const [form1, setForm1] = useState({ email: '', password: '', nama: '', telepon: '', jenisKelamin: 'Laki-Laki' });
+  const [form1, setForm1] = useState({ email: '', password: '', nama: '', nik: '', telepon: '', jenisKelamin: 'Laki-Laki' });
   const [form2, setForm2] = useState({ tanggalLahir: '', provinsi: 'Jawa Tengah', kabupaten: 'Sukoharjo', kecamatan: 'Tembalang', kelurahan: 'Bulusan' });
   const [form3, setForm3] = useState({ pendidikan: 'Sarjana 1', pekerjaan: 'Dosen', pendapatan: 'Rp2.500.000 – Rp5.000.000', tanggungan: '1' });
 
@@ -135,6 +139,42 @@ export default function RegisterPage(): JSX.Element {
   const isPendingRole = selectedRole === 'Bidan' || selectedRole === 'Kader Posyandu';
 
   const goLogin = () => navigate('/login');
+
+  const handleRegister = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const roleMap: Record<string, string> = {
+        'Ibu/Wali': 'Ibu Hamil',
+        'Bidan': 'Bidan',
+        'Kader Posyandu': 'Kader',
+      };
+      await register({
+        email: form1.email,
+        password: form1.password,
+        no_hp: form1.telepon,
+        nama: form1.nama,
+        nik: form1.nik,
+        jenis_kelamin: form1.jenisKelamin,
+        tanggal_lahir: new Date().toISOString(),
+        id_lokasi: 1,
+        id_pendidikan: form3.pendidikan ? 1 : null,
+        id_pekerjaan: form3.pekerjaan ? 1 : null,
+        id_pendapatan: form3.pendapatan ? 1 : null,
+        jumlah_tanggungan: form3.tanggungan ? parseInt(form3.tanggungan) : null,
+        role: roleMap[selectedRole] || 'Ibu Hamil',
+      });
+      if (isPendingRole) {
+        setStep('done-pending');
+      } else {
+        setStep('done');
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Registrasi gagal. Silakan coba lagi.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ── Step: Pilih Role ───────────────────────────────────────────────────
   if (step === 'role') {
@@ -191,6 +231,11 @@ export default function RegisterPage(): JSX.Element {
               <FileInput label="Kartu Tanda Penduduk (KTP)" icon={<span>🪪</span>} />
               {isPendingRole && <FileInput label="Surat Keterangan Aktif Kerja" icon={<span>📄</span>} />}
 
+              <Field label="NIK (16 digit)" icon={<CreditCard size={13} />}>
+                <input type="text" value={form1.nik} onChange={(e) => setForm1({ ...form1, nik: e.target.value })}
+                  placeholder="1234567890123456" maxLength={16} className={inputCls} />
+              </Field>
+
               <Field label="Email Aktif" icon={<Mail size={13} />}>
                 <input type="email" value={form1.email} onChange={(e) => setForm1({ ...form1, email: e.target.value })}
                   placeholder="dani@gmail.com" className={inputCls} />
@@ -220,6 +265,8 @@ export default function RegisterPage(): JSX.Element {
               )}
 
               <VerifNotice />
+
+              {error && <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
             </div>
 
             <div className="flex gap-3 mt-6">
@@ -227,9 +274,10 @@ export default function RegisterPage(): JSX.Element {
                 className="flex-1 py-3 bg-primary hover:bg-primary-600 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
                 <ArrowLeft size={15} /> Pilih Role
               </button>
-              <button onClick={() => isPendingRole ? setStep('done-pending') : setStep('berkas2')}
-                className="flex-1 py-3 bg-primary hover:bg-primary-600 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
-                {isPendingRole ? 'Selesaikan Registrasi Awal' : 'Halaman 2'} <ArrowRight size={15} />
+              <button onClick={() => isPendingRole ? handleRegister() : setStep('berkas2')}
+                disabled={loading}
+                className="flex-1 py-3 bg-primary hover:bg-primary-600 disabled:bg-primary/60 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                {loading ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Memproses...</> : isPendingRole ? 'Selesaikan Registrasi Awal' : 'Halaman 2'} <ArrowRight size={15} />
               </button>
             </div>
           </FormWrap>
@@ -327,6 +375,8 @@ export default function RegisterPage(): JSX.Element {
                   placeholder="1" className={inputCls} />
               </Field>
               <VerifNotice />
+
+              {error && <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
             </div>
 
             <div className="flex gap-3 mt-6">
@@ -334,9 +384,10 @@ export default function RegisterPage(): JSX.Element {
                 className="flex-1 py-3 bg-primary hover:bg-primary-600 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
                 <ArrowLeft size={15} /> Halaman 2
               </button>
-              <button onClick={() => setStep('done')}
-                className="flex-1 py-3 bg-primary hover:bg-primary-600 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
-                Selesaikan Registrasi <ArrowRight size={15} />
+              <button onClick={handleRegister}
+                disabled={loading}
+                className="flex-1 py-3 bg-primary hover:bg-primary-600 disabled:bg-primary/60 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                {loading ? <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Memproses...</> : 'Selesaikan Registrasi'} <ArrowRight size={15} />
               </button>
             </div>
           </FormWrap>

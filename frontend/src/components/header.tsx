@@ -1,14 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Bell, LogOut, LogIn, ChevronDown, ArrowRight } from 'lucide-react';
 import type { Role } from '../App';
 import { useAuth } from '../context/AuthContext';
-import { NOTIF_PREVIEW, CATEGORY_DOT } from '../screens/notifikasi/data/notifikasi.data';
+import { apiGet } from '../lib/api';
 
 interface HeaderProps {
   currentRole?: Role;
   onLoginClick: () => void;
   onChangeRole?: (role: Role) => void;
+}
+
+interface NotifPreview {
+  id_notifikasi: number;
+  judul: string;
+  pesan: string | null;
+  tipe_notifikasi: string;
+  status_baca: boolean;
+  tanggal_kirim: string;
 }
 
 const PAGE_TITLES: Record<string, string> = {
@@ -21,6 +30,23 @@ const PAGE_TITLES: Record<string, string> = {
   '/notifikasi': 'Notifikasi',
 };
 
+const TIPE_DOT: Record<string, string> = {
+  Pemeriksaan: 'bg-blue-500',
+  Imunisasi: 'bg-green-500',
+  Rujukan: 'bg-orange-500',
+  Edukasi: 'bg-purple-500',
+  Pengingat: 'bg-yellow-500',
+};
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps): JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
@@ -29,16 +55,22 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [notifPreviews, setNotifPreviews] = useState<NotifPreview[]>([]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      apiGet<{ notifikasi: NotifPreview[] }>('/notifikasi?per_page=4')
+        .then((res) => setNotifPreviews(res.notifikasi))
+        .catch(() => {});
+    }
+  }, [isLoggedIn]);
 
   const pageTitle = PAGE_TITLES[location.pathname] || 'SiGizi';
+  const unreadCount = notifPreviews.filter((n) => !n.status_baca).length;
 
-  // Preview notifikasi sesuai role yang sedang login
-  const previewItems = isLoggedIn && currentRole ? (NOTIF_PREVIEW[currentRole] ?? []) : [];
-  const unreadCount = previewItems.filter((n) => !n.read).length || previewItems.length;
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowProfileMenu(false);
-    logout();
+    await logout();
     navigate('/');
   };
 
@@ -130,35 +162,40 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
 
                   {/* Preview list */}
                   <div className="divide-y divide-neutral-50 max-h-80 overflow-y-auto">
-                    {previewItems.slice(0, 4).map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => { navigate('/notifikasi'); setShowNotifications(false); }}
-                        className="flex items-start gap-3 px-5 py-3.5 hover:bg-neutral-50 cursor-pointer transition-colors"
-                      >
-                        {/* Category dot */}
-                        <div className="flex-shrink-0 mt-1.5">
-                          <span className={`w-2 h-2 rounded-full block ${CATEGORY_DOT[item.category] ?? 'bg-neutral-300'}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-neutral-800 leading-snug truncate">{item.title}</p>
-                          {item.description && (
-                            <p className="text-xs text-neutral-500 mt-0.5 line-clamp-1 leading-relaxed">{item.description}</p>
-                          )}
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <span className="text-[10px] text-neutral-400">{item.time}</span>
-                            {item.tags[0] && (
-                              <span
-                                className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                                style={{ color: item.tags[0].color, backgroundColor: item.tags[0].bg }}
-                              >
-                                {item.tags[0].label}
-                              </span>
+                    {notifPreviews.length === 0 ? (
+                      <div className="px-5 py-8 text-center text-sm text-neutral-400">
+                        Belum ada notifikasi
+                      </div>
+                    ) : (
+                      notifPreviews.map((item) => (
+                        <div
+                          key={item.id_notifikasi}
+                          onClick={() => { navigate('/notifikasi'); setShowNotifications(false); }}
+                          className="flex items-start gap-3 px-5 py-3.5 hover:bg-neutral-50 cursor-pointer transition-colors"
+                        >
+                          {/* Category dot */}
+                          <div className="flex-shrink-0 mt-1.5">
+                            <span className={`w-2 h-2 rounded-full block ${TIPE_DOT[item.tipe_notifikasi] ?? 'bg-neutral-300'}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-neutral-800 leading-snug truncate">{item.judul}</p>
+                            {item.pesan && (
+                              <p className="text-xs text-neutral-500 mt-0.5 line-clamp-1 leading-relaxed">{item.pesan}</p>
                             )}
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className="text-[10px] text-neutral-400">
+                                {new Date(item.tanggal_kirim).toLocaleDateString('id-ID')}
+                              </span>
+                              {!item.status_baca && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                                  Baru
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
 
                   {/* Footer CTA */}
@@ -180,8 +217,8 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
                 onClick={() => { setShowProfileMenu(!showProfileMenu); setShowNotifications(false); }}
                 className="flex items-center gap-2 p-1 hover:bg-neutral-50 rounded-xl transition-colors"
               >
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-200 flex-shrink-0">
-                  <img src={user!.avatarUrl} alt={user!.name} className="w-full h-full object-cover" />
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-primary-100 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">
+                  {getInitials(user!.name)}
                 </div>
                 <span className="text-sm font-semibold text-neutral-700 font-body hidden sm:inline">
                   {user!.name}
@@ -193,7 +230,8 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
                   {/* User info */}
                   <div className="px-4 py-3 border-b border-neutral-100">
                     <p className="text-sm font-semibold text-neutral-800 font-body">{user!.name}</p>
-                    <p className="text-xs text-neutral-500 font-body mt-0.5">{user!.role}</p>
+                    <p className="text-xs text-neutral-500 font-body mt-0.5">{user!.email}</p>
+                    <p className="text-xs text-neutral-400 font-body mt-0.5">{user!.role}</p>
                   </div>
                   {/* Logout */}
                   <button

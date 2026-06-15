@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/danielgtaylor/huma/v2/humatest"
+	"github.com/go-chi/chi/v5"
 	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 	"github.com/stringptr/SiGizi/backend/internal/middleware"
 )
@@ -31,6 +33,19 @@ func SetupRouter(t *testing.T) (http.Handler, huma.API, *jwtutils.JWT, *NoopBlac
 	api.UseMiddleware(middleware.AccessTokenMiddleware(api, &jwtUtil, blacklistRepo))
 
 	return testHandler, api, &jwtUtil, blacklistRepo
+}
+
+func SetupChiRouter(t *testing.T) (http.Handler, huma.API, *jwtutils.JWT, *NoopBlacklistRepo) {
+	t.Helper()
+	router := chi.NewRouter()
+	api := humachi.New(router, huma.DefaultConfig("Test", "1.0.0"))
+	jwtUtil := jwtutils.New("test-secret-key")
+	blacklistRepo := &NoopBlacklistRepo{}
+
+	api.UseMiddleware(middleware.RealIPMiddleware())
+	api.UseMiddleware(middleware.AccessTokenMiddleware(api, &jwtUtil, blacklistRepo))
+
+	return router, api, &jwtUtil, blacklistRepo
 }
 
 func CreateGroups(api huma.API, jwtUtil *jwtutils.JWT, blacklistRepo *NoopBlacklistRepo) Groups {

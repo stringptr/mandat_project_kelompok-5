@@ -6,6 +6,7 @@ import (
 	"time"
 
 	artikelDomain "github.com/stringptr/SiGizi/backend/internal/domain/artikel"
+	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/enum"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 	. "github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/table"
 
@@ -13,6 +14,14 @@ import (
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+var statusArtikelExpr = map[model.StatusArtikel]StringExpression{
+	model.StatusArtikel_Draft:              enum.StatusArtikel.Draft,
+	model.StatusArtikel_MenungguVerifikasi: enum.StatusArtikel.MenungguVerifikasi,
+	model.StatusArtikel_Dipublikasikan:     enum.StatusArtikel.Dipublikasikan,
+	model.StatusArtikel_Ditolak:            enum.StatusArtikel.Ditolak,
+	model.StatusArtikel_Diarsipkan:         enum.StatusArtikel.Diarsipkan,
+}
 
 type Repo struct {
 	db *pgxpool.Pool
@@ -190,7 +199,7 @@ func (r *Repo) ReviewArtikel(ctx context.Context, idArtikel int32, idVerifikator
 		Artikel.TanggalPublish,
 		Artikel.UpdatedAt,
 	).SET(
-		String(string(statusArtikel)),
+		statusArtikelExpr[statusArtikel],
 		Int32(idVerifikator),
 		TimestampzT(now),
 		TimestampzT(now),
@@ -203,7 +212,7 @@ func (r *Repo) ReviewArtikel(ctx context.Context, idArtikel int32, idVerifikator
 			Artikel.IDVerifikator,
 			Artikel.UpdatedAt,
 		).SET(
-			String(string(statusArtikel)),
+			statusArtikelExpr[statusArtikel],
 			Int32(idVerifikator),
 			TimestampzT(now),
 		).WHERE(Artikel.IDArtikel.EQ(Int32(idArtikel))).

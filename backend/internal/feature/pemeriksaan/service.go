@@ -234,7 +234,7 @@ func (s *Service) Verify(ctx context.Context, idHasilPemeriksaan int32, idBidan 
 		bidanNama = bidanUser.Nama
 	}
 
-	_, pubErr := s.notifRepo.Create(ctx, &model.Notifikasi{
+	pubErr := s.notifRepo.Create(ctx, &model.Notifikasi{
 		IDUser:          existing.IDPetugasInput,
 		Judul:           "Pemeriksaan Terverifikasi",
 		Pesan:           strPtr(fmt.Sprintf("Data pemeriksaan telah diverifikasi oleh %s.", bidanNama)),
@@ -297,7 +297,7 @@ func (s *Service) createNotificationForCreate(ctx context.Context, jadwal *model
 		StatusBaca:     false,
 		TanggalKirim:   time.Now(),
 	}
-	_, errCreate := s.notifRepo.Create(ctx, notif)
+	errCreate := s.notifRepo.Create(ctx, notif)
 	if errCreate != nil {
 		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Gagal membuat notifikasi."}
 	}

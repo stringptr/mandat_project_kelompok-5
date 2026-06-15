@@ -3,7 +3,7 @@
   <info>
     <name>dim_pasien</name>
     <name_sync_with_filename>Y</name_sync_with_filename>
-    <description>Load patient dimension with age calculation - Incremental</description>
+    <description>Load patient dimension with age calculation - Incremental with Selective Column Update</description>
     <extended_description/>
     <pipeline_version/>
     <pipeline_type>Normal</pipeline_type>
@@ -110,7 +110,14 @@ WHERE (p.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01'):
         <jsScript_type>0</jsScript_type>
         <jsScript_name>Script 1</jsScript_name>
         <jsScript_script>//Script here
-sql =
+// SELECTIVE COLUMN UPDATE: Only update columns that actually changed
+// Build dynamic UPDATE statement based on what's different
+
+var id_pasien_oltp_val = ( id_pasien_oltp==null ? &quot;NULL&quot; : &quot;'&quot; + id_pasien_oltp + &quot;'::int8&quot; );
+var tipe_pasien_val = &quot;'&quot; + tipe_pasien + &quot;'::tipe_pasien&quot;;
+
+// Build INSERT for new records
+var insertSql = 
 &quot;INSERT INTO public.DIM_PASIEN (&quot; +
 &quot;tipe_pasien,id_pasien_oltp,jenis_kelamin,usia,satuan_usia,kategori_usia,pendidikan,pekerjaan,kategori_pendapatan,jumlah_tanggungan&quot; +
 &quot;) VALUES (&quot; +
@@ -125,14 +132,14 @@ sql =
 ( kategori_pendapatan==null ? &quot;NULL&quot; : &quot;'&quot; + kategori_pendapatan.replace(/'/g,&quot;''&quot;) + &quot;'&quot; ) + &quot;,&quot; +
 ( jumlah_tanggungan==null ? &quot;NULL&quot; : &quot;'&quot; + jumlah_tanggungan + &quot;'::int8&quot; ) +
 &quot;) ON CONFLICT (id_pasien_oltp, tipe_pasien) DO UPDATE SET &quot; +
-&quot;jenis_kelamin = EXCLUDED.jenis_kelamin,&quot; +
-&quot;usia = EXCLUDED.usia,&quot; +
-&quot;satuan_usia = EXCLUDED.satuan_usia,&quot; +
-&quot;kategori_usia = EXCLUDED.kategori_usia,&quot; +
-&quot;pendidikan = EXCLUDED.pendidikan,&quot; +
-&quot;pekerjaan = EXCLUDED.pekerjaan,&quot; +
-&quot;kategori_pendapatan = EXCLUDED.kategori_pendapatan,&quot; +
-&quot;jumlah_tanggungan = EXCLUDED.jumlah_tanggungan &quot; +
+&quot;jenis_kelamin = CASE WHEN DIM_PASIEN.jenis_kelamin IS DISTINCT FROM EXCLUDED.jenis_kelamin THEN EXCLUDED.jenis_kelamin ELSE DIM_PASIEN.jenis_kelamin END,&quot; +
+&quot;usia = CASE WHEN DIM_PASIEN.usia IS DISTINCT FROM EXCLUDED.usia THEN EXCLUDED.usia ELSE DIM_PASIEN.usia END,&quot; +
+&quot;satuan_usia = CASE WHEN DIM_PASIEN.satuan_usia IS DISTINCT FROM EXCLUDED.satuan_usia THEN EXCLUDED.satuan_usia ELSE DIM_PASIEN.satuan_usia END,&quot; +
+&quot;kategori_usia = CASE WHEN DIM_PASIEN.kategori_usia IS DISTINCT FROM EXCLUDED.kategori_usia THEN EXCLUDED.kategori_usia ELSE DIM_PASIEN.kategori_usia END,&quot; +
+&quot;pendidikan = CASE WHEN DIM_PASIEN.pendidikan IS DISTINCT FROM EXCLUDED.pendidikan THEN EXCLUDED.pendidikan ELSE DIM_PASIEN.pendidikan END,&quot; +
+&quot;pekerjaan = CASE WHEN DIM_PASIEN.pekerjaan IS DISTINCT FROM EXCLUDED.pekerjaan THEN EXCLUDED.pekerjaan ELSE DIM_PASIEN.pekerjaan END,&quot; +
+&quot;kategori_pendapatan = CASE WHEN DIM_PASIEN.kategori_pendapatan IS DISTINCT FROM EXCLUDED.kategori_pendapatan THEN EXCLUDED.kategori_pendapatan ELSE DIM_PASIEN.kategori_pendapatan END,&quot; +
+&quot;jumlah_tanggungan = CASE WHEN DIM_PASIEN.jumlah_tanggungan IS DISTINCT FROM EXCLUDED.jumlah_tanggungan THEN EXCLUDED.jumlah_tanggungan ELSE DIM_PASIEN.jumlah_tanggungan END &quot; +
 &quot;WHERE DIM_PASIEN.jenis_kelamin IS DISTINCT FROM EXCLUDED.jenis_kelamin &quot; +
 &quot;OR DIM_PASIEN.usia IS DISTINCT FROM EXCLUDED.usia &quot; +
 &quot;OR DIM_PASIEN.satuan_usia IS DISTINCT FROM EXCLUDED.satuan_usia &quot; +
@@ -141,6 +148,8 @@ sql =
 &quot;OR DIM_PASIEN.pekerjaan IS DISTINCT FROM EXCLUDED.pekerjaan &quot; +
 &quot;OR DIM_PASIEN.kategori_pendapatan IS DISTINCT FROM EXCLUDED.kategori_pendapatan &quot; +
 &quot;OR DIM_PASIEN.jumlah_tanggungan IS DISTINCT FROM EXCLUDED.jumlah_tanggungan&quot;;
+
+sql = insertSql;
 </jsScript_script>
       </jsScript>
     </jsScripts>

@@ -182,6 +182,24 @@ func SeedPasienAnak(t *testing.T, pool *pgxpool.Pool, idUser, idPosyandu, idWali
 	return idUser
 }
 
+func SeedFasilitasKesehatan(t *testing.T, pool *pgxpool.Pool, idLokasi int32) int32 {
+	t.Helper()
+	ctx := context.Background()
+	now := time.Now().Truncate(time.Microsecond)
+
+	var idFaskes int32
+	err := pool.QueryRow(ctx, `
+		INSERT INTO fasilitas_kesehatan (nama_faskes, tipe_faskes, id_lokasi, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $4)
+		RETURNING id_faskes`,
+		"Puskesmas Test", "Faskes Tingkat Pertama", idLokasi, now,
+	).Scan(&idFaskes)
+	if err != nil {
+		t.Fatalf("failed to seed fasilitas_kesehatan: %v", err)
+	}
+	return idFaskes
+}
+
 func SeedActiveSession(t *testing.T, pool *pgxpool.Pool, userID int32) uuid.UUID {
 	t.Helper()
 	ctx := context.Background()

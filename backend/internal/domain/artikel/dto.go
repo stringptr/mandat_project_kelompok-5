@@ -1,16 +1,14 @@
 package artikel
 
-import "time"
-
 type CreateArtikelRequest struct {
-	Judul     string `json:"judul" minLength:"1" maxLength:"255"`
+	Judul      string `json:"judul" minLength:"1" maxLength:"255"`
 	IsiArtikel string `json:"isi_artikel" minLength:"1"`
-	Kategori  string `json:"kategori,omitempty" maxLength:"100"`
+	Kategori   string `json:"kategori,omitempty" maxLength:"100"`
 }
 
 type CreateArtikelResponse struct {
-	IDArtikel      int32  `json:"id_artikel"`
-	StatusArtikel  string `json:"status_artikel"`
+	IDArtikel     int32  `json:"id_artikel"`
+	StatusArtikel string `json:"status_artikel"`
 }
 
 type ArtikelListItem struct {
@@ -24,19 +22,19 @@ type ArtikelListItem struct {
 
 type ArtikelListData struct {
 	Artikel   []ArtikelListItem `json:"artikel"`
-	TotalData int                `json:"total_data"`
+	TotalData int               `json:"total_data"`
 }
 
 type ArtikelDetail struct {
-	IDArtikel      int32   `json:"id_artikel"`
-	Judul          string  `json:"judul"`
-	IsiArtikel     string  `json:"isi_artikel"`
-	Kategori       string  `json:"kategori"`
-	NamaPenulis    string  `json:"nama_penulis"`
+	IDArtikel       int32   `json:"id_artikel"`
+	Judul           string  `json:"judul"`
+	IsiArtikel      string  `json:"isi_artikel"`
+	Kategori        string  `json:"kategori"`
+	NamaPenulis     string  `json:"nama_penulis"`
 	NamaVerifikator *string `json:"nama_verifikator"`
-	TanggalPublish *string `json:"tanggal_publish"`
-	CreatedAt      string  `json:"created_at"`
-	UpdatedAt      string  `json:"updated_at"`
+	TanggalPublish  *string `json:"tanggal_publish"`
+	CreatedAt       string  `json:"created_at"`
+	UpdatedAt       string  `json:"updated_at"`
 }
 
 type UpdateArtikelRequest struct {
@@ -55,7 +53,7 @@ type ArtikelPendingItem struct {
 
 type ArtikelPendingData struct {
 	Artikel   []ArtikelPendingItem `json:"artikel"`
-	TotalData int                   `json:"total_data"`
+	TotalData int                  `json:"total_data"`
 }
 
 type ReviewArtikelRequest struct {

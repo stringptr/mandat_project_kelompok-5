@@ -43,6 +43,50 @@ func TruncateNotifikasiTables(t *testing.T, pool *pgxpool.Pool) {
 	}
 }
 
+func TruncateImunisasiTables(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	ctx := context.Background()
+	tables := []string{
+		"hasil_pemeriksaan",
+		"jadwal_imunisasi",
+	}
+	for _, table := range tables {
+		_, err := pool.Exec(ctx, "TRUNCATE TABLE "+table+" CASCADE")
+		if err != nil {
+			t.Fatalf("failed to truncate table %s: %v", table, err)
+		}
+	}
+}
+
+func TruncateTindakLanjutTables(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	ctx := context.Background()
+	tables := []string{
+		"rujukan",
+		"tindak_lanjut",
+		"fasilitas_kesehatan",
+	}
+	for _, table := range tables {
+		_, err := pool.Exec(ctx, "TRUNCATE TABLE "+table+" CASCADE")
+		if err != nil {
+			t.Fatalf("failed to truncate table %s: %v", table, err)
+		}
+	}
+	_, err := pool.Exec(ctx, "ALTER SEQUENCE fasilitas_kesehatan_id_faskes_seq RESTART WITH 1")
+	if err != nil {
+		_ = err
+	}
+}
+
+func TruncateArtikelTables(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	ctx := context.Background()
+	_, err := pool.Exec(ctx, "TRUNCATE TABLE artikel CASCADE")
+	if err != nil {
+		t.Fatalf("failed to truncate artikel: %v", err)
+	}
+}
+
 func TruncatePasienTables(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
 	ctx := context.Background()

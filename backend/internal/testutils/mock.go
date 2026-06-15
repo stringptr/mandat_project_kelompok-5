@@ -6,6 +6,7 @@ import (
 
 	"github.com/stringptr/SiGizi/backend/internal/domain/bannedip"
 	"github.com/stringptr/SiGizi/backend/internal/domain/jwtblacklist"
+	"github.com/stringptr/SiGizi/backend/internal/domain/notification"
 )
 
 type NoopBlacklistRepo struct{}
@@ -51,3 +52,11 @@ func (n *NoopBanRepo) ClearAttempts(_ context.Context, _ string) error {
 }
 
 var _ bannedip.Repo = (*NoopBanRepo)(nil)
+
+type NoopNotifPublisher struct{}
+
+func (n *NoopNotifPublisher) PublishToUser(_ int32, _ *notification.Notification) error { return nil }
+func (n *NoopNotifPublisher) PublishToRole(_ string, _ *notification.Notification) error { return nil }
+func (n *NoopNotifPublisher) PublishBroadcast(_ *notification.Notification) error        { return nil }
+
+var _ notification.Publisher = (*NoopNotifPublisher)(nil)

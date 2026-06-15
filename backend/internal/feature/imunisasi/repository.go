@@ -3,8 +3,10 @@ package imunisasi
 import (
 	"context"
 	"strings"
+	"time"
 
 	imunisasiDomain "github.com/stringptr/SiGizi/backend/internal/domain/imunisasi"
+	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/enum"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 	. "github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/table"
 
@@ -177,17 +179,21 @@ func (r *Repo) Delete(ctx context.Context, idImunisasi int32) error {
 }
 
 func (r *Repo) UpdateRealisasi(ctx context.Context, idImunisasi int32, tanggalRealisasi string) error {
+	t, err := time.Parse("2006-01-02", tanggalRealisasi)
+	if err != nil {
+		return err
+	}
 	stmt := JadwalImunisasi.UPDATE(
 		JadwalImunisasi.TanggalRealisasi,
 		JadwalImunisasi.StatusImunisasi,
 		JadwalImunisasi.UpdatedAt,
 	).SET(
-		Timestampz(tanggalRealisasi),
-		String(string(model.StatusImunisasi_Sudah)),
+		TimestampzT(t),
+		enum.StatusImunisasi.Sudah,
 		RawTimestampz("NOW()"),
 	).WHERE(JadwalImunisasi.IDImunisasi.EQ(Int32(idImunisasi)))
 
-	_, err := pgxV5.Exec(ctx, stmt, r.db)
+	_, err = pgxV5.Exec(ctx, stmt, r.db)
 	return err
 }
 

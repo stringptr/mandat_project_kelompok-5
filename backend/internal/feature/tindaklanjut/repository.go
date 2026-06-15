@@ -6,6 +6,7 @@ import (
 	"time"
 
 	tindaklanjutDomain "github.com/stringptr/SiGizi/backend/internal/domain/tindaklanjut"
+	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/enum"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 	. "github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/table"
 
@@ -13,6 +14,14 @@ import (
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+var statusRujukanExpr = map[model.StatusRujukan]StringExpression{
+	model.StatusRujukan_Diajukan: enum.StatusRujukan.Diajukan,
+	model.StatusRujukan_Diproses: enum.StatusRujukan.Diproses,
+	model.StatusRujukan_Diterima: enum.StatusRujukan.Diterima,
+	model.StatusRujukan_Ditolak:  enum.StatusRujukan.Ditolak,
+	model.StatusRujukan_Selesai:  enum.StatusRujukan.Selesai,
+}
 
 type Repo struct {
 	db *pgxpool.Pool
@@ -186,7 +195,7 @@ func (r *Repo) UpdateStatusRujukan(ctx context.Context, idRujukan int32, statusR
 		Rujukan.StatusRujukan,
 		Rujukan.UpdatedAt,
 	).SET(
-		String(string(statusRujukan)),
+		statusRujukanExpr[statusRujukan],
 		TimestampzT(time.Now()),
 	).WHERE(Rujukan.IDRujukan.EQ(Int32(idRujukan))).
 		RETURNING(Rujukan.AllColumns)

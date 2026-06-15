@@ -53,11 +53,13 @@
 FROM posyandu pos
 JOIN bidan b         ON pos.id_bidan  = b.id_user
 JOIN user_account ua ON b.id_user     = ua.id_user
-JOIN lokasi lok      ON b.wilayah_kerja = lok.id_lokasi</sql>
+JOIN lokasi lok      ON b.wilayah_kerja = lok.id_lokasi
+WHERE (pos.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ OR b.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ OR ua.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ)
+  AND pos.is_deleted = false AND b.is_deleted = false AND ua.is_deleted = false</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>
-    <variables_active>N</variables_active>
+    <variables_active>Y</variables_active>
     <lazy_conversion_active>N</lazy_conversion_active>
     <attributes/>
     <GUI>
@@ -93,7 +95,10 @@ sql =
 &quot;) ON CONFLICT (id_posyandu_oltp) DO UPDATE SET &quot; +
 &quot;nama_posyandu = EXCLUDED.nama_posyandu,&quot; +
 &quot;id_petugas_bidan = EXCLUDED.id_petugas_bidan,&quot; +
-&quot;wilayah_kerja = EXCLUDED.wilayah_kerja&quot;;
+&quot;wilayah_kerja = EXCLUDED.wilayah_kerja &quot; +
+&quot;WHERE DIM_POSYANDU.nama_posyandu IS DISTINCT FROM EXCLUDED.nama_posyandu &quot; +
+&quot;OR DIM_POSYANDU.id_petugas_bidan IS DISTINCT FROM EXCLUDED.id_petugas_bidan &quot; +
+&quot;OR DIM_POSYANDU.wilayah_kerja IS DISTINCT FROM EXCLUDED.wilayah_kerja&quot;;
 </jsScript_script>
       </jsScript>
     </jsScripts>

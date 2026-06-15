@@ -77,11 +77,15 @@ FROM pasien p
 JOIN user_account ua ON p.id_pasien = ua.id_user
 LEFT JOIN pendidikan        pend ON ua.id_pendidikan = pend.id_pendidikan
 LEFT JOIN pekerjaan         pek  ON ua.id_pekerjaan  = pek.id_pekerjaan
-LEFT JOIN kategori_pendapatan kp ON ua.id_pendapatan = kp.id_pendapatan</sql>
+LEFT JOIN kategori_pendapatan kp ON ua.id_pendapatan = kp.id_pendapatan
+WHERE (p.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ
+   OR ua.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ)
+  AND p.is_deleted = false
+  AND ua.is_deleted = false</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>
-    <variables_active>N</variables_active>
+    <variables_active>Y</variables_active>
     <lazy_conversion_active>N</lazy_conversion_active>
     <attributes/>
     <GUI>
@@ -128,7 +132,15 @@ sql =
 &quot;pendidikan = EXCLUDED.pendidikan,&quot; +
 &quot;pekerjaan = EXCLUDED.pekerjaan,&quot; +
 &quot;kategori_pendapatan = EXCLUDED.kategori_pendapatan,&quot; +
-&quot;jumlah_tanggungan = EXCLUDED.jumlah_tanggungan&quot;;
+&quot;jumlah_tanggungan = EXCLUDED.jumlah_tanggungan &quot; +
+&quot;WHERE DIM_PASIEN.jenis_kelamin IS DISTINCT FROM EXCLUDED.jenis_kelamin &quot; +
+&quot;OR DIM_PASIEN.usia IS DISTINCT FROM EXCLUDED.usia &quot; +
+&quot;OR DIM_PASIEN.satuan_usia IS DISTINCT FROM EXCLUDED.satuan_usia &quot; +
+&quot;OR DIM_PASIEN.kategori_usia IS DISTINCT FROM EXCLUDED.kategori_usia &quot; +
+&quot;OR DIM_PASIEN.pendidikan IS DISTINCT FROM EXCLUDED.pendidikan &quot; +
+&quot;OR DIM_PASIEN.pekerjaan IS DISTINCT FROM EXCLUDED.pekerjaan &quot; +
+&quot;OR DIM_PASIEN.kategori_pendapatan IS DISTINCT FROM EXCLUDED.kategori_pendapatan &quot; +
+&quot;OR DIM_PASIEN.jumlah_tanggungan IS DISTINCT FROM EXCLUDED.jumlah_tanggungan&quot;;
 </jsScript_script>
       </jsScript>
     </jsScripts>

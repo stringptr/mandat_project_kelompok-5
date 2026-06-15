@@ -85,11 +85,13 @@ FROM hasil_pemeriksaan hp
 JOIN jadwal_imunisasi ji  ON hp.id_jadwal_imunisasi = ji.id_imunisasi
 JOIN pasien p             ON ji.id_pasien           = p.id_pasien
 JOIN user_account ua      ON p.id_pasien            = ua.id_user
-LEFT JOIN ibu_hamil ih    ON ih.id_pasien           = ji.id_pasien</sql>
+LEFT JOIN ibu_hamil ih    ON ih.id_pasien           = ji.id_pasien
+WHERE hp.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ
+  AND p.is_deleted = false AND ua.is_deleted = false</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>
-    <variables_active>N</variables_active>
+    <variables_active>Y</variables_active>
     <lazy_conversion_active>N</lazy_conversion_active>
     <attributes/>
     <GUI>
@@ -173,7 +175,27 @@ id_petugas_subq + &quot;,&quot; +
 &quot;flag_perlu_rujukan = EXCLUDED.flag_perlu_rujukan,&quot; +
 &quot;flag_kek = EXCLUDED.flag_kek,&quot; +
 &quot;flag_anemia = EXCLUDED.flag_anemia,&quot; +
-&quot;flag_risiko_tinggi = EXCLUDED.flag_risiko_tinggi&quot;;
+&quot;flag_risiko_tinggi = EXCLUDED.flag_risiko_tinggi &quot; +
+&quot;WHERE FACT_PEMERIKSAAN.id_jadwal_imunisasi_oltp IS DISTINCT FROM EXCLUDED.id_jadwal_imunisasi_oltp &quot; +
+&quot;OR FACT_PEMERIKSAAN.id_waktu IS DISTINCT FROM EXCLUDED.id_waktu &quot; +
+&quot;OR FACT_PEMERIKSAAN.id_lokasi IS DISTINCT FROM EXCLUDED.id_lokasi &quot; +
+&quot;OR FACT_PEMERIKSAAN.id_dim_pasien IS DISTINCT FROM EXCLUDED.id_dim_pasien &quot; +
+&quot;OR FACT_PEMERIKSAAN.id_posyandu IS DISTINCT FROM EXCLUDED.id_posyandu &quot; +
+&quot;OR FACT_PEMERIKSAAN.id_dim_kehamilan IS DISTINCT FROM EXCLUDED.id_dim_kehamilan &quot; +
+&quot;OR FACT_PEMERIKSAAN.tipe_pasien IS DISTINCT FROM EXCLUDED.tipe_pasien &quot; +
+&quot;OR FACT_PEMERIKSAAN.id_petugas IS DISTINCT FROM EXCLUDED.id_petugas &quot; +
+&quot;OR FACT_PEMERIKSAAN.berat_badan IS DISTINCT FROM EXCLUDED.berat_badan &quot; +
+&quot;OR FACT_PEMERIKSAAN.tinggi_badan IS DISTINCT FROM EXCLUDED.tinggi_badan &quot; +
+&quot;OR FACT_PEMERIKSAAN.lingkar_kepala IS DISTINCT FROM EXCLUDED.lingkar_kepala &quot; +
+&quot;OR FACT_PEMERIKSAAN.tekanan_darah IS DISTINCT FROM EXCLUDED.tekanan_darah &quot; +
+&quot;OR FACT_PEMERIKSAAN.status_stunting IS DISTINCT FROM EXCLUDED.status_stunting &quot; +
+&quot;OR FACT_PEMERIKSAAN.status_gizi IS DISTINCT FROM EXCLUDED.status_gizi &quot; +
+&quot;OR FACT_PEMERIKSAAN.flag_stunting IS DISTINCT FROM EXCLUDED.flag_stunting &quot; +
+&quot;OR FACT_PEMERIKSAAN.flag_gizi_buruk IS DISTINCT FROM EXCLUDED.flag_gizi_buruk &quot; +
+&quot;OR FACT_PEMERIKSAAN.flag_perlu_rujukan IS DISTINCT FROM EXCLUDED.flag_perlu_rujukan &quot; +
+&quot;OR FACT_PEMERIKSAAN.flag_kek IS DISTINCT FROM EXCLUDED.flag_kek &quot; +
+&quot;OR FACT_PEMERIKSAAN.flag_anemia IS DISTINCT FROM EXCLUDED.flag_anemia &quot; +
+&quot;OR FACT_PEMERIKSAAN.flag_risiko_tinggi IS DISTINCT FROM EXCLUDED.flag_risiko_tinggi&quot;;
 </jsScript_script>
       </jsScript>
     </jsScripts>

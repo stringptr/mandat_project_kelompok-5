@@ -55,11 +55,13 @@
     WHEN (CURRENT_DATE - ih.hpht) / 7 &lt;= 26 THEN 2
     ELSE 3
   END as trimester
-FROM ibu_hamil ih</sql>
+FROM ibu_hamil ih
+WHERE ih.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ
+  AND ih.is_deleted = false</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>
-    <variables_active>N</variables_active>
+    <variables_active>Y</variables_active>
     <lazy_conversion_active>N</lazy_conversion_active>
     <attributes/>
     <GUI>
@@ -107,7 +109,13 @@ bulanMulaiHamilVal +
 &quot;status_kehamilan = EXCLUDED.status_kehamilan,&quot; +
 &quot;trimester = EXCLUDED.trimester,&quot; +
 &quot;hpht = EXCLUDED.hpht,&quot; +
-&quot;bulan_mulai_hamil = EXCLUDED.bulan_mulai_hamil&quot;;
+&quot;bulan_mulai_hamil = EXCLUDED.bulan_mulai_hamil &quot; +
+&quot;WHERE DIM_IBU_HAMIL.id_dim_pasien IS DISTINCT FROM EXCLUDED.id_dim_pasien &quot; +
+&quot;OR DIM_IBU_HAMIL.hamil_ke IS DISTINCT FROM EXCLUDED.hamil_ke &quot; +
+&quot;OR DIM_IBU_HAMIL.status_kehamilan IS DISTINCT FROM EXCLUDED.status_kehamilan &quot; +
+&quot;OR DIM_IBU_HAMIL.trimester IS DISTINCT FROM EXCLUDED.trimester &quot; +
+&quot;OR DIM_IBU_HAMIL.hpht IS DISTINCT FROM EXCLUDED.hpht &quot; +
+&quot;OR DIM_IBU_HAMIL.bulan_mulai_hamil IS DISTINCT FROM EXCLUDED.bulan_mulai_hamil&quot;;
 </jsScript_script>
       </jsScript>
     </jsScripts>

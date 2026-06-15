@@ -61,11 +61,13 @@ SELECT
   ua.id_lokasi                                       AS id_lokasi_oltp
 FROM jadwal_imunisasi ji
 JOIN pasien p        ON ji.id_pasien = p.id_pasien
-JOIN user_account ua ON p.id_pasien  = ua.id_user</sql>
+JOIN user_account ua ON p.id_pasien  = ua.id_user
+WHERE ji.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ
+  AND p.is_deleted = false AND ua.is_deleted = false</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>
-    <variables_active>N</variables_active>
+    <variables_active>Y</variables_active>
     <lazy_conversion_active>N</lazy_conversion_active>
     <attributes/>
     <GUI>
@@ -127,7 +129,16 @@ sql =
 &quot;status_imunisasi = EXCLUDED.status_imunisasi,&quot; +
 &quot;flag_terlaksana = EXCLUDED.flag_terlaksana,&quot; +
 &quot;flag_terlambat = EXCLUDED.flag_terlambat,&quot; +
-&quot;hari_keterlambatan = EXCLUDED.hari_keterlambatan&quot;;
+&quot;hari_keterlambatan = EXCLUDED.hari_keterlambatan &quot; +
+&quot;WHERE FACT_IMUNISASI.id_waktu IS DISTINCT FROM EXCLUDED.id_waktu &quot; +
+&quot;OR FACT_IMUNISASI.id_lokasi IS DISTINCT FROM EXCLUDED.id_lokasi &quot; +
+&quot;OR FACT_IMUNISASI.id_dim_pasien IS DISTINCT FROM EXCLUDED.id_dim_pasien &quot; +
+&quot;OR FACT_IMUNISASI.id_posyandu IS DISTINCT FROM EXCLUDED.id_posyandu &quot; +
+&quot;OR FACT_IMUNISASI.nama_vaksin IS DISTINCT FROM EXCLUDED.nama_vaksin &quot; +
+&quot;OR FACT_IMUNISASI.status_imunisasi IS DISTINCT FROM EXCLUDED.status_imunisasi &quot; +
+&quot;OR FACT_IMUNISASI.flag_terlaksana IS DISTINCT FROM EXCLUDED.flag_terlaksana &quot; +
+&quot;OR FACT_IMUNISASI.flag_terlambat IS DISTINCT FROM EXCLUDED.flag_terlambat &quot; +
+&quot;OR FACT_IMUNISASI.hari_keterlambatan IS DISTINCT FROM EXCLUDED.hari_keterlambatan&quot;;
 </jsScript_script>
       </jsScript>
     </jsScripts>

@@ -103,7 +103,12 @@ provVal +
 &quot;nama_kecamatan = EXCLUDED.nama_kecamatan,&quot; +
 &quot;nama_kabupaten = EXCLUDED.nama_kabupaten,&quot; +
 &quot;nama_kota = EXCLUDED.nama_kota,&quot; +
-&quot;nama_provinsi = EXCLUDED.nama_provinsi&quot;;
+&quot;nama_provinsi = EXCLUDED.nama_provinsi &quot; +
+&quot;WHERE DIM_LOKASI.nama_kelurahan IS DISTINCT FROM EXCLUDED.nama_kelurahan &quot; +
+&quot;OR DIM_LOKASI.nama_kecamatan IS DISTINCT FROM EXCLUDED.nama_kecamatan &quot; +
+&quot;OR DIM_LOKASI.nama_kabupaten IS DISTINCT FROM EXCLUDED.nama_kabupaten &quot; +
+&quot;OR DIM_LOKASI.nama_kota IS DISTINCT FROM EXCLUDED.nama_kota &quot; +
+&quot;OR DIM_LOKASI.nama_provinsi IS DISTINCT FROM EXCLUDED.nama_provinsi&quot;;
 </jsScript_script>
       </jsScript>
     </jsScripts>

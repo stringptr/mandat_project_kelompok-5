@@ -49,11 +49,13 @@
   a.panjang_lahir,
   a.hubungan_dengan_wali::VARCHAR,
   a.id_ibu_hamil as id_ibu_hamil_oltp
-FROM anak a</sql>
+FROM anak a
+WHERE a.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ
+  AND a.is_deleted = false</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>
-    <variables_active>N</variables_active>
+    <variables_active>Y</variables_active>
     <lazy_conversion_active>N</lazy_conversion_active>
     <attributes/>
     <GUI>
@@ -97,7 +99,11 @@ ibuHamilVal +
 &quot;berat_lahir = EXCLUDED.berat_lahir,&quot; +
 &quot;panjang_lahir = EXCLUDED.panjang_lahir,&quot; +
 &quot;hubungan_dengan_wali = EXCLUDED.hubungan_dengan_wali,&quot; +
-&quot;id_ibu_hamil_oltp = EXCLUDED.id_ibu_hamil_oltp&quot;;
+&quot;id_ibu_hamil_oltp = EXCLUDED.id_ibu_hamil_oltp &quot; +
+&quot;WHERE DIM_ANAK.berat_lahir IS DISTINCT FROM EXCLUDED.berat_lahir &quot; +
+&quot;OR DIM_ANAK.panjang_lahir IS DISTINCT FROM EXCLUDED.panjang_lahir &quot; +
+&quot;OR DIM_ANAK.hubungan_dengan_wali IS DISTINCT FROM EXCLUDED.hubungan_dengan_wali &quot; +
+&quot;OR DIM_ANAK.id_ibu_hamil_oltp IS DISTINCT FROM EXCLUDED.id_ibu_hamil_oltp&quot;;
 </jsScript_script>
       </jsScript>
     </jsScripts>

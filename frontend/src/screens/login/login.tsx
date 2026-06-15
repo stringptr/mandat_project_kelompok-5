@@ -1,35 +1,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import type { Role } from '../../App';
-
-// Mock credentials — satu akun per role
-const MOCK_USERS: Record<string, { password: string; role: Role; name: string; avatarUrl: string }> = {
-  'ibu@sigizi.id': {
-    password: 'password',
-    role: 'Ibu/Wali',
-    name: 'Ny. Rina Marlina',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-  },
-  'bidan@sigizi.id': {
-    password: 'password',
-    role: 'Bidan',
-    name: 'Bidan Sri Lestari',
-    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-  },
-  'dinkes@sigizi.id': {
-    password: 'password',
-    role: 'Dinas Kesehatan',
-    name: 'Dr. Budi Hermawan',
-    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-  },
-  'kader@sigizi.id': {
-    password: 'password',
-    role: 'Kader Posyandu',
-    name: 'Siti Aminah',
-    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-  },
-};
 
 interface LoginModalProps {
   onClose: () => void;
@@ -43,21 +14,19 @@ export function LoginModal({ onClose }: LoginModalProps): JSX.Element {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
-    setTimeout(() => {
-      const user = MOCK_USERS[email.toLowerCase().trim()];
-      if (user && user.password === password) {
-        login({ name: user.name, role: user.role, avatarUrl: user.avatarUrl });
-        onClose();
-      } else {
-        setError('Email atau password salah. Coba lagi.');
-      }
+    try {
+      await login(email.trim().toLowerCase(), password);
+      onClose();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Email atau password salah. Coba lagi.';
+      setError(message);
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   return (

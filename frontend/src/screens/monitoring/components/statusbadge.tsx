@@ -5,6 +5,7 @@ export type BadgeVariant =
   | 'gizi-lebih'
   | 'pending'
   | 'verified'
+  | 'rejected'
   | 'urgent'
   | 'normal'
   | 'info';
@@ -22,6 +23,7 @@ const BADGE_STYLES: Record<BadgeVariant, { bg: string; text: string; defaultLabe
   'gizi-lebih': { bg: 'bg-blue-50', text: 'text-blue-700', defaultLabel: 'Gizi Lebih' },
   'pending': { bg: 'bg-orange-50', text: 'text-orange-700', defaultLabel: 'Pending' },
   'verified': { bg: 'bg-emerald-50', text: 'text-emerald-700', defaultLabel: 'Verified' },
+  'rejected': { bg: 'bg-red-50', text: 'text-red-700', defaultLabel: 'Ditolak' },
   'urgent': { bg: 'bg-red-50', text: 'text-red-700', defaultLabel: 'Urgent' },
   'normal': { bg: 'bg-neutral-100', text: 'text-neutral-600', defaultLabel: 'Normal' },
   'info': { bg: 'bg-blue-50', text: 'text-blue-700', defaultLabel: 'Info' },
@@ -34,6 +36,7 @@ const DOT_COLORS: Record<BadgeVariant, string> = {
   'gizi-lebih': 'bg-blue-500',
   'pending': 'bg-orange-500',
   'verified': 'bg-emerald-500',
+  'rejected': 'bg-red-500',
   'urgent': 'bg-red-500',
   'normal': 'bg-neutral-400',
   'info': 'bg-blue-500',

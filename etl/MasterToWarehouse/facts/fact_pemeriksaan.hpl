@@ -3,7 +3,7 @@
   <info>
     <name>fact_pemeriksaan</name>
     <name_sync_with_filename>Y</name_sync_with_filename>
-    <description>Load health examination facts with all dimensions lookup</description>
+    <description>Load health examination facts with all dimensions lookup - Incremental</description>
     <extended_description/>
     <pipeline_version/>
     <pipeline_type>Normal</pipeline_type>
@@ -15,7 +15,7 @@
     <created_user>-</created_user>
     <created_date>2026/06/13 13:00:00.000</created_date>
     <modified_user>-</modified_user>
-    <modified_date>2026/06/13 16:30:00.000</modified_date>
+    <modified_date>2026/06/14 22:50:00.000</modified_date>
   </info>
   <notepads>
   </notepads>
@@ -27,7 +27,7 @@
     </hop>
     <hop>
       <from>Build SQL</from>
-      <to>Execute INSERT</to>
+      <to>Execute UPSERT</to>
       <enabled>Y</enabled>
     </hop>
   </order>
@@ -69,7 +69,7 @@ SELECT
   hp.status_stunting::VARCHAR,
   hp.status_gizi::VARCHAR,
   -- status_perlu_rujukan di-derive: ada di tindak_lanjut.status_pasien
-  COALESCE(tl.status_pasien::VARCHAR, 'Dalam Pemantauan') AS status_perlu_rujukan,
+  COALESCE((SELECT tl.status_pasien::VARCHAR FROM tindak_lanjut tl WHERE tl.id_hasil_pemeriksaan = hp.id_hasil_pemeriksaan LIMIT 1), 'Dalam Pemantauan') AS status_perlu_rujukan,
   -- lila dan hemoglobin tidak ada di skema; set 0 agar flag_kek/flag_anemia = 0 untuk anak
   -- untuk ibu hamil, derive dari status_gizi
   0::NUMERIC                          AS lila,
@@ -85,8 +85,7 @@ FROM hasil_pemeriksaan hp
 JOIN jadwal_imunisasi ji  ON hp.id_jadwal_imunisasi = ji.id_imunisasi
 JOIN pasien p             ON ji.id_pasien           = p.id_pasien
 JOIN user_account ua      ON p.id_pasien            = ua.id_user
-LEFT JOIN ibu_hamil ih    ON ih.id_pasien           = ji.id_pasien
-LEFT JOIN tindak_lanjut tl ON tl.id_hasil_pemeriksaan = hp.id_hasil_pemeriksaan</sql>
+LEFT JOIN ibu_hamil ih    ON ih.id_pasien           = ji.id_pasien</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>
@@ -131,8 +130,9 @@ var id_petugas_subq = &quot;(SELECT id_petugas_bidan FROM DIM_POSYANDU WHERE id_
 
 sql =
 &quot;INSERT INTO public.FACT_PEMERIKSAAN (&quot; +
-&quot;id_jadwal_imunisasi_oltp,id_waktu,id_lokasi,id_dim_pasien,id_posyandu,id_dim_kehamilan,tipe_pasien,id_petugas,berat_badan,tinggi_badan,lingkar_kepala,tekanan_darah,status_stunting,status_gizi,flag_stunting,flag_gizi_buruk,flag_perlu_rujukan,flag_kek,flag_anemia,flag_risiko_tinggi&quot; +
+&quot;id_hasil_pemeriksaan_oltp,id_jadwal_imunisasi_oltp,id_waktu,id_lokasi,id_dim_pasien,id_posyandu,id_dim_kehamilan,tipe_pasien,id_petugas,berat_badan,tinggi_badan,lingkar_kepala,tekanan_darah,status_stunting,status_gizi,flag_stunting,flag_gizi_buruk,flag_perlu_rujukan,flag_kek,flag_anemia,flag_risiko_tinggi&quot; +
 &quot;) VALUES (&quot; +
+&quot;'&quot; + id_hasil_pemeriksaan + &quot;'::int,&quot; +
 (id_jadwal_imunisasi_oltp==null ? &quot;NULL&quot; : &quot;'&quot; + id_jadwal_imunisasi_oltp + &quot;'::int8&quot;) + &quot;,&quot; +
 id_waktu_subq + &quot;,&quot; +
 id_lokasi_subq + &quot;,&quot; +
@@ -153,7 +153,27 @@ id_petugas_subq + &quot;,&quot; +
 (flag_kek==null ? &quot;NULL&quot; : &quot;'&quot; + flag_kek + &quot;'::int8&quot;) + &quot;,&quot; +
 (flag_anemia==null ? &quot;NULL&quot; : &quot;'&quot; + flag_anemia + &quot;'::int8&quot;) + &quot;,&quot; +
 (flag_risiko_tinggi==null ? &quot;NULL&quot; : &quot;'&quot; + flag_risiko_tinggi + &quot;'::int8&quot;) +
-&quot;)&quot;;
+&quot;) ON CONFLICT (id_hasil_pemeriksaan_oltp) DO UPDATE SET &quot; +
+&quot;id_jadwal_imunisasi_oltp = EXCLUDED.id_jadwal_imunisasi_oltp,&quot; +
+&quot;id_waktu = EXCLUDED.id_waktu,&quot; +
+&quot;id_lokasi = EXCLUDED.id_lokasi,&quot; +
+&quot;id_dim_pasien = EXCLUDED.id_dim_pasien,&quot; +
+&quot;id_posyandu = EXCLUDED.id_posyandu,&quot; +
+&quot;id_dim_kehamilan = EXCLUDED.id_dim_kehamilan,&quot; +
+&quot;tipe_pasien = EXCLUDED.tipe_pasien,&quot; +
+&quot;id_petugas = EXCLUDED.id_petugas,&quot; +
+&quot;berat_badan = EXCLUDED.berat_badan,&quot; +
+&quot;tinggi_badan = EXCLUDED.tinggi_badan,&quot; +
+&quot;lingkar_kepala = EXCLUDED.lingkar_kepala,&quot; +
+&quot;tekanan_darah = EXCLUDED.tekanan_darah,&quot; +
+&quot;status_stunting = EXCLUDED.status_stunting,&quot; +
+&quot;status_gizi = EXCLUDED.status_gizi,&quot; +
+&quot;flag_stunting = EXCLUDED.flag_stunting,&quot; +
+&quot;flag_gizi_buruk = EXCLUDED.flag_gizi_buruk,&quot; +
+&quot;flag_perlu_rujukan = EXCLUDED.flag_perlu_rujukan,&quot; +
+&quot;flag_kek = EXCLUDED.flag_kek,&quot; +
+&quot;flag_anemia = EXCLUDED.flag_anemia,&quot; +
+&quot;flag_risiko_tinggi = EXCLUDED.flag_risiko_tinggi&quot;;
 </jsScript_script>
       </jsScript>
     </jsScripts>
@@ -162,7 +182,7 @@ id_petugas_subq + &quot;,&quot; +
         <name>sql</name>
         <rename>sql</rename>
         <type>String</type>
-        <length>4000</length>
+        <length>5000</length>
         <precision>-1</precision>
         <replace>N</replace>
       </field>
@@ -174,7 +194,7 @@ id_petugas_subq + &quot;,&quot; +
     </GUI>
   </transform>
   <transform>
-    <name>Execute INSERT</name>
+    <name>Execute UPSERT</name>
     <type>ExecSqlRow</type>
     <description/>
     <distribute>Y</distribute>

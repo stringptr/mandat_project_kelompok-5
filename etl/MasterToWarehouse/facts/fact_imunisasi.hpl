@@ -3,7 +3,7 @@
   <info>
     <name>fact_imunisasi</name>
     <name_sync_with_filename>Y</name_sync_with_filename>
-    <description>Load immunization facts with dimensions lookup</description>
+    <description>Load immunization facts with dimensions lookup - Incremental</description>
     <extended_description/>
     <pipeline_version/>
     <pipeline_type>Normal</pipeline_type>
@@ -15,7 +15,7 @@
     <created_user>-</created_user>
     <created_date>2026/06/13 13:00:00.000</created_date>
     <modified_user>-</modified_user>
-    <modified_date>2026/06/13 16:30:00.000</modified_date>
+    <modified_date>2026/06/14 22:50:00.000</modified_date>
   </info>
   <notepads>
   </notepads>
@@ -27,7 +27,7 @@
     </hop>
     <hop>
       <from>Build SQL</from>
-      <to>Execute INSERT</to>
+      <to>Execute UPSERT</to>
       <enabled>Y</enabled>
     </hop>
   </order>
@@ -106,18 +106,28 @@ if (tanggal_imunisasi != null &amp;&amp; tanggal_target != null) {
 
 sql =
 &quot;INSERT INTO public.FACT_IMUNISASI (&quot; +
-&quot;id_waktu,id_lokasi,id_dim_pasien,id_posyandu,nama_vaksin,status_imunisasi,flag_terlaksana,flag_terlambat,hari_keterlambatan&quot; +
+&quot;id_imunisasi_oltp,id_waktu,id_lokasi,id_dim_pasien,id_posyandu,nama_vaksin,status_imunisasi,flag_terlaksana,flag_terlambat,hari_keterlambatan&quot; +
 &quot;) VALUES (&quot; +
+&quot;'&quot; + id_imunisasi + &quot;'::int,&quot; +
 &quot;(SELECT id_waktu FROM DIM_WAKTU WHERE tanggal = '&quot; + tanggal_imunisasi + &quot;'::date),&quot; +
 &quot;(SELECT id_lokasi FROM DIM_LOKASI WHERE id_lokasi_oltp = '&quot; + id_lokasi_oltp + &quot;'::int),&quot; +
-&quot;(SELECT id_dim_pasien FROM DIM_PASIEN WHERE id_pasien_oltp = '&quot; + id_pasien + &quot;'::int),&quot; +
+&quot;(SELECT id_dim_pasien FROM DIM_PASIEN WHERE id_pasien_oltp = '&quot; + id_pasien + &quot;'::int LIMIT 1),&quot; +
 &quot;(SELECT id_posyandu FROM DIM_POSYANDU WHERE id_posyandu_oltp = '&quot; + id_posyandu_oltp + &quot;'::int),&quot; +
 &quot;'&quot; + nama_vaksin.replace(/'/g,&quot;''&quot;) + &quot;',&quot; +
 &quot;'&quot; + status_imunisasi.replace(/'/g,&quot;''&quot;) + &quot;',&quot; +
 &quot;'&quot; + flag_terlaksana + &quot;'::int,&quot; +
 &quot;'&quot; + flag_terlambat + &quot;'::int,&quot; +
 &quot;'&quot; + hari_keterlambatan + &quot;'::int&quot; +
-&quot;)&quot;;
+&quot;) ON CONFLICT (id_imunisasi_oltp) DO UPDATE SET &quot; +
+&quot;id_waktu = EXCLUDED.id_waktu,&quot; +
+&quot;id_lokasi = EXCLUDED.id_lokasi,&quot; +
+&quot;id_dim_pasien = EXCLUDED.id_dim_pasien,&quot; +
+&quot;id_posyandu = EXCLUDED.id_posyandu,&quot; +
+&quot;nama_vaksin = EXCLUDED.nama_vaksin,&quot; +
+&quot;status_imunisasi = EXCLUDED.status_imunisasi,&quot; +
+&quot;flag_terlaksana = EXCLUDED.flag_terlaksana,&quot; +
+&quot;flag_terlambat = EXCLUDED.flag_terlambat,&quot; +
+&quot;hari_keterlambatan = EXCLUDED.hari_keterlambatan&quot;;
 </jsScript_script>
       </jsScript>
     </jsScripts>
@@ -162,7 +172,7 @@ sql =
     </GUI>
   </transform>
   <transform>
-    <name>Execute INSERT</name>
+    <name>Execute UPSERT</name>
     <type>ExecSqlRow</type>
     <description/>
     <distribute>Y</distribute>

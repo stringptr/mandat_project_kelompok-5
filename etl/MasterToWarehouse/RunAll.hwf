@@ -404,8 +404,12 @@
       <height>130</height>
       <xloc>20</xloc>
       <yloc>360</yloc>
-      <note>Master to Warehouse ETL - Execution Order:
+      <note>Master to Warehouse ETL - Incremental (UPSERT)
 
+All pipelines use INSERT ... ON CONFLICT ... DO UPDATE/NOTHING.
+Safe to re-run without duplicates. No TRUNCATE needed.
+
+Execution Order:
 Phase 1 (Parallel): dim_waktu, dim_lokasi, dim_petugas
 Phase 2 (Sequential): dim_posyandu (dep: dim_petugas)
 Phase 3 (Sequential): dim_pasien (dep: dim_posyandu, dim_waktu, dim_lokasi)

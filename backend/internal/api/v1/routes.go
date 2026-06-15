@@ -3,11 +3,15 @@ package v1
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stringptr/SiGizi/backend/internal/config"
+	artikelDomain "github.com/stringptr/SiGizi/backend/internal/domain/artikel"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
+	imunisasiDomain "github.com/stringptr/SiGizi/backend/internal/domain/imunisasi"
+	tindaklanjutDomain "github.com/stringptr/SiGizi/backend/internal/domain/tindaklanjut"
 	jwtblacklistDomain "github.com/stringptr/SiGizi/backend/internal/domain/jwtblacklist"
 	lokasiDomain "github.com/stringptr/SiGizi/backend/internal/domain/lokasi"
 	notificationDomain "github.com/stringptr/SiGizi/backend/internal/domain/notification"
 	pasienDomain "github.com/stringptr/SiGizi/backend/internal/domain/pasien"
+	pemeriksaanDomain "github.com/stringptr/SiGizi/backend/internal/domain/pemeriksaan"
 	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
 	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 	"github.com/stringptr/SiGizi/backend/internal/middleware"
@@ -16,15 +20,19 @@ import (
 )
 
 type Dependency struct {
-	AuthConfig         config.AuthConfig
-	JWTUtil            jwtutils.JWT
-	UserAccountHandler userAccountDomain.Handler
-	AuthHandler        authDomain.Handler
-	BlacklistRepo      jwtblacklistDomain.Repo
-	NotifPublisher     notificationDomain.Publisher
-	NotifHandler       notificationDomain.Handler
-	PasienHandler      pasienDomain.Handler
-	LokasiHandler      lokasiDomain.Handler
+	AuthConfig          config.AuthConfig
+	JWTUtil             jwtutils.JWT
+	UserAccountHandler  userAccountDomain.Handler
+	AuthHandler         authDomain.Handler
+	BlacklistRepo       jwtblacklistDomain.Repo
+	NotifPublisher      notificationDomain.Publisher
+	NotifHandler        notificationDomain.Handler
+	PasienHandler       pasienDomain.Handler
+	LokasiHandler       lokasiDomain.Handler
+	PemeriksaanHandler  pemeriksaanDomain.Handler
+	ImunisasiHandler    imunisasiDomain.Handler
+	ArtikelHandler      artikelDomain.Handler
+	TindakLanjutHandler tindaklanjutDomain.Handler
 }
 
 func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
@@ -84,4 +92,36 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Get(adminGroup, "/monitoring/pasien/{id}", d.PasienHandler.GetByID)
 	huma.Patch(adminGroup, "/pasien/{id}", d.PasienHandler.Update)
 	huma.Delete(bidanGroup, "/pasien/{id}", d.PasienHandler.Delete)
+
+	huma.Post(adminGroup, "/monitoring/pemeriksaan", d.PemeriksaanHandler.Create)
+	huma.Get(adminGroup, "/monitoring/pemeriksaan/{id}", d.PemeriksaanHandler.GetByID)
+	huma.Put(adminGroup, "/monitoring/pemeriksaan/{id}", d.PemeriksaanHandler.Update)
+	huma.Delete(bidanGroup, "/monitoring/pemeriksaan/{id}", d.PemeriksaanHandler.Delete)
+	huma.Patch(bidanGroup, "/monitoring/pemeriksaan/{id}/verify", d.PemeriksaanHandler.Verify)
+	huma.Get(bidanGroup, "/monitoring/pemeriksaan/pending", d.PemeriksaanHandler.GetPending)
+
+	huma.Get(adminGroup, "/imunisasi", d.ImunisasiHandler.GetAll)
+	huma.Get(adminGroup, "/imunisasi/{id}", d.ImunisasiHandler.GetByID)
+	huma.Post(bidanGroup, "/imunisasi", d.ImunisasiHandler.Create)
+	huma.Put(bidanGroup, "/imunisasi/{id}", d.ImunisasiHandler.Update)
+	huma.Delete(bidanGroup, "/imunisasi/{id}", d.ImunisasiHandler.Delete)
+	huma.Patch(bidanGroup, "/imunisasi/{id}/realisasi", d.ImunisasiHandler.Realisasi)
+	huma.Get(adminGroup, "/imunisasi/pasien/{id_pasien}", d.ImunisasiHandler.GetByPasienID)
+	huma.Get(adminGroup, "/imunisasi/statistik", d.ImunisasiHandler.GetStatistik)
+
+	huma.Get(adminGroup, "/artikel", d.ArtikelHandler.GetAllPublished)
+	huma.Get(adminGroup, "/artikel/{id}", d.ArtikelHandler.GetByID)
+	huma.Post(bidanGroup, "/artikel", d.ArtikelHandler.Create)
+	huma.Patch(bidanGroup, "/artikel/{id}", d.ArtikelHandler.Update)
+	huma.Delete(dinkesGroup, "/artikel/{id}", d.ArtikelHandler.Delete)
+	huma.Patch(dinkesGroup, "/artikel/{id}/review", d.ArtikelHandler.Review)
+	huma.Get(dinkesGroup, "/artikel/pending", d.ArtikelHandler.GetPending)
+
+	huma.Get(bidanGroup, "/tindak-lanjut/pasien", d.TindakLanjutHandler.GetPasienTindakLanjut)
+	huma.Get(bidanGroup, "/tindak-lanjut/pasien/{id}", d.TindakLanjutHandler.GetDetailPasienByID)
+	huma.Post(bidanGroup, "/tindak-lanjut", d.TindakLanjutHandler.CreateTindakLanjut)
+	huma.Patch(bidanGroup, "/rujukan/{id}/status", d.TindakLanjutHandler.UpdateStatusRujukan)
+	huma.Get(bidanGroup, "/tindak-lanjut/status", d.TindakLanjutHandler.GetStatusTindakLanjut)
+	huma.Get(dinkesGroup, "/laporan/tindak-lanjut", d.TindakLanjutHandler.GetLaporanTindakLanjut)
+	huma.Get(userGroup, "/tindak-lanjut/{id}", d.TindakLanjutHandler.GetDetailTindakLanjutByID)
 }

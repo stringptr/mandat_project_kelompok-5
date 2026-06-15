@@ -11,13 +11,17 @@ import (
 	v1 "github.com/stringptr/SiGizi/backend/internal/api/v1"
 	"github.com/stringptr/SiGizi/backend/internal/config"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
+	artikelFeature "github.com/stringptr/SiGizi/backend/internal/feature/artikel"
 	"github.com/stringptr/SiGizi/backend/internal/feature/auditlog"
 	"github.com/stringptr/SiGizi/backend/internal/feature/auth"
 	"github.com/stringptr/SiGizi/backend/internal/feature/bannedip"
+	imunisasiFeature "github.com/stringptr/SiGizi/backend/internal/feature/imunisasi"
+	tindaklanjutFeature "github.com/stringptr/SiGizi/backend/internal/feature/tindaklanjut"
 	"github.com/stringptr/SiGizi/backend/internal/feature/jwtblacklist"
 	lokasiFeature "github.com/stringptr/SiGizi/backend/internal/feature/lokasi"
 	"github.com/stringptr/SiGizi/backend/internal/feature/notification"
 	pasienFeature "github.com/stringptr/SiGizi/backend/internal/feature/pasien"
+	pemeriksaanFeature "github.com/stringptr/SiGizi/backend/internal/feature/pemeriksaan"
 	"github.com/stringptr/SiGizi/backend/internal/feature/userAccount"
 	"github.com/stringptr/SiGizi/backend/internal/feature/userSession"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
@@ -94,6 +98,22 @@ func main() {
 	lokasiService := lokasiFeature.NewService(lokasiRepo)
 	lokasiHandler := lokasiFeature.NewHandler(lokasiService)
 
+	pemeriksaanRepo := pemeriksaanFeature.NewRepo(pool)
+	pemeriksaanService := pemeriksaanFeature.NewService(pemeriksaanRepo, auditLogRepo, notifRepo, notifPublisher)
+	pemeriksaanHandler := pemeriksaanFeature.NewHandler(pemeriksaanService)
+
+	imunisasiRepo := imunisasiFeature.NewRepo(pool)
+	imunisasiService := imunisasiFeature.NewService(imunisasiRepo, auditLogRepo, notifRepo, notifPublisher)
+	imunisasiHandler := imunisasiFeature.NewHandler(imunisasiService)
+
+	artikelRepo := artikelFeature.NewRepo(pool)
+	artikelService := artikelFeature.NewService(artikelRepo, auditLogRepo, notifRepo, notifPublisher)
+	artikelHandler := artikelFeature.NewHandler(artikelService)
+
+	tindaklanjutRepo := tindaklanjutFeature.NewRepo(pool)
+	tindaklanjutService := tindaklanjutFeature.NewService(tindaklanjutRepo, auditLogRepo, notifRepo, notifPublisher)
+	tindaklanjutHandler := tindaklanjutFeature.NewHandler(tindaklanjutService)
+
 	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo, auditLogRepo, mail.New(cfg.MailConfig))
 	authHandler := auth.NewHandler(authService, &jwtUtil)
 
@@ -162,6 +182,10 @@ func main() {
 		NotifHandler:       notifHandler,
 		PasienHandler:      pasienHandler,
 		LokasiHandler:      lokasiHandler,
+		PemeriksaanHandler: pemeriksaanHandler,
+		ImunisasiHandler:   imunisasiHandler,
+		ArtikelHandler:     artikelHandler,
+		TindakLanjutHandler: tindaklanjutHandler,
 	})
 
 	log.Printf("server starting on %s:%s", cfg.Host, cfg.Port)

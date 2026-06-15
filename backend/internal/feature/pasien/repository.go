@@ -105,6 +105,27 @@ func (r *Repo) CreateAnak(ctx context.Context, data *model.Anak) error {
 	return err
 }
 
+func (r *Repo) CheckPasienOwnership(ctx context.Context, idPasien int32, idUser int32) (bool, error) {
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM pasien p
+			LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
+			WHERE p.id_pasien = #1
+			  AND p.is_deleted = false
+			  AND (p.id_pasien = #2 OR a.id_wali = #2)
+		) AS owned
+	`
+	var result struct{ Owned bool }
+	err := pgxV5.Query(ctx, RawStatement(query, RawArgs{"#1": idPasien, "#2": idUser}), r.db, &result)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			return false, nil
+		}
+		return false, err
+	}
+	return result.Owned, nil
+}
+
 func (r *Repo) GetAllPaginated(ctx context.Context, page int, perPage int, q string) ([]*pasienDomain.PasienJoinRow, int, error) {
 	offset := int64((page - 1) * perPage)
 

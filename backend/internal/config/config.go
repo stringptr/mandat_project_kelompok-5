@@ -45,13 +45,13 @@ type RestrictAuthConfig struct {
 }
 
 type MailConfig struct {
-	Provider  string
-	Host      string
-	Port      int
-	Username  string
-	Password  string
-	FromEmail string
-	FromName  string
+	Provider     string
+	Host         string
+	Port         int
+	Username     string
+	Password     string
+	FromEmail    string
+	FromName     string
 	ResendAPIKey string
 }
 
@@ -72,7 +72,7 @@ func Load() *Config {
 	natsPort := getEnv("NATS_PORT", "4222")
 	natsToken := getEnv("NATS_TOKEN", "")
 
-	restrictAuthDuration := getEnv("BANNED_AUTH_DURATION", strconv.Itoa(int(15*time.Second)))
+	restrictAuthDuration := getEnv("BANNED_AUTH_DURATION", "15")
 	restrictAuthMaxAttempt := getEnv("BANNED_AUTH_MAX_ATTEMPT", "3")
 	restrictAuthDurationInt, _ := strconv.Atoi(restrictAuthDuration)
 	restrictAuthMaxAttemptInt, _ := strconv.Atoi(restrictAuthMaxAttempt)

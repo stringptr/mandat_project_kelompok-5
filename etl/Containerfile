@@ -1,0 +1,20 @@
+FROM apache/hop-web:2.17.0
+
+USER root
+
+RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
+RUN mkdir /opt/venv
+RUN chmod 777 /opt/venv
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY cron/crontab /etc/cron.d/hop-cron
+COPY cron/run-MasterToWarehouse.sh /files/projects/imunisasi/cron/run-MasterToWarehouse.sh
+
+RUN chmod 0644 /etc/cron.d/hop-cron && \
+  chmod +x /files/projects/imunisasi/cron/run-MasterToWarehouse.sh && \
+  crontab /etc/cron.d/hop-cron
+
+RUN chown -R hop:hop /home/hop/
+
+USER hop

@@ -17,6 +17,7 @@ type Repo interface {
 	Delete(ctx context.Context, idHasilPemeriksaan int32) error
 	GetPendingVerification(ctx context.Context) ([]*PendingJoinRow, error)
 	GetDetailJoinByID(ctx context.Context, idHasilPemeriksaan int32) (*DetailJoinRow, error)
+	CheckPemeriksaanOwnership(ctx context.Context, idHasilPemeriksaan int32, idUser int32) (bool, error)
 }
 
 type PendingJoinRow struct {

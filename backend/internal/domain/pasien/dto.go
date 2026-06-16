@@ -26,6 +26,7 @@ type GetAllPasienRequest struct {
 	Page    int    `query:"page" minimum:"1" default:"1"`
 	PerPage int    `query:"per_page" minimum:"1" maximum:"100" default:"20"`
 	Q       string `query:"q" maxLength:"255"`
+	IDUser  int32  `json:"-"`
 }
 
 type SearchPasienRequest struct {

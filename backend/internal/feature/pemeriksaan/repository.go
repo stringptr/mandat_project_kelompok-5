@@ -135,6 +135,29 @@ func (r *Repo) Delete(ctx context.Context, idHasilPemeriksaan int32) error {
 	return err
 }
 
+func (r *Repo) CheckPemeriksaanOwnership(ctx context.Context, idHasilPemeriksaan int32, idUser int32) (bool, error) {
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM hasil_pemeriksaan hp
+			JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
+			JOIN pasien p ON p.id_pasien = ji.id_pasien
+			LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
+			WHERE hp.id_hasil_pemeriksaan = #1
+			  AND p.is_deleted = false
+			  AND (p.id_pasien = #2 OR a.id_wali = #2)
+		) AS owned
+	`
+	var result struct{ Owned bool }
+	err := pgxV5.Query(ctx, RawStatement(query, RawArgs{"#1": idHasilPemeriksaan, "#2": idUser}), r.db, &result)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			return false, nil
+		}
+		return false, err
+	}
+	return result.Owned, nil
+}
+
 func (r *Repo) GetPendingVerification(ctx context.Context) ([]*pemeriksaanDomain.PendingJoinRow, error) {
 	sql := `
 		SELECT

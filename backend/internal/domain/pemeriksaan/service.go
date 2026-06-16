@@ -13,4 +13,5 @@ type Service interface {
 	Delete(ctx context.Context, idHasilPemeriksaan int32) *errorutils.Error
 	Verify(ctx context.Context, idHasilPemeriksaan int32, idBidan int32) (*VerifyPemeriksaanResponse, *errorutils.Error)
 	GetPending(ctx context.Context) (*PendingPemeriksaanData, *errorutils.Error)
+	IsOwnPemeriksaan(ctx context.Context, idHasilPemeriksaan int32, idUser int32) (bool, *errorutils.Error)
 }

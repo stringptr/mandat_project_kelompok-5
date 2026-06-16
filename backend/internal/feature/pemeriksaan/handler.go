@@ -34,6 +34,21 @@ func (h *Handler) Create(ctx context.Context, input *httputils.APIRequestInput[*
 func (h *Handler) GetByID(ctx context.Context, input *struct {
 	IDHasilPemeriksaan int32 `path:"id" minimum:"1"`
 }) (*httputils.APIResponseOutput[*pemeriksaanDomain.DetailPemeriksaanResponse], error) {
+	claims := httputils.GetAccessClaim(ctx)
+	if claims == nil {
+		return nil, huma.Error401Unauthorized("Anda harus login untuk mengakses halaman ini.")
+	}
+
+	if !httputils.IsPetugas(claims.Roles) {
+		isOwner, err := h.Service.IsOwnPemeriksaan(ctx, input.IDHasilPemeriksaan, claims.IDUser)
+		if err != nil {
+			return nil, errorutils.ToHumaError(err)
+		}
+		if !isOwner {
+			return nil, huma.Error404NotFound("Data pemeriksaan tidak ditemukan.")
+		}
+	}
+
 	res, err := h.Service.GetByID(ctx, input.IDHasilPemeriksaan)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)

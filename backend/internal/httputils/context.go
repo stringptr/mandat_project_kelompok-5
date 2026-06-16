@@ -39,6 +39,16 @@ func GetRefreshToken(ctx context.Context) uuid.UUID {
 	return uuid.Nil
 }
 
+func IsPetugas(roles []string) bool {
+	for _, r := range roles {
+		switch r {
+		case "ADMIN", "BIDAN", "KADER", "DINKES", "SUPER_ADMIN":
+			return true
+		}
+	}
+	return false
+}
+
 func ReadCookie(ctx huma.Context, name string) (*http.Cookie, error) {
 	c := ctx.Header("Cookie")
 	if c == "" {

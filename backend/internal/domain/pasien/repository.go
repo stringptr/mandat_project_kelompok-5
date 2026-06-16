@@ -18,8 +18,10 @@ type Repo interface {
 	CreateAnak(ctx context.Context, data *model.Anak) error
 
 	GetAllPaginated(ctx context.Context, page int, perPage int, q string) ([]*PasienJoinRow, int, error)
+	GetAllPaginatedByUser(ctx context.Context, page int, perPage int, q string, idUser int32) ([]*PasienJoinRow, int, error)
 	Search(ctx context.Context, q string) ([]*PasienJoinRow, error)
 	GetDetailByID(ctx context.Context, idPasien int32) (*PasienDetailJoinRow, error)
+	CheckPasienOwnership(ctx context.Context, idPasien int32, idUser int32) (bool, error)
 
 	UpdatePasien(ctx context.Context, data *model.Pasien) error
 	UpdateIbuHamil(ctx context.Context, data *model.IbuHamil) error

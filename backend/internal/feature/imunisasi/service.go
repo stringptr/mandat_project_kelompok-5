@@ -43,6 +43,33 @@ func (s *Service) logAudit(ctx context.Context, endpoint string, tipeAktivitas m
 	})
 }
 
+func (s *Service) GetAllByUser(ctx context.Context, idUser int32) (*imunisasiDomain.ImunisasiListData, *errorutils.Error) {
+	rows, err := s.repo.GetAllByUser(ctx, idUser)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	items := make([]imunisasiDomain.ImunisasiListItem, len(rows))
+	for i, r := range rows {
+		items[i] = imunisasiDomain.ImunisasiListItem{
+			IDImunisasi:     r.IDImunisasi,
+			NamaPasien:      r.NamaPasien,
+			NamaVaksin:      r.NamaVaksin,
+			TanggalJadwal:   r.TanggalJadwal,
+			StatusImunisasi: r.StatusImunisasi,
+		}
+	}
+
+	if items == nil {
+		items = []imunisasiDomain.ImunisasiListItem{}
+	}
+
+	return &imunisasiDomain.ImunisasiListData{
+		Jadwal:    items,
+		TotalData: len(items),
+	}, nil
+}
+
 func (s *Service) GetAll(ctx context.Context) (*imunisasiDomain.ImunisasiListData, *errorutils.Error) {
 	rows, err := s.repo.GetAll(ctx)
 	if err != nil {
@@ -225,6 +252,14 @@ func (s *Service) Realisasi(ctx context.Context, idImunisasi int32, req *imunisa
 		StatusImunisasi:  string(model.StatusImunisasi_Sudah),
 		TanggalRealisasi: req.TanggalRealisasi,
 	}, nil
+}
+
+func (s *Service) IsOwnPasien(ctx context.Context, idPasien int32, idUser int32) (bool, *errorutils.Error) {
+	owned, err := s.repo.CheckPasienOwnership(ctx, idPasien, idUser)
+	if err != nil {
+		return false, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+	return owned, nil
 }
 
 func (s *Service) GetByPasienID(ctx context.Context, idPasien int32) (*imunisasiDomain.RiwayatImunisasiResponse, *errorutils.Error) {

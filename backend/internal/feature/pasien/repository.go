@@ -184,6 +184,67 @@ func (r *Repo) GetAllPaginated(ctx context.Context, page int, perPage int, q str
 	return result, int(countResult.Count), nil
 }
 
+func (r *Repo) GetAllPaginatedByUser(ctx context.Context, page int, perPage int, q string, idUser int32) ([]*pasienDomain.PasienJoinRow, int, error) {
+	offset := int64((page - 1) * perPage)
+
+	p := Pasien.AS("p")
+	ua := UserAccount.AS("ua")
+	pos := Posyandu.AS("pos")
+	anakAlias := Anak.AS("a")
+
+	fromClause := p.
+		INNER_JOIN(ua, ua.IDUser.EQ(p.IDPasien).AND(ua.IsDeleted.EQ(Bool(false)))).
+		INNER_JOIN(pos, pos.IDPosyandu.EQ(p.IDPosyandu).AND(pos.IsDeleted.EQ(Bool(false)))).
+		LEFT_JOIN(anakAlias, anakAlias.IDPasien.EQ(p.IDPasien).AND(anakAlias.IsDeleted.EQ(Bool(false))))
+
+	ownershipCond := p.IDPasien.EQ(Int32(idUser)).OR(anakAlias.IDWali.EQ(Int32(idUser)))
+	conditions := []BoolExpression{p.IsDeleted.EQ(Bool(false)), ownershipCond}
+
+	if q != "" {
+		pattern := "%" + q + "%"
+		nameILike := BoolExp(CustomExpression(ua.Nama, Token("ILIKE"), String(pattern)))
+		nikILike := BoolExp(CustomExpression(ua.Nik, Token("ILIKE"), String(pattern)))
+		conditions = append(conditions, nameILike.OR(nikILike))
+	}
+
+	whereCond := conditions[0]
+	for _, c := range conditions[1:] {
+		whereCond = whereCond.AND(c)
+	}
+
+	var countResult struct{ Count int64 }
+	countStmt := SELECT(COUNT(STAR)).FROM(fromClause).WHERE(whereCond)
+	err := pgxV5.Query(ctx, countStmt, r.db, &countResult)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	jenisIbuHamil := Raw("(SELECT 'Ibu Hamil' FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1)")
+	jenisAnak := Raw("(SELECT 'Anak' FROM anak a WHERE a.id_pasien = p.id_pasien AND a.is_deleted = false LIMIT 1)")
+	subStatus := Raw("(SELECT ih.status_kehamilan::text FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1)")
+
+	var result []*pasienDomain.PasienJoinRow
+	dataStmt := SELECT(
+		p.IDPasien,
+		ua.Nama,
+		ua.Nik,
+		Raw("ua.jenis_kelamin::text"),
+		Raw("ua.tanggal_lahir::text"),
+		pos.NamaPosyandu,
+		COALESCE(jenisIbuHamil, jenisAnak, String("Pasien")).AS("jenis_pasien"),
+		subStatus.AS("status_kehamilan"),
+	).FROM(fromClause).WHERE(whereCond).
+		ORDER_BY(ua.Nama.ASC()).
+		LIMIT(int64(perPage)).
+		OFFSET(offset)
+	err = pgxV5.Query(ctx, dataStmt, r.db, &result)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return result, int(countResult.Count), nil
+}
+
 func (r *Repo) Search(ctx context.Context, q string) ([]*pasienDomain.PasienJoinRow, error) {
 	p := Pasien.AS("p")
 	ua := UserAccount.AS("ua")

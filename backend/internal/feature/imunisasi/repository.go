@@ -23,6 +23,31 @@ func NewRepo(db *pgxpool.Pool) *Repo {
 	return &Repo{db: db}
 }
 
+func (r *Repo) GetAllByUser(ctx context.Context, idUser int32) ([]*imunisasiDomain.ImunisasiJoinRow, error) {
+	sql := `
+		SELECT
+			ji.id_imunisasi,
+			COALESCE(a.nama_anak, ua.nama) AS nama_pasien,
+			ji.nama_vaksin,
+			ji.tanggal_jadwal::text,
+			ji.status_imunisasi::text
+		FROM jadwal_imunisasi ji
+		JOIN pasien p ON p.id_pasien = ji.id_pasien
+		JOIN user_account ua ON ua.id_user = p.id_pasien
+		LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
+		WHERE (p.id_pasien = #1 OR a.id_wali = #1)
+		  AND p.is_deleted = false
+		ORDER BY ji.tanggal_jadwal DESC
+	`
+
+	var rows []*imunisasiDomain.ImunisasiJoinRow
+	err := pgxV5.Query(ctx, RawStatement(sql, RawArgs{"#1": idUser}), r.db, &rows)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
 func (r *Repo) GetAll(ctx context.Context) ([]*imunisasiDomain.ImunisasiJoinRow, error) {
 	sql := `
 		SELECT
@@ -116,6 +141,27 @@ func (r *Repo) GetPasienByID(ctx context.Context, idPasien int32) (*model.Pasien
 		return nil, nil
 	}
 	return results[0], nil
+}
+
+func (r *Repo) CheckPasienOwnership(ctx context.Context, idPasien int32, idUser int32) (bool, error) {
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM pasien p
+			LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
+			WHERE p.id_pasien = #1
+			  AND p.is_deleted = false
+			  AND (p.id_pasien = #2 OR a.id_wali = #2)
+		) AS owned
+	`
+	var result struct{ Owned bool }
+	err := pgxV5.Query(ctx, RawStatement(query, RawArgs{"#1": idPasien, "#2": idUser}), r.db, &result)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			return false, nil
+		}
+		return false, err
+	}
+	return result.Owned, nil
 }
 
 func (r *Repo) GetNamaPasienByID(ctx context.Context, idPasien int32) (string, error) {

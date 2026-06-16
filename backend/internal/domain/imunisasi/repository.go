@@ -8,11 +8,13 @@ import (
 
 type Repo interface {
 	GetAll(ctx context.Context) ([]*ImunisasiJoinRow, error)
+	GetAllByUser(ctx context.Context, idUser int32) ([]*ImunisasiJoinRow, error)
 	GetByID(ctx context.Context, idImunisasi int32) (*model.JadwalImunisasi, error)
 	GetDetailJoinByID(ctx context.Context, idImunisasi int32) (*DetailJoinRow, error)
 	GetByPasienID(ctx context.Context, idPasien int32) ([]*model.JadwalImunisasi, error)
 	GetPasienByID(ctx context.Context, idPasien int32) (*model.Pasien, error)
 	GetNamaPasienByID(ctx context.Context, idPasien int32) (string, error)
+	CheckPasienOwnership(ctx context.Context, idPasien int32, idUser int32) (bool, error)
 	Create(ctx context.Context, data *model.JadwalImunisasi) error
 	Update(ctx context.Context, data *model.JadwalImunisasi) error
 	Delete(ctx context.Context, idImunisasi int32) error

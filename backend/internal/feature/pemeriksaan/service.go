@@ -257,6 +257,14 @@ func (s *Service) Verify(ctx context.Context, idHasilPemeriksaan int32, idBidan 
 	}, nil
 }
 
+func (s *Service) IsOwnPemeriksaan(ctx context.Context, idHasilPemeriksaan int32, idUser int32) (bool, *errorutils.Error) {
+	owned, err := s.repo.CheckPemeriksaanOwnership(ctx, idHasilPemeriksaan, idUser)
+	if err != nil {
+		return false, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+	return owned, nil
+}
+
 func (s *Service) GetPending(ctx context.Context) (*pemeriksaanDomain.PendingPemeriksaanData, *errorutils.Error) {
 	rows, err := s.repo.GetPendingVerification(ctx)
 	if err != nil {

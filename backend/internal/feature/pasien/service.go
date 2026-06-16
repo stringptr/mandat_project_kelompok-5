@@ -173,6 +173,57 @@ func (s *Service) DaftarAnak(ctx context.Context, req *pasienDomain.DaftarAnakRe
 	return nil
 }
 
+func (s *Service) GetAllByUser(ctx context.Context, idUser int32, req *pasienDomain.GetAllPasienRequest) (*pasienDomain.PasienListData, *errorutils.Error) {
+	if req == nil {
+		req = &pasienDomain.GetAllPasienRequest{}
+	}
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	perPage := req.PerPage
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	rows, total, err := s.repo.GetAllPaginatedByUser(ctx, page, perPage, req.Q, idUser)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
+	}
+
+	items := make([]pasienDomain.PasienListItem, len(rows))
+	for i, r := range rows {
+		items[i] = pasienDomain.PasienListItem{
+			IDPasien:        r.IDPasien,
+			Nama:            r.Nama,
+			NIK:             r.NIK,
+			JenisKelamin:    r.JenisKelamin,
+			Umur:            calculateAge(r.TanggalLahir),
+			NamaPosyandu:    r.NamaPosyandu,
+			JenisPasien:     r.JenisPasien,
+			StatusKehamilan: r.StatusKehamilan,
+		}
+	}
+
+	return &pasienDomain.PasienListData{
+		Pasien:    items,
+		TotalData: total,
+		Page:      page,
+		PerPage:   perPage,
+	}, nil
+}
+
+func (s *Service) IsOwnPasien(ctx context.Context, idPasien int32, idUser int32) (bool, *errorutils.Error) {
+	owned, err := s.repo.CheckPasienOwnership(ctx, idPasien, idUser)
+	if err != nil {
+		return false, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
+	}
+	return owned, nil
+}
+
 func (s *Service) GetAll(ctx context.Context, req *pasienDomain.GetAllPasienRequest) (*pasienDomain.PasienListData, *errorutils.Error) {
 	if req == nil {
 		req = &pasienDomain.GetAllPasienRequest{}

@@ -3,6 +3,7 @@ package pasien
 import (
 	"context"
 
+	"github.com/danielgtaylor/huma/v2"
 	pasienDomain "github.com/stringptr/SiGizi/backend/internal/domain/pasien"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
@@ -35,7 +36,18 @@ func (h *Handler) DaftarAnak(ctx context.Context, input *httputils.APIRequestInp
 }
 
 func (h *Handler) GetAll(ctx context.Context, input *httputils.APIRequestInput[*pasienDomain.GetAllPasienRequest]) (*httputils.APIResponseOutput[*pasienDomain.PasienListData], error) {
-	res, err := h.Service.GetAll(ctx, input.Body)
+	claims := httputils.GetAccessClaim(ctx)
+	if claims == nil {
+		return nil, huma.Error401Unauthorized("Anda harus login untuk mengakses halaman ini.")
+	}
+
+	var res *pasienDomain.PasienListData
+	var err *errorutils.Error
+	if httputils.IsPetugas(claims.Roles) {
+		res, err = h.Service.GetAll(ctx, input.Body)
+	} else {
+		res, err = h.Service.GetAllByUser(ctx, claims.IDUser, input.Body)
+	}
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}
@@ -59,6 +71,21 @@ func (h *Handler) GetByID(ctx context.Context, input *struct {
 	IDPasien int32 `path:"id" minimum:"1"`
 },
 ) (*httputils.APIResponseOutput[*pasienDomain.PasienDetailResponse], error) {
+	claims := httputils.GetAccessClaim(ctx)
+	if claims == nil {
+		return nil, huma.Error401Unauthorized("Anda harus login untuk mengakses halaman ini.")
+	}
+
+	if !httputils.IsPetugas(claims.Roles) {
+		isOwner, err := h.Service.IsOwnPasien(ctx, input.IDPasien, claims.IDUser)
+		if err != nil {
+			return nil, errorutils.ToHumaError(err)
+		}
+		if !isOwner {
+			return nil, huma.Error404NotFound("Data pasien tidak ditemukan.")
+		}
+	}
+
 	res, err := h.Service.GetByID(ctx, input.IDPasien)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)

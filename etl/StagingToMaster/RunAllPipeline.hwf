@@ -792,12 +792,19 @@
     <hop>
       <from>notifikasi.hpl</from>
       <to>user_session.hpl</to>
-      <enabled>Y</enabled>
+      <enabled>N</enabled>
       <evaluation>Y</evaluation>
       <unconditional>N</unconditional>
     </hop>
     <hop>
       <from>user_session.hpl</from>
+      <to>audit_log.hpl</to>
+      <enabled>N</enabled>
+      <evaluation>Y</evaluation>
+      <unconditional>N</unconditional>
+    </hop>
+    <hop>
+      <from>notifikasi.hpl</from>
       <to>audit_log.hpl</to>
       <enabled>Y</enabled>
       <evaluation>Y</evaluation>

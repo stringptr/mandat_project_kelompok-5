@@ -45,7 +45,6 @@
     <single_statement>N</single_statement>
     <sql>TRUNCATE TABLE
 audit_log,
-user_session,
 notifikasi,
 rujukan,
 tindak_lanjut,

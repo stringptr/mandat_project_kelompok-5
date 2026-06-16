@@ -5,9 +5,7 @@ name: Go Backend Integration Test
 
 on:
   push:
-    branches: ["main"]
   pull_request:
-    branches: ["main"]
 
 permissions:
   contents: read
@@ -20,5 +18,7 @@ jobs:
       - name: Start Podman socket
         run: systemctl --user enable --now podman.socket && export
           DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock
+      - name: Copy .env.example
+        run: cp .env.example .env
       - name: Run integration tests compose
         run: podman compose -f compose.test.yaml up --abort-on-container-exit

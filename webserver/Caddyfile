@@ -2,7 +2,27 @@
 	rate_limit {
 		zone global_zone {
 			key {remote_host}
-			events 100
+			events 300
+			window 1m
+		}
+	}
+
+	handle /* {
+		handle_path /api* {
+			reverse_proxy backend:8080
+		}
+
+		handle {
+			reverse_proxy frontend:5173
+		}
+	}
+}
+
+:443 {
+	rate_limit {
+		zone global_zone {
+			key {remote_host}
+			events 300
 			window 1m
 		}
 	}

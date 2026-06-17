@@ -43,8 +43,23 @@ func (s *Service) logAudit(ctx context.Context, endpoint string, tipeAktivitas m
 	})
 }
 
-func (s *Service) GetPasienTindakLanjut(ctx context.Context) (*tindaklanjutDomain.PasienTindakLanjutData, *errorutils.Error) {
-	rows, err := s.repo.GetPasienTindakLanjut(ctx)
+func (s *Service) GetPasienTindakLanjut(ctx context.Context, req *tindaklanjutDomain.GetPasienTindakLanjutRequest) (*tindaklanjutDomain.PasienTindakLanjutData, *errorutils.Error) {
+	if req == nil {
+		req = &tindaklanjutDomain.GetPasienTindakLanjutRequest{}
+	}
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	perPage := req.PerPage
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	rows, total, err := s.repo.GetPasienTindakLanjut(ctx, page, perPage)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
 	}
@@ -66,11 +81,19 @@ func (s *Service) GetPasienTindakLanjut(ctx context.Context) (*tindaklanjutDomai
 
 	return &tindaklanjutDomain.PasienTindakLanjutData{
 		Pasien:    items,
-		TotalData: len(items),
+		TotalData: total,
 	}, nil
 }
 
 func (s *Service) GetDetailPasienByID(ctx context.Context, idPasien int32) (*tindaklanjutDomain.DetailPasienTindakLanjut, *errorutils.Error) {
+	pasien, err := s.repo.GetPasienByID(ctx, idPasien)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+	if pasien == nil {
+		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Data pasien tidak ditemukan."}
+	}
+
 	detailRow, err := s.repo.GetDetailPasienByID(ctx, idPasien)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}

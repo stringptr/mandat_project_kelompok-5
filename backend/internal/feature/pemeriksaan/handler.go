@@ -93,8 +93,23 @@ func (h *Handler) Verify(ctx context.Context, input *struct {
 	return httputils.NewOKOutput(res), nil
 }
 
-func (h *Handler) GetPending(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*pemeriksaanDomain.PendingPemeriksaanData], error) {
-	res, err := h.Service.GetPending(ctx)
+func (h *Handler) GetPending(ctx context.Context, input *pemeriksaanDomain.GetPendingPemeriksaanRequest) (*httputils.APIResponseOutput[*pemeriksaanDomain.PendingPemeriksaanData], error) {
+	if input == nil {
+		input = &pemeriksaanDomain.GetPendingPemeriksaanRequest{}
+	}
+	page := input.Page
+	if page < 1 {
+		page = 1
+	}
+	perPage := input.PerPage
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	res, err := h.Service.GetPending(ctx, page, perPage)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}

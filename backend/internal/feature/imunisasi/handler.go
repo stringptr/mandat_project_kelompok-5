@@ -17,7 +17,7 @@ func NewHandler(service imunisasiDomain.Service) *Handler {
 	return &Handler{Service: service}
 }
 
-func (h *Handler) GetAll(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*imunisasiDomain.ImunisasiListData], error) {
+func (h *Handler) GetAll(ctx context.Context, input *imunisasiDomain.GetAllImunisasiRequest) (*httputils.APIResponseOutput[*imunisasiDomain.ImunisasiListData], error) {
 	claims := httputils.GetAccessClaim(ctx)
 	if claims == nil {
 		return nil, huma.Error401Unauthorized("Anda harus login untuk mengakses halaman ini.")
@@ -26,9 +26,9 @@ func (h *Handler) GetAll(ctx context.Context, input *struct{}) (*httputils.APIRe
 	var res *imunisasiDomain.ImunisasiListData
 	var err *errorutils.Error
 	if httputils.IsPetugas(claims.Roles) {
-		res, err = h.Service.GetAll(ctx)
+		res, err = h.Service.GetAll(ctx, input)
 	} else {
-		res, err = h.Service.GetAllByUser(ctx, claims.IDUser)
+		res, err = h.Service.GetAllByUser(ctx, claims.IDUser, input)
 	}
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)

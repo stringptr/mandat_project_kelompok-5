@@ -1,5 +1,10 @@
 package pemeriksaan
 
+type GetPendingPemeriksaanRequest struct {
+	Page    int `query:"page" minimum:"1" default:"1"`
+	PerPage int `query:"per_page" minimum:"1" maximum:"100" default:"20"`
+}
+
 type CreatePemeriksaanRequest struct {
 	IDJadwalImunisasi int32   `json:"id_jadwal_imunisasi" minimum:"1"`
 	BeratBadan        float64 `json:"berat_badan" minimum:"0"`

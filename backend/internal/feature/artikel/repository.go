@@ -2,7 +2,6 @@ package artikel
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	artikelDomain "github.com/stringptr/SiGizi/backend/internal/domain/artikel"
@@ -46,11 +45,22 @@ func (r *Repo) GetAllPublished(ctx context.Context) ([]*artikelDomain.ArtikelJoi
 		ORDER BY a.tanggal_publish DESC
 	`
 
-	var rows []*artikelDomain.ArtikelJoinRow
-	err := pgxV5.Query(ctx, RawStatement(sql), r.db, &rows)
+	pgxRows, err := r.db.Query(ctx, sql)
 	if err != nil {
 		return nil, err
 	}
+	defer pgxRows.Close()
+
+	var rows []*artikelDomain.ArtikelJoinRow
+	for pgxRows.Next() {
+		var row artikelDomain.ArtikelJoinRow
+		err := pgxRows.Scan(&row.IDArtikel, &row.Judul, &row.Kategori, &row.Ringkasan, &row.NamaPenulis, &row.TanggalPublish)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, &row)
+	}
+
 	return rows, nil
 }
 
@@ -78,22 +88,29 @@ func (r *Repo) GetDetailJoinByID(ctx context.Context, idArtikel int32) (*artikel
 			COALESCE(a.kategori, '') AS kategori,
 			penulis.nama AS nama_penulis,
 			verifikator.nama AS nama_verifikator,
-			a.tanggal_publish::text,
-			a.created_at::text,
-			a.updated_at::text
+			a.tanggal_publish::text AS tanggal_publish,
+			a.created_at::text AS created_at,
+			a.updated_at::text AS updated_at
 		FROM artikel a
 		JOIN user_account penulis ON penulis.id_user = a.id_penulis
 		LEFT JOIN user_account verifikator ON verifikator.id_user = a.id_verifikator
-		WHERE a.id_artikel = #1
+		WHERE a.id_artikel = $1
 		LIMIT 1
 	`
 
-	var row artikelDomain.DetailJoinRow
-	err := pgxV5.Query(ctx, RawStatement(sql, RawArgs{"#1": idArtikel}), r.db, &row)
+	pgxRows, err := r.db.Query(ctx, sql, idArtikel)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows") {
-			return nil, nil
-		}
+		return nil, err
+	}
+	defer pgxRows.Close()
+
+	if !pgxRows.Next() {
+		return nil, nil
+	}
+
+	var row artikelDomain.DetailJoinRow
+	err = pgxRows.Scan(&row.IDArtikel, &row.Judul, &row.IsiArtikel, &row.Kategori, &row.NamaPenulis, &row.NamaVerifikator, &row.TanggalPublish, &row.CreatedAt, &row.UpdatedAt)
+	if err != nil {
 		return nil, err
 	}
 	return &row, nil
@@ -113,11 +130,22 @@ func (r *Repo) GetPending(ctx context.Context) ([]*artikelDomain.PendingJoinRow,
 		ORDER BY a.created_at DESC
 	`
 
-	var rows []*artikelDomain.PendingJoinRow
-	err := pgxV5.Query(ctx, RawStatement(sql), r.db, &rows)
+	pgxRows, err := r.db.Query(ctx, sql)
 	if err != nil {
 		return nil, err
 	}
+	defer pgxRows.Close()
+
+	var rows []*artikelDomain.PendingJoinRow
+	for pgxRows.Next() {
+		var row artikelDomain.PendingJoinRow
+		err := pgxRows.Scan(&row.IDArtikel, &row.Judul, &row.NamaPenulis, &row.CreatedAt, &row.StatusArtikel)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, &row)
+	}
+
 	return rows, nil
 }
 

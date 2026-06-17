@@ -19,7 +19,7 @@ type Repo interface {
 
 	GetAllPaginated(ctx context.Context, page int, perPage int, q string) ([]*PasienJoinRow, int, error)
 	GetAllPaginatedByUser(ctx context.Context, page int, perPage int, q string, idUser int32) ([]*PasienJoinRow, int, error)
-	Search(ctx context.Context, q string) ([]*PasienJoinRow, error)
+	Search(ctx context.Context, q string, page int, perPage int) ([]*PasienJoinRow, int, error)
 	GetDetailByID(ctx context.Context, idPasien int32) (*PasienDetailJoinRow, error)
 	CheckPasienOwnership(ctx context.Context, idPasien int32, idUser int32) (bool, error)
 

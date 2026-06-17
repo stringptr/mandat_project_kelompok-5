@@ -7,7 +7,7 @@ import (
 )
 
 type Handler interface {
-	GetPasienTindakLanjut(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*PasienTindakLanjutData], error)
+	GetPasienTindakLanjut(ctx context.Context, input *GetPasienTindakLanjutRequest) (*httputils.APIResponseOutput[*PasienTindakLanjutData], error)
 	GetDetailPasienByID(ctx context.Context, input *struct {
 		IDPasien int32 `path:"id" minimum:"1"`
 	}) (*httputils.APIResponseOutput[*DetailPasienTindakLanjut], error)

@@ -43,8 +43,23 @@ func (s *Service) logAudit(ctx context.Context, endpoint string, tipeAktivitas m
 	})
 }
 
-func (s *Service) GetAllByUser(ctx context.Context, idUser int32) (*imunisasiDomain.ImunisasiListData, *errorutils.Error) {
-	rows, err := s.repo.GetAllByUser(ctx, idUser)
+func (s *Service) GetAllByUser(ctx context.Context, idUser int32, req *imunisasiDomain.GetAllImunisasiRequest) (*imunisasiDomain.ImunisasiListData, *errorutils.Error) {
+	if req == nil {
+		req = &imunisasiDomain.GetAllImunisasiRequest{}
+	}
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	perPage := req.PerPage
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	rows, total, err := s.repo.GetAllByUser(ctx, idUser, page, perPage, req.Q)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
 	}
@@ -66,12 +81,27 @@ func (s *Service) GetAllByUser(ctx context.Context, idUser int32) (*imunisasiDom
 
 	return &imunisasiDomain.ImunisasiListData{
 		Jadwal:    items,
-		TotalData: len(items),
+		TotalData: total,
 	}, nil
 }
 
-func (s *Service) GetAll(ctx context.Context) (*imunisasiDomain.ImunisasiListData, *errorutils.Error) {
-	rows, err := s.repo.GetAll(ctx)
+func (s *Service) GetAll(ctx context.Context, req *imunisasiDomain.GetAllImunisasiRequest) (*imunisasiDomain.ImunisasiListData, *errorutils.Error) {
+	if req == nil {
+		req = &imunisasiDomain.GetAllImunisasiRequest{}
+	}
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	perPage := req.PerPage
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	rows, total, err := s.repo.GetAll(ctx, page, perPage, req.Q)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
 	}
@@ -93,7 +123,7 @@ func (s *Service) GetAll(ctx context.Context) (*imunisasiDomain.ImunisasiListDat
 
 	return &imunisasiDomain.ImunisasiListData{
 		Jadwal:    items,
-		TotalData: len(items),
+		TotalData: total,
 	}, nil
 }
 

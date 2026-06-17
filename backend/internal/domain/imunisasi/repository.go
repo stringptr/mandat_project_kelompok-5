@@ -7,8 +7,8 @@ import (
 )
 
 type Repo interface {
-	GetAll(ctx context.Context) ([]*ImunisasiJoinRow, error)
-	GetAllByUser(ctx context.Context, idUser int32) ([]*ImunisasiJoinRow, error)
+	GetAll(ctx context.Context, page int, perPage int, q string) ([]*ImunisasiJoinRow, int, error)
+	GetAllByUser(ctx context.Context, idUser int32, page int, perPage int, q string) ([]*ImunisasiJoinRow, int, error)
 	GetByID(ctx context.Context, idImunisasi int32) (*model.JadwalImunisasi, error)
 	GetDetailJoinByID(ctx context.Context, idImunisasi int32) (*DetailJoinRow, error)
 	GetByPasienID(ctx context.Context, idPasien int32) ([]*model.JadwalImunisasi, error)
@@ -42,6 +42,6 @@ type DetailJoinRow struct {
 }
 
 type StatistikRow struct {
-	TotalTarget int32
+	TotalTarget    int32
 	TotalRealisasi int32
 }

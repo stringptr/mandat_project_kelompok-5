@@ -7,8 +7,8 @@ import (
 )
 
 type Service interface {
-	GetAll(ctx context.Context) (*ImunisasiListData, *errorutils.Error)
-	GetAllByUser(ctx context.Context, idUser int32) (*ImunisasiListData, *errorutils.Error)
+	GetAll(ctx context.Context, req *GetAllImunisasiRequest) (*ImunisasiListData, *errorutils.Error)
+	GetAllByUser(ctx context.Context, idUser int32, req *GetAllImunisasiRequest) (*ImunisasiListData, *errorutils.Error)
 	GetByID(ctx context.Context, idImunisasi int32) (*ImunisasiDetail, *errorutils.Error)
 	Create(ctx context.Context, req *CreateImunisasiRequest) (*CreateImunisasiResponse, *errorutils.Error)
 	Update(ctx context.Context, req *UpdateImunisasiRequest, idImunisasi int32) (*UpdateImunisasiResponse, *errorutils.Error)

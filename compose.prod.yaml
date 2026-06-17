@@ -106,10 +106,6 @@ services:
     build:
       context: ./migrations
       dockerfile: Containerfile
-    develop:
-      watch:
-        - action: rebuild
-          path: /app/Containerfile
     volumes:
       - ./migrations:/app:z
       - go_cache:/go/pkg/mod:z
@@ -130,10 +126,6 @@ services:
     build:
       context: ./migrations
       dockerfile: Containerfile
-    develop:
-      watch:
-        - action: rebuild
-          path: /app/Containerfile
     volumes:
       - ./migrations:/app:z
       - go_cache:/go/pkg/mod:z
@@ -154,10 +146,6 @@ services:
     build:
       context: ./migrations
       dockerfile: Containerfile
-    develop:
-      watch:
-        - action: rebuild
-          path: /app/Containerfile
     volumes:
       - ./migrations:/app:z
       - go_cache:/go/pkg/mod:z

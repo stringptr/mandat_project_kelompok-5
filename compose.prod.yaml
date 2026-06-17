@@ -108,7 +108,6 @@ services:
       dockerfile: Containerfile
     volumes:
       - ./migrations:/app:z
-      - go_cache:/go/pkg/mod:z
     working_dir: /app
     environment:
       GOOSE_DRIVER: postgres
@@ -128,7 +127,6 @@ services:
       dockerfile: Containerfile
     volumes:
       - ./migrations:/app:z
-      - go_cache:/go/pkg/mod:z
     working_dir: /app
     environment:
       GOOSE_DRIVER: postgres
@@ -148,7 +146,6 @@ services:
       dockerfile: Containerfile
     volumes:
       - ./migrations:/app:z
-      - go_cache:/go/pkg/mod:z
     working_dir: /app
     environment:
       GOOSE_DRIVER: mssql

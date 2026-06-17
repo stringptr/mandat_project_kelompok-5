@@ -267,7 +267,7 @@ func (s *Service) GetAll(ctx context.Context, req *pasienDomain.GetAllPasienRequ
 	}, nil
 }
 
-func (s *Service) Search(ctx context.Context, req *pasienDomain.SearchPasienRequest) ([]*pasienDomain.PasienListItem, *errorutils.Error) {
+func (s *Service) Search(ctx context.Context, req *pasienDomain.SearchPasienRequest) (*pasienDomain.SearchPasienResponseData, *errorutils.Error) {
 	if req == nil {
 		req = &pasienDomain.SearchPasienRequest{}
 	}
@@ -275,14 +275,26 @@ func (s *Service) Search(ctx context.Context, req *pasienDomain.SearchPasienRequ
 		return nil, &errorutils.Error{Status: http.StatusBadRequest, Message: "Parameter pencarian (q) wajib diisi."}
 	}
 
-	rows, err := s.repo.Search(ctx, req.Q)
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	perPage := req.PerPage
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	rows, total, err := s.repo.Search(ctx, req.Q, page, perPage)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 
-	items := make([]*pasienDomain.PasienListItem, len(rows))
+	items := make([]pasienDomain.PasienListItem, len(rows))
 	for i, r := range rows {
-		items[i] = &pasienDomain.PasienListItem{
+		items[i] = pasienDomain.PasienListItem{
 			IDPasien:        r.IDPasien,
 			Nama:            r.Nama,
 			NIK:             r.NIK,
@@ -294,7 +306,16 @@ func (s *Service) Search(ctx context.Context, req *pasienDomain.SearchPasienRequ
 		}
 	}
 
-	return items, nil
+	if items == nil {
+		items = []pasienDomain.PasienListItem{}
+	}
+
+	return &pasienDomain.SearchPasienResponseData{
+		Pasien:    items,
+		TotalData: total,
+		Page:      page,
+		PerPage:   perPage,
+	}, nil
 }
 
 func (s *Service) GetByID(ctx context.Context, idPasien int32) (*pasienDomain.PasienDetailResponse, *errorutils.Error) {

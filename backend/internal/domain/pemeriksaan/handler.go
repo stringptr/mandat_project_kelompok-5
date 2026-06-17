@@ -18,5 +18,5 @@ type Handler interface {
 	Verify(ctx context.Context, input *struct {
 		IDHasilPemeriksaan int32 `path:"id" minimum:"1"`
 	}) (*httputils.APIResponseOutput[*VerifyPemeriksaanResponse], error)
-	GetPending(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*PendingPemeriksaanData], error)
+	GetPending(ctx context.Context, input *GetPendingPemeriksaanRequest) (*httputils.APIResponseOutput[*PendingPemeriksaanData], error)
 }

@@ -61,7 +61,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Post(nonAuthenticatedOnlyGroup, "/auth/register", d.AuthHandler.Register)
 	huma.Post(nonAuthenticatedOnlyGroup, "/auth/login", d.AuthHandler.Login)
 
-	huma.Get(nonAuthenticatedOnlyGroup, "/lokasi", d.LokasiHandler.GetLokasi)
+	huma.Get(publicGroup, "/lokasi", d.LokasiHandler.GetLokasi)
 
 	huma.Post(authRefresh, "/auth/refresh", d.AuthHandler.Refresh)
 	huma.Post(authRefresh, "/auth/logout", d.AuthHandler.Logout)

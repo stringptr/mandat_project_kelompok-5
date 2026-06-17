@@ -2,7 +2,7 @@ package tindaklanjut
 
 import (
 	"context"
-	"strings"
+	"fmt"
 	"time"
 
 	tindaklanjutDomain "github.com/stringptr/SiGizi/backend/internal/domain/tindaklanjut"
@@ -14,6 +14,21 @@ import (
 	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+func (r *Repo) GetPasienByID(ctx context.Context, idPasien int32) (*model.Pasien, error) {
+	var results []*model.Pasien
+	stmt := SELECT(Pasien.AllColumns).
+		FROM(Pasien).
+		WHERE(Pasien.IDPasien.EQ(Int32(idPasien)).AND(Pasien.IsDeleted.EQ(Bool(false))))
+	err := pgxV5.Query(ctx, stmt, r.db, &results)
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 0 {
+		return nil, nil
+	}
+	return results[0], nil
+}
 
 var statusRujukanExpr = map[model.StatusRujukan]StringExpression{
 	model.StatusRujukan_Diajukan: enum.StatusRujukan.Diajukan,
@@ -31,12 +46,48 @@ func NewRepo(db *pgxpool.Pool) *Repo {
 	return &Repo{db: db}
 }
 
-func (r *Repo) GetPasienTindakLanjut(ctx context.Context) ([]*tindaklanjutDomain.PasienTindakLanjutJoinRow, error) {
-	sql := `
+func (r *Repo) GetPasienTindakLanjut(ctx context.Context, page int, perPage int) ([]*tindaklanjutDomain.PasienTindakLanjutJoinRow, int, error) {
+	offset := int64((page - 1) * perPage)
+
+	latestHpSubquery := `
+		LEFT JOIN LATERAL (
+			SELECT
+				hp2.id_hasil_pemeriksaan,
+				hp2.status_gizi,
+				hp2.status_stunting,
+				hp2.catatan,
+				hp2.created_at
+			FROM hasil_pemeriksaan hp2
+			JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp2.id_jadwal_imunisasi
+			WHERE ji.id_pasien = p.id_pasien
+			ORDER BY hp2.created_at DESC
+			LIMIT 1
+		) hp ON true
+	`
+
+	fromWhere := `
+		FROM pasien p
+		LEFT JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
+		LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
+	` + latestHpSubquery + `
+		LEFT JOIN tindak_lanjut tl ON tl.id_hasil_pemeriksaan = hp.id_hasil_pemeriksaan
+		WHERE p.is_deleted = false
+			AND hp.status_gizi IS NOT NULL
+			AND hp.status_gizi != 'Gizi Baik'
+			AND tl.id_tindak_lanjut IS NULL
+	`
+
+	var countResult struct{ Count int64 }
+	err := pgxV5.Query(ctx, RawStatement("SELECT COUNT(*)"+fromWhere), r.db, &countResult)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	dataSQL := `
 		SELECT
 			p.id_pasien,
-			COALESCE(a.nama_anak, ua.nama) AS nama_pasien,
-			hp.status_gizi::text,
+			COALESCE(ua.nama, a.nama_anak, '') AS nama_pasien,
+			hp.status_gizi::text AS status_gizi,
 			CASE
 				WHEN hp.status_gizi IN ('Gizi Buruk', 'Gizi Kurang')
 					OR hp.status_stunting IN ('Stunting', 'Stunting Berat', 'Berisiko Stunting')
@@ -44,63 +95,70 @@ func (r *Repo) GetPasienTindakLanjut(ctx context.Context) ([]*tindaklanjutDomain
 				ELSE 'Dalam Pemantauan'
 			END AS status_pasien,
 			hp.created_at::text AS tanggal_pemeriksaan
-		FROM pasien p
-		JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
-		LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
-		LEFT JOIN hasil_pemeriksaan hp ON hp.id_hasil_pemeriksaan = (
-			SELECT hp2.id_hasil_pemeriksaan
-			FROM hasil_pemeriksaan hp2
-			JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp2.id_jadwal_imunisasi
-			WHERE ji.id_pasien = p.id_pasien
-			ORDER BY hp2.created_at DESC
-			LIMIT 1
-		)
-		LEFT JOIN tindak_lanjut tl ON tl.id_hasil_pemeriksaan = hp.id_hasil_pemeriksaan
-		WHERE p.is_deleted = false
-			AND hp.status_gizi IS NOT NULL
-			AND hp.status_gizi != 'Gizi Baik'
-			AND tl.id_tindak_lanjut IS NULL
+	` + fromWhere + `
 		ORDER BY hp.created_at DESC
+		OFFSET $1 LIMIT $2
 	`
 
-	var rows []*tindaklanjutDomain.PasienTindakLanjutJoinRow
-	err := pgxV5.Query(ctx, RawStatement(sql), r.db, &rows)
+	pgxRows, err := r.db.Query(ctx, dataSQL, offset, perPage)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return rows, nil
+	defer pgxRows.Close()
+
+	var rows []*tindaklanjutDomain.PasienTindakLanjutJoinRow
+	for pgxRows.Next() {
+		var row tindaklanjutDomain.PasienTindakLanjutJoinRow
+		err := pgxRows.Scan(&row.IDPasien, &row.NamaPasien, &row.StatusGizi, &row.StatusPasien, &row.TanggalPemeriksaan)
+		if err != nil {
+			return nil, 0, err
+		}
+		rows = append(rows, &row)
+	}
+
+	return rows, int(countResult.Count), nil
 }
 
 func (r *Repo) GetDetailPasienByID(ctx context.Context, idPasien int32) (*tindaklanjutDomain.DetailPasienJoinRow, error) {
 	sql := `
 		SELECT
 			p.id_pasien,
-			COALESCE(a.nama_anak, ua.nama) AS nama_pasien,
-			EXTRACT(YEAR FROM AGE(ua.tanggal_lahir))::int || ' Tahun' AS usia,
-			hp.status_gizi::text,
-			hp.status_stunting::text,
+			COALESCE(ua.nama, '') AS nama_pasien,
+			CASE WHEN ua.tanggal_lahir IS NOT NULL
+				THEN EXTRACT(YEAR FROM AGE(ua.tanggal_lahir))::int || ' Tahun'
+				ELSE ''
+			END AS usia,
+			COALESCE(hp.status_gizi::text, '') AS status_gizi,
+			COALESCE(hp.status_stunting::text, '') AS status_stunting,
 			COALESCE(hp.catatan, '') AS catatan
 		FROM pasien p
-		JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
+		LEFT JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
 		LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
-		LEFT JOIN hasil_pemeriksaan hp ON hp.id_hasil_pemeriksaan = (
-			SELECT hp2.id_hasil_pemeriksaan
+		LEFT JOIN LATERAL (
+			SELECT hp2.id_hasil_pemeriksaan, hp2.status_gizi, hp2.status_stunting, hp2.catatan
 			FROM hasil_pemeriksaan hp2
 			JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp2.id_jadwal_imunisasi
 			WHERE ji.id_pasien = p.id_pasien
 			ORDER BY hp2.created_at DESC
 			LIMIT 1
-		)
-		WHERE p.id_pasien = #1 AND p.is_deleted = false
+		) hp ON true
+		WHERE p.id_pasien = $1 AND p.is_deleted = false
 		LIMIT 1
 	`
 
-	var row tindaklanjutDomain.DetailPasienJoinRow
-	err := pgxV5.Query(ctx, RawStatement(sql, RawArgs{"#1": idPasien}), r.db, &row)
+	pgxRows, err := r.db.Query(ctx, sql, idPasien)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows") {
-			return nil, nil
-		}
+		return nil, err
+	}
+	defer pgxRows.Close()
+
+	if !pgxRows.Next() {
+		return nil, nil
+	}
+
+	var row tindaklanjutDomain.DetailPasienJoinRow
+	err = pgxRows.Scan(&row.IDPasien, &row.NamaPasien, &row.Usia, &row.StatusGizi, &row.StatusStunting, &row.Catatan)
+	if err != nil {
 		return nil, err
 	}
 	return &row, nil
@@ -110,19 +168,30 @@ func (r *Repo) GetRiwayatPemeriksaan(ctx context.Context, idPasien int32) ([]*ti
 	sql := `
 		SELECT
 			hp.created_at::text AS tanggal,
-			hp.berat_badan::float8,
-			hp.tinggi_badan::float8
+			hp.berat_badan::float8 AS berat_badan,
+			hp.tinggi_badan::float8 AS tinggi_badan
 		FROM hasil_pemeriksaan hp
 		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
-		WHERE ji.id_pasien = #1
+		WHERE ji.id_pasien = $1
 		ORDER BY hp.created_at DESC
 	`
 
-	var rows []*tindaklanjutDomain.RiwayatPemeriksaanJoinRow
-	err := pgxV5.Query(ctx, RawStatement(sql, RawArgs{"#1": idPasien}), r.db, &rows)
+	pgxRows, err := r.db.Query(ctx, sql, idPasien)
 	if err != nil {
 		return nil, err
 	}
+	defer pgxRows.Close()
+
+	var rows []*tindaklanjutDomain.RiwayatPemeriksaanJoinRow
+	for pgxRows.Next() {
+		var row tindaklanjutDomain.RiwayatPemeriksaanJoinRow
+		err := pgxRows.Scan(&row.Tanggal, &row.BeratBadan, &row.TinggiBadan)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, &row)
+	}
+
 	return rows, nil
 }
 
@@ -213,26 +282,36 @@ func (r *Repo) UpdateStatusRujukan(ctx context.Context, idRujukan int32, statusR
 func (r *Repo) GetStatusTindakLanjut(ctx context.Context) ([]*tindaklanjutDomain.StatusTindakLanjutJoinRow, error) {
 	sql := `
 		SELECT
-			p.id_pasien,
-			COALESCE(a.nama_anak, ua.nama) AS nama_pasien,
-			tl.status_pasien::text,
+			COALESCE(p.id_pasien, 0) AS id_pasien,
+			COALESCE(ua.nama, '') AS nama_pasien,
+			tl.status_pasien::text AS status_pasien,
 			COALESCE(r.status_rujukan::text, '') AS status_rujukan,
 			COALESCE(r.tanggal_rujukan::text, '') AS tanggal_rujukan
 		FROM tindak_lanjut tl
-		JOIN hasil_pemeriksaan hp ON hp.id_hasil_pemeriksaan = tl.id_hasil_pemeriksaan
-		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
-		JOIN pasien p ON p.id_pasien = ji.id_pasien AND p.is_deleted = false
-		JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
-		LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
+		LEFT JOIN hasil_pemeriksaan hp ON hp.id_hasil_pemeriksaan = tl.id_hasil_pemeriksaan
+		LEFT JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
+		LEFT JOIN pasien p ON p.id_pasien = ji.id_pasien AND p.is_deleted = false
+		LEFT JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
 		LEFT JOIN rujukan r ON r.id_tindak_lanjut = tl.id_tindak_lanjut
 		ORDER BY tl.created_at DESC
 	`
 
-	var rows []*tindaklanjutDomain.StatusTindakLanjutJoinRow
-	err := pgxV5.Query(ctx, RawStatement(sql), r.db, &rows)
+	pgxRows, err := r.db.Query(ctx, sql)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetStatusTindakLanjut query failed: %w", err)
 	}
+	defer pgxRows.Close()
+
+	var rows []*tindaklanjutDomain.StatusTindakLanjutJoinRow
+	for pgxRows.Next() {
+		var row tindaklanjutDomain.StatusTindakLanjutJoinRow
+		err := pgxRows.Scan(&row.IDPasien, &row.NamaPasien, &row.StatusPasien, &row.StatusRujukan, &row.TanggalRujukan)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, &row)
+	}
+
 	return rows, nil
 }
 
@@ -248,17 +327,28 @@ func (r *Repo) GetLaporanTindakLanjut(ctx context.Context) ([]*tindaklanjutDomai
 		JOIN hasil_pemeriksaan hp ON hp.id_hasil_pemeriksaan = tl.id_hasil_pemeriksaan
 		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
 		JOIN pasien p ON p.id_pasien = ji.id_pasien AND p.is_deleted = false
-		JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu
-		JOIN lokasi l ON l.id_lokasi = pos.id_lokasi
+		LEFT JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu
+		LEFT JOIN lokasi l ON l.id_lokasi = pos.id_lokasi
 		GROUP BY l.nama_lokasi
 		ORDER BY l.nama_lokasi
 	`
 
-	var rows []*tindaklanjutDomain.LaporanTindakLanjutJoinRow
-	err := pgxV5.Query(ctx, RawStatement(sql), r.db, &rows)
+	pgxRows, err := r.db.Query(ctx, sql)
 	if err != nil {
 		return nil, err
 	}
+	defer pgxRows.Close()
+
+	var rows []*tindaklanjutDomain.LaporanTindakLanjutJoinRow
+	for pgxRows.Next() {
+		var row tindaklanjutDomain.LaporanTindakLanjutJoinRow
+		err := pgxRows.Scan(&row.Wilayah, &row.JumlahPasienDirujuk, &row.JumlahPasienDiterima, &row.JumlahPasienDiproses)
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, &row)
+	}
+
 	return rows, nil
 }
 
@@ -266,25 +356,32 @@ func (r *Repo) GetDetailTindakLanjutByID(ctx context.Context, idTindakLanjut int
 	sql := `
 		SELECT
 			tl.id_tindak_lanjut,
-			tl.status_pasien::text,
+			tl.status_pasien::text AS status_pasien,
 			tl.catatan_medis,
 			tl.rekomendasi,
-			tl.jadwal_kontrol::text,
-			r.status_rujukan::text,
+			tl.jadwal_kontrol::text AS jadwal_kontrol,
+			r.status_rujukan::text AS status_rujukan,
 			fk.nama_faskes
 		FROM tindak_lanjut tl
 		LEFT JOIN rujukan r ON r.id_tindak_lanjut = tl.id_tindak_lanjut
 		LEFT JOIN fasilitas_kesehatan fk ON fk.id_faskes = r.id_faskes
-		WHERE tl.id_tindak_lanjut = #1
+		WHERE tl.id_tindak_lanjut = $1
 		LIMIT 1
 	`
 
-	var row tindaklanjutDomain.DetailTindakLanjutJoinRow
-	err := pgxV5.Query(ctx, RawStatement(sql, RawArgs{"#1": idTindakLanjut}), r.db, &row)
+	pgxRows, err := r.db.Query(ctx, sql, idTindakLanjut)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows") {
-			return nil, nil
-		}
+		return nil, err
+	}
+	defer pgxRows.Close()
+
+	if !pgxRows.Next() {
+		return nil, nil
+	}
+
+	var row tindaklanjutDomain.DetailTindakLanjutJoinRow
+	err = pgxRows.Scan(&row.IDTindakLanjut, &row.StatusPasien, &row.CatatanMedis, &row.Rekomendasi, &row.JadwalKontrol, &row.StatusRujukan, &row.NamaFaskes)
+	if err != nil {
 		return nil, err
 	}
 	return &row, nil

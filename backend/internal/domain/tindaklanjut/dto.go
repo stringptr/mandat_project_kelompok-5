@@ -1,5 +1,10 @@
 package tindaklanjut
 
+type GetPasienTindakLanjutRequest struct {
+	Page    int    `query:"page" minimum:"1" default:"1"`
+	PerPage int    `query:"per_page" minimum:"1" maximum:"100" default:"20"`
+}
+
 type PasienTindakLanjutItem struct {
 	IDPasien           int32  `json:"id_pasien"`
 	NamaPasien         string `json:"nama_pasien"`

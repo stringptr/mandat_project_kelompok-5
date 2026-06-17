@@ -30,7 +30,16 @@ type GetAllPasienRequest struct {
 }
 
 type SearchPasienRequest struct {
-	Q string `query:"q" maxLength:"255"`
+	Q       string `query:"q" maxLength:"255"`
+	Page    int    `query:"page" minimum:"1" default:"1"`
+	PerPage int    `query:"per_page" minimum:"1" maximum:"100" default:"20"`
+}
+
+type SearchPasienResponseData struct {
+	Pasien    []PasienListItem `json:"pasien"`
+	TotalData int              `json:"total_data"`
+	Page      int              `json:"page"`
+	PerPage   int              `json:"per_page"`
 }
 
 type PasienListItem struct {

@@ -265,8 +265,8 @@ func (s *Service) IsOwnPemeriksaan(ctx context.Context, idHasilPemeriksaan int32
 	return owned, nil
 }
 
-func (s *Service) GetPending(ctx context.Context) (*pemeriksaanDomain.PendingPemeriksaanData, *errorutils.Error) {
-	rows, err := s.repo.GetPendingVerification(ctx)
+func (s *Service) GetPending(ctx context.Context, page int, perPage int) (*pemeriksaanDomain.PendingPemeriksaanData, *errorutils.Error) {
+	rows, total, err := s.repo.GetPendingVerification(ctx, page, perPage)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
 	}
@@ -287,7 +287,7 @@ func (s *Service) GetPending(ctx context.Context) (*pemeriksaanDomain.PendingPem
 
 	return &pemeriksaanDomain.PendingPemeriksaanData{
 		PemeriksaanPending: items,
-		TotalPending:       len(items),
+		TotalPending:       total,
 	}, nil
 }
 

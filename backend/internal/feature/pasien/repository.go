@@ -129,159 +129,189 @@ func (r *Repo) CheckPasienOwnership(ctx context.Context, idPasien int32, idUser 
 func (r *Repo) GetAllPaginated(ctx context.Context, page int, perPage int, q string) ([]*pasienDomain.PasienJoinRow, int, error) {
 	offset := int64((page - 1) * perPage)
 
-	p := Pasien.AS("p")
-	ua := UserAccount.AS("ua")
-	pos := Posyandu.AS("pos")
+	fromJoin := `
+		FROM pasien p
+		INNER JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
+		INNER JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu AND pos.is_deleted = false
+	`
+	baseWhere := "WHERE p.is_deleted = false"
 
-	fromClause := p.
-		INNER_JOIN(ua, ua.IDUser.EQ(p.IDPasien).AND(ua.IsDeleted.EQ(Bool(false)))).
-		INNER_JOIN(pos, pos.IDPosyandu.EQ(p.IDPosyandu).AND(pos.IsDeleted.EQ(Bool(false))))
+	countSQL := "SELECT COUNT(*)" + fromJoin + baseWhere
+	var count int64
+	if q != "" {
+		err := r.db.QueryRow(ctx, countSQL+" AND (ua.nama ILIKE $1 OR ua.nik ILIKE $1)", "%"+q+"%").Scan(&count)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		err := r.db.QueryRow(ctx, countSQL).Scan(&count)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
 
-	conditions := []BoolExpression{p.IsDeleted.EQ(Bool(false))}
+	selectCols := `
+		SELECT
+			p.id_pasien,
+			ua.nama,
+			ua.nik,
+			ua.jenis_kelamin::text,
+			ua.tanggal_lahir::text,
+			pos.nama_posyandu,
+			COALESCE(
+				(SELECT 'Ibu Hamil' FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1),
+				(SELECT 'Anak' FROM anak a WHERE a.id_pasien = p.id_pasien AND a.is_deleted = false LIMIT 1),
+				'Pasien'
+			) AS jenis_pasien,
+			(SELECT ih.status_kehamilan::text FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1) AS status_kehamilan
+	`
+
+	dataSQL := selectCols + fromJoin + baseWhere + " ORDER BY ua.nama ASC LIMIT $1 OFFSET $2"
+	dataArgs := []interface{}{perPage, offset}
 
 	if q != "" {
-		pattern := "%" + q + "%"
-		nameILike := BoolExp(CustomExpression(ua.Nama, Token("ILIKE"), String(pattern)))
-		nikILike := BoolExp(CustomExpression(ua.Nik, Token("ILIKE"), String(pattern)))
-		conditions = append(conditions, nameILike.OR(nikILike))
+		dataSQL = selectCols + fromJoin + baseWhere + " AND (ua.nama ILIKE $3 OR ua.nik ILIKE $3) ORDER BY ua.nama ASC LIMIT $1 OFFSET $2"
+		dataArgs = append(dataArgs, "%"+q+"%")
 	}
 
-	whereCond := conditions[0]
-	for _, c := range conditions[1:] {
-		whereCond = whereCond.AND(c)
-	}
-
-	var countResult struct{ Count int64 }
-	countStmt := SELECT(COUNT(STAR)).FROM(fromClause).WHERE(whereCond)
-	err := pgxV5.Query(ctx, countStmt, r.db, &countResult)
+	pgxRows, err := r.db.Query(ctx, dataSQL, dataArgs...)
 	if err != nil {
 		return nil, 0, err
 	}
-
-	jenisIbuHamil := Raw("(SELECT 'Ibu Hamil' FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1)")
-	jenisAnak := Raw("(SELECT 'Anak' FROM anak a WHERE a.id_pasien = p.id_pasien AND a.is_deleted = false LIMIT 1)")
-	subStatus := Raw("(SELECT ih.status_kehamilan::text FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1)")
+	defer pgxRows.Close()
 
 	var result []*pasienDomain.PasienJoinRow
-	dataStmt := SELECT(
-		p.IDPasien,
-		ua.Nama,
-		ua.Nik,
-		Raw("ua.jenis_kelamin::text"),
-		Raw("ua.tanggal_lahir::text"),
-		pos.NamaPosyandu,
-		COALESCE(jenisIbuHamil, jenisAnak, String("Pasien")).AS("jenis_pasien"),
-		subStatus.AS("status_kehamilan"),
-	).FROM(fromClause).WHERE(whereCond).
-		ORDER_BY(ua.Nama.ASC()).
-		LIMIT(int64(perPage)).
-		OFFSET(offset)
-	err = pgxV5.Query(ctx, dataStmt, r.db, &result)
-	if err != nil {
-		return nil, 0, err
+	for pgxRows.Next() {
+		var row pasienDomain.PasienJoinRow
+		err := pgxRows.Scan(&row.IDPasien, &row.Nama, &row.NIK, &row.JenisKelamin, &row.TanggalLahir, &row.NamaPosyandu, &row.JenisPasien, &row.StatusKehamilan)
+		if err != nil {
+			return nil, 0, err
+		}
+		result = append(result, &row)
 	}
 
-	return result, int(countResult.Count), nil
+	return result, int(count), nil
 }
 
 func (r *Repo) GetAllPaginatedByUser(ctx context.Context, page int, perPage int, q string, idUser int32) ([]*pasienDomain.PasienJoinRow, int, error) {
 	offset := int64((page - 1) * perPage)
 
-	p := Pasien.AS("p")
-	ua := UserAccount.AS("ua")
-	pos := Posyandu.AS("pos")
-	anakAlias := Anak.AS("a")
+	fromJoin := `
+		FROM pasien p
+		INNER JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
+		INNER JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu AND pos.is_deleted = false
+		LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
+	`
+	baseWhere := "WHERE p.is_deleted = false AND (p.id_pasien = $1 OR a.id_wali = $1)"
 
-	fromClause := p.
-		INNER_JOIN(ua, ua.IDUser.EQ(p.IDPasien).AND(ua.IsDeleted.EQ(Bool(false)))).
-		INNER_JOIN(pos, pos.IDPosyandu.EQ(p.IDPosyandu).AND(pos.IsDeleted.EQ(Bool(false)))).
-		LEFT_JOIN(anakAlias, anakAlias.IDPasien.EQ(p.IDPasien).AND(anakAlias.IsDeleted.EQ(Bool(false))))
+	countSQL := "SELECT COUNT(*)" + fromJoin + baseWhere
+	var count int64
+	if q != "" {
+		err := r.db.QueryRow(ctx, countSQL+" AND (ua.nama ILIKE $2 OR ua.nik ILIKE $2)", idUser, "%"+q+"%").Scan(&count)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		err := r.db.QueryRow(ctx, countSQL, idUser).Scan(&count)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
 
-	ownershipCond := p.IDPasien.EQ(Int32(idUser)).OR(anakAlias.IDWali.EQ(Int32(idUser)))
-	conditions := []BoolExpression{p.IsDeleted.EQ(Bool(false)), ownershipCond}
+	selectCols := `
+		SELECT
+			p.id_pasien,
+			ua.nama,
+			ua.nik,
+			ua.jenis_kelamin::text,
+			ua.tanggal_lahir::text,
+			pos.nama_posyandu,
+			COALESCE(
+				(SELECT 'Ibu Hamil' FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1),
+				(SELECT 'Anak' FROM anak a WHERE a.id_pasien = p.id_pasien AND a.is_deleted = false LIMIT 1),
+				'Pasien'
+			) AS jenis_pasien,
+			(SELECT ih.status_kehamilan::text FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1) AS status_kehamilan
+	`
+
+	dataSQL := selectCols + fromJoin + baseWhere + " ORDER BY ua.nama ASC LIMIT $1 OFFSET $2"
+	dataArgs := []interface{}{perPage, offset, idUser}
 
 	if q != "" {
-		pattern := "%" + q + "%"
-		nameILike := BoolExp(CustomExpression(ua.Nama, Token("ILIKE"), String(pattern)))
-		nikILike := BoolExp(CustomExpression(ua.Nik, Token("ILIKE"), String(pattern)))
-		conditions = append(conditions, nameILike.OR(nikILike))
+		dataSQL = selectCols + fromJoin + baseWhere + " AND (ua.nama ILIKE $4 OR ua.nik ILIKE $4) ORDER BY ua.nama ASC LIMIT $1 OFFSET $2"
+		dataArgs = append(dataArgs, "%"+q+"%")
 	}
 
-	whereCond := conditions[0]
-	for _, c := range conditions[1:] {
-		whereCond = whereCond.AND(c)
-	}
-
-	var countResult struct{ Count int64 }
-	countStmt := SELECT(COUNT(STAR)).FROM(fromClause).WHERE(whereCond)
-	err := pgxV5.Query(ctx, countStmt, r.db, &countResult)
+	pgxRows, err := r.db.Query(ctx, dataSQL, dataArgs...)
 	if err != nil {
 		return nil, 0, err
 	}
-
-	jenisIbuHamil := Raw("(SELECT 'Ibu Hamil' FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1)")
-	jenisAnak := Raw("(SELECT 'Anak' FROM anak a WHERE a.id_pasien = p.id_pasien AND a.is_deleted = false LIMIT 1)")
-	subStatus := Raw("(SELECT ih.status_kehamilan::text FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1)")
+	defer pgxRows.Close()
 
 	var result []*pasienDomain.PasienJoinRow
-	dataStmt := SELECT(
-		p.IDPasien,
-		ua.Nama,
-		ua.Nik,
-		Raw("ua.jenis_kelamin::text"),
-		Raw("ua.tanggal_lahir::text"),
-		pos.NamaPosyandu,
-		COALESCE(jenisIbuHamil, jenisAnak, String("Pasien")).AS("jenis_pasien"),
-		subStatus.AS("status_kehamilan"),
-	).FROM(fromClause).WHERE(whereCond).
-		ORDER_BY(ua.Nama.ASC()).
-		LIMIT(int64(perPage)).
-		OFFSET(offset)
-	err = pgxV5.Query(ctx, dataStmt, r.db, &result)
-	if err != nil {
-		return nil, 0, err
+	for pgxRows.Next() {
+		var row pasienDomain.PasienJoinRow
+		err := pgxRows.Scan(&row.IDPasien, &row.Nama, &row.NIK, &row.JenisKelamin, &row.TanggalLahir, &row.NamaPosyandu, &row.JenisPasien, &row.StatusKehamilan)
+		if err != nil {
+			return nil, 0, err
+		}
+		result = append(result, &row)
 	}
 
-	return result, int(countResult.Count), nil
+	return result, int(count), nil
 }
 
-func (r *Repo) Search(ctx context.Context, q string) ([]*pasienDomain.PasienJoinRow, error) {
-	p := Pasien.AS("p")
-	ua := UserAccount.AS("ua")
-	pos := Posyandu.AS("pos")
+func (r *Repo) Search(ctx context.Context, q string, page int, perPage int) ([]*pasienDomain.PasienJoinRow, int, error) {
+	offset := int64((page - 1) * perPage)
 
-	fromClause := p.
-		INNER_JOIN(ua, ua.IDUser.EQ(p.IDPasien).AND(ua.IsDeleted.EQ(Bool(false)))).
-		INNER_JOIN(pos, pos.IDPosyandu.EQ(p.IDPosyandu).AND(pos.IsDeleted.EQ(Bool(false))))
-
+	fromJoin := `
+		FROM pasien p
+		INNER JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
+		INNER JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu AND pos.is_deleted = false
+	`
 	pattern := "%" + q + "%"
-	whereCond := p.IsDeleted.EQ(Bool(false)).AND(
-		BoolExp(CustomExpression(ua.Nama, Token("ILIKE"), String(pattern))).
-			OR(BoolExp(CustomExpression(ua.Nik, Token("ILIKE"), String(pattern)))),
-	)
 
-	jenisIbuHamil := Raw("(SELECT 'Ibu Hamil' FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1)")
-	jenisAnak := Raw("(SELECT 'Anak' FROM anak a WHERE a.id_pasien = p.id_pasien AND a.is_deleted = false LIMIT 1)")
-	subStatus := Raw("(SELECT ih.status_kehamilan::text FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1)")
-
-	var result []*pasienDomain.PasienJoinRow
-	err := pgxV5.Query(ctx,
-		SELECT(
-			p.IDPasien,
-			ua.Nama,
-			ua.Nik,
-			Raw("ua.jenis_kelamin::text"),
-			Raw("ua.tanggal_lahir::text"),
-			pos.NamaPosyandu,
-			COALESCE(jenisIbuHamil, jenisAnak, String("Pasien")).AS("jenis_pasien"),
-			subStatus.AS("status_kehamilan"),
-		).FROM(fromClause).WHERE(whereCond).ORDER_BY(ua.Nama.ASC()).LIMIT(20),
-		r.db, &result)
+	var count int64
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*)"+fromJoin+"WHERE p.is_deleted = false AND (ua.nama ILIKE $1 OR ua.nik ILIKE $1)", pattern).Scan(&count)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return result, nil
+	selectCols := `
+		SELECT
+			p.id_pasien,
+			ua.nama,
+			ua.nik,
+			ua.jenis_kelamin::text,
+			ua.tanggal_lahir::text,
+			pos.nama_posyandu,
+			COALESCE(
+				(SELECT 'Ibu Hamil' FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1),
+				(SELECT 'Anak' FROM anak a WHERE a.id_pasien = p.id_pasien AND a.is_deleted = false LIMIT 1),
+				'Pasien'
+			) AS jenis_pasien,
+			(SELECT ih.status_kehamilan::text FROM ibu_hamil ih WHERE ih.id_pasien = p.id_pasien AND ih.is_deleted = false LIMIT 1) AS status_kehamilan
+	`
+
+	dataSQL := selectCols + fromJoin + `WHERE p.is_deleted = false AND (ua.nama ILIKE $3 OR ua.nik ILIKE $3) ORDER BY ua.nama ASC LIMIT $1 OFFSET $2`
+
+	pgxRows, err := r.db.Query(ctx, dataSQL, perPage, offset, pattern)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer pgxRows.Close()
+
+	var result []*pasienDomain.PasienJoinRow
+	for pgxRows.Next() {
+		var row pasienDomain.PasienJoinRow
+		err := pgxRows.Scan(&row.IDPasien, &row.Nama, &row.NIK, &row.JenisKelamin, &row.TanggalLahir, &row.NamaPosyandu, &row.JenisPasien, &row.StatusKehamilan)
+		if err != nil {
+			return nil, 0, err
+		}
+		result = append(result, &row)
+	}
+
+	return result, int(count), nil
 }
 
 func (r *Repo) GetDetailByID(ctx context.Context, idPasien int32) (*pasienDomain.PasienDetailJoinRow, error) {
@@ -318,9 +348,9 @@ func (r *Repo) GetDetailByID(ctx context.Context, idPasien int32) (*pasienDomain
 				'Ibu Hamil' AS jenis,
 				ih.id_ibu_hamil,
 				ih.hamil_ke,
-				ih.bulan_mulai_hamil::text AS bulan_mulai_hamil,
-				ih.hpht::text AS hpht,
-				ih.status_kehamilan::text AS status_kehamilan,
+				ih.bulan_mulai_hamil::text,
+				ih.hpht::text,
+				ih.status_kehamilan::text,
 				NULL::text AS nama_anak,
 				NULL::float8 AS berat_lahir,
 				NULL::float8 AS panjang_lahir,
@@ -345,18 +375,31 @@ func (r *Repo) GetDetailByID(ctx context.Context, idPasien int32) (*pasienDomain
 			JOIN user_account w ON w.id_user = a.id_wali
 			WHERE a.id_pasien = p.id_pasien LIMIT 1
 		) anak_data ON true
-		WHERE p.id_pasien = #1 AND p.is_deleted = false
+		WHERE p.id_pasien = $1 AND p.is_deleted = false
 	`
 
-	var row pasienDomain.PasienDetailJoinRow
-	err := pgxV5.Query(ctx, RawStatement(dataSQL, RawArgs{"#1": idPasien}), r.db, &row)
+	pgxRows, err := r.db.Query(ctx, dataSQL, idPasien)
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows") {
-			return nil, nil
-		}
 		return nil, err
 	}
+	defer pgxRows.Close()
 
+	if !pgxRows.Next() {
+		return nil, nil
+	}
+
+	var row pasienDomain.PasienDetailJoinRow
+	err = pgxRows.Scan(
+		&row.IDPasien, &row.Nama, &row.NIK, &row.Email, &row.NoHp,
+		&row.JenisKelamin, &row.TanggalLahir, &row.IDLokasi,
+		&row.NamaPosyandu, &row.IDPosyandu, &row.JenisPasien,
+		&row.CreatedAt, &row.UpdatedAt,
+		&row.IDIbuHamil, &row.HamilKe, &row.BulanMulaiHamil, &row.Hpht, &row.StatusKehamilan,
+		&row.NamaAnak, &row.BeratLahir, &row.PanjangLahir, &row.HubunganDenganWali, &row.NamaWali,
+	)
+	if err != nil {
+		return nil, err
+	}
 	return &row, nil
 }
 

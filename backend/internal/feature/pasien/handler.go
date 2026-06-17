@@ -35,7 +35,7 @@ func (h *Handler) DaftarAnak(ctx context.Context, input *httputils.APIRequestInp
 	return httputils.NewCreatedOutput[any](nil), nil
 }
 
-func (h *Handler) GetAll(ctx context.Context, input *httputils.APIRequestInput[*pasienDomain.GetAllPasienRequest]) (*httputils.APIResponseOutput[*pasienDomain.PasienListData], error) {
+func (h *Handler) GetAll(ctx context.Context, input *pasienDomain.GetAllPasienRequest) (*httputils.APIResponseOutput[*pasienDomain.PasienListData], error) {
 	claims := httputils.GetAccessClaim(ctx)
 	if claims == nil {
 		return nil, huma.Error401Unauthorized("Anda harus login untuk mengakses halaman ini.")
@@ -44,9 +44,9 @@ func (h *Handler) GetAll(ctx context.Context, input *httputils.APIRequestInput[*
 	var res *pasienDomain.PasienListData
 	var err *errorutils.Error
 	if httputils.IsPetugas(claims.Roles) {
-		res, err = h.Service.GetAll(ctx, input.Body)
+		res, err = h.Service.GetAll(ctx, input)
 	} else {
-		res, err = h.Service.GetAllByUser(ctx, claims.IDUser, input.Body)
+		res, err = h.Service.GetAllByUser(ctx, claims.IDUser, input)
 	}
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
@@ -55,13 +55,10 @@ func (h *Handler) GetAll(ctx context.Context, input *httputils.APIRequestInput[*
 	return httputils.NewOKOutput(res), nil
 }
 
-func (h *Handler) Search(ctx context.Context, input *pasienDomain.SearchPasienRequest) (*httputils.APIResponseOutput[[]*pasienDomain.PasienListItem], error) {
+func (h *Handler) Search(ctx context.Context, input *pasienDomain.SearchPasienRequest) (*httputils.APIResponseOutput[*pasienDomain.SearchPasienResponseData], error) {
 	res, err := h.Service.Search(ctx, input)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
-	}
-	if res == nil {
-		res = []*pasienDomain.PasienListItem{}
 	}
 
 	return httputils.NewOKOutput(res), nil

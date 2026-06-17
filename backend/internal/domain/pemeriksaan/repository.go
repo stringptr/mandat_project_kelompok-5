@@ -15,7 +15,7 @@ type Repo interface {
 	Create(ctx context.Context, data *model.HasilPemeriksaan) error
 	Update(ctx context.Context, data *model.HasilPemeriksaan) error
 	Delete(ctx context.Context, idHasilPemeriksaan int32) error
-	GetPendingVerification(ctx context.Context) ([]*PendingJoinRow, error)
+	GetPendingVerification(ctx context.Context, page int, perPage int) ([]*PendingJoinRow, int, error)
 	GetDetailJoinByID(ctx context.Context, idHasilPemeriksaan int32) (*DetailJoinRow, error)
 	CheckPemeriksaanOwnership(ctx context.Context, idHasilPemeriksaan int32, idUser int32) (bool, error)
 }

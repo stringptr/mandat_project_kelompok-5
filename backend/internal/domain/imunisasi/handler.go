@@ -7,7 +7,7 @@ import (
 )
 
 type Handler interface {
-	GetAll(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*ImunisasiListData], error)
+	GetAll(ctx context.Context, input *GetAllImunisasiRequest) (*httputils.APIResponseOutput[*ImunisasiListData], error)
 	GetByID(ctx context.Context, input *struct {
 		IDImunisasi int32 `path:"id" minimum:"1"`
 	}) (*httputils.APIResponseOutput[*ImunisasiDetail], error)

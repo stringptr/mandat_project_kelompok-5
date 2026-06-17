@@ -7,7 +7,8 @@ import (
 )
 
 type Repo interface {
-	GetPasienTindakLanjut(ctx context.Context) ([]*PasienTindakLanjutJoinRow, error)
+	GetPasienByID(ctx context.Context, idPasien int32) (*model.Pasien, error)
+	GetPasienTindakLanjut(ctx context.Context, page int, perPage int) ([]*PasienTindakLanjutJoinRow, int, error)
 	GetDetailPasienByID(ctx context.Context, idPasien int32) (*DetailPasienJoinRow, error)
 	GetRiwayatPemeriksaan(ctx context.Context, idPasien int32) ([]*RiwayatPemeriksaanJoinRow, error)
 	GetTindakLanjutByHasilPemeriksaan(ctx context.Context, idHasilPemeriksaan int32) (*model.TindakLanjut, error)

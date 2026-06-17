@@ -1,5 +1,11 @@
 package imunisasi
 
+type GetAllImunisasiRequest struct {
+	Page    int    `query:"page" minimum:"1" default:"1"`
+	PerPage int    `query:"per_page" minimum:"1" maximum:"100" default:"20"`
+	Q       string `query:"q" maxLength:"255"`
+}
+
 type CreateImunisasiRequest struct {
 	IDPasien      int32  `json:"id_pasien" minimum:"1"`
 	NamaVaksin    string `json:"nama_vaksin" minLength:"1" maxLength:"100"`

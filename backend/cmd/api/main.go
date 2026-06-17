@@ -16,12 +16,12 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/feature/auth"
 	"github.com/stringptr/SiGizi/backend/internal/feature/bannedip"
 	imunisasiFeature "github.com/stringptr/SiGizi/backend/internal/feature/imunisasi"
-	tindaklanjutFeature "github.com/stringptr/SiGizi/backend/internal/feature/tindaklanjut"
 	"github.com/stringptr/SiGizi/backend/internal/feature/jwtblacklist"
 	lokasiFeature "github.com/stringptr/SiGizi/backend/internal/feature/lokasi"
 	"github.com/stringptr/SiGizi/backend/internal/feature/notification"
 	pasienFeature "github.com/stringptr/SiGizi/backend/internal/feature/pasien"
 	pemeriksaanFeature "github.com/stringptr/SiGizi/backend/internal/feature/pemeriksaan"
+	tindaklanjutFeature "github.com/stringptr/SiGizi/backend/internal/feature/tindaklanjut"
 	"github.com/stringptr/SiGizi/backend/internal/feature/userAccount"
 	"github.com/stringptr/SiGizi/backend/internal/feature/userSession"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
@@ -173,18 +173,18 @@ func main() {
 
 	v1Group := huma.NewGroup(api, "/v1")
 	v1.RegisterRoutes(v1Group, r, &v1.Dependency{
-		AuthConfig:         cfg.AuthConfig,
-		JWTUtil:            jwtUtil,
-		UserAccountHandler: userAccountHandler,
-		AuthHandler:        authHandler,
-		BlacklistRepo:      blacklistRepo,
-		NotifPublisher:     notifPublisher,
-		NotifHandler:       notifHandler,
-		PasienHandler:      pasienHandler,
-		LokasiHandler:      lokasiHandler,
-		PemeriksaanHandler: pemeriksaanHandler,
-		ImunisasiHandler:   imunisasiHandler,
-		ArtikelHandler:     artikelHandler,
+		AuthConfig:          cfg.AuthConfig,
+		JWTUtil:             jwtUtil,
+		UserAccountHandler:  userAccountHandler,
+		AuthHandler:         authHandler,
+		BlacklistRepo:       blacklistRepo,
+		NotifPublisher:      notifPublisher,
+		NotifHandler:        notifHandler,
+		PasienHandler:       pasienHandler,
+		LokasiHandler:       lokasiHandler,
+		PemeriksaanHandler:  pemeriksaanHandler,
+		ImunisasiHandler:    imunisasiHandler,
+		ArtikelHandler:      artikelHandler,
 		TindakLanjutHandler: tindaklanjutHandler,
 	})
 

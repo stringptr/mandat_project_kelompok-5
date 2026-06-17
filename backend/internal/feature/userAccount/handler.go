@@ -18,8 +18,8 @@ func NewHandler(Service userAccountDomain.Service) *Handler {
 	return &Handler{Service: Service}
 }
 
-func (h *Handler) GetAllUsers(ctx context.Context, input *httputils.APIRequestInput[*userAccountDomain.GetAllUsersRequest]) (*httputils.APIResponseOutput[*userAccountDomain.UserListData], error) {
-	result, err := h.Service.GetAllUsers(ctx, input.Body)
+func (h *Handler) GetAllUsers(ctx context.Context, input *userAccountDomain.GetAllUsersRequest) (*httputils.APIResponseOutput[*userAccountDomain.UserListData], error) {
+	result, err := h.Service.GetAllUsers(ctx, input)
 	if err != nil {
 		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
 	}

@@ -17,8 +17,8 @@ func NewHandler(service tindaklanjutDomain.Service) *Handler {
 	return &Handler{Service: service}
 }
 
-func (h *Handler) GetPasienTindakLanjut(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*tindaklanjutDomain.PasienTindakLanjutData], error) {
-	res, err := h.Service.GetPasienTindakLanjut(ctx)
+func (h *Handler) GetPasienTindakLanjut(ctx context.Context, input *tindaklanjutDomain.GetPasienTindakLanjutRequest) (*httputils.APIResponseOutput[*tindaklanjutDomain.PasienTindakLanjutData], error) {
+	res, err := h.Service.GetPasienTindakLanjut(ctx, input)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}

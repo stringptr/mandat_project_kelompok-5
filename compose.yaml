@@ -59,6 +59,7 @@ services:
     volumes:
       - ./storage/master:/var/lib/postgresql
       - ./migrations:/docker-entrypoint-initdb.d
+      - ./migrations/data:/data-csv:z
     env_file:
       - .env
     environment:

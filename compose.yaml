@@ -84,7 +84,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2025-CU3-ubuntu-22.04
     restart: unless-stopped
     volumes:
-     # - ./storage/staging:/var/opt/mssql:z
+      - ./storage/staging:/var/opt/mssql:z
       - ./migrations/data:/data:z
     environment:
       ACCEPT_EULA: Y

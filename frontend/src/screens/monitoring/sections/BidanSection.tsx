@@ -1,387 +1,221 @@
-import { useState } from 'react';
-import { AlertTriangle, ClipboardCheck, CalendarDays, Plus } from 'lucide-react';
-import { StatCard } from '../components/statcard';
-import { ChartWidget } from '../components/chartwidget';
-import { DataTable, type Column } from '../components/datatable';
-import { StatusBadge } from '../components/statusbadge';
-import { FilterBar } from '../components/filterbar';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Search } from 'lucide-react';
+import { useNotification } from '../../../context/NotificationContext';
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from '../../../lib/api';
+import type { PasienListData } from '../../../types/entities';
 import ModalTambahPemeriksaan, { type FormDataTambah, type PasienOption } from '../components/modaltambah';
 import ModalEditPemeriksaan, { type PemeriksaanData } from '../components/modalubah';
 import ModalHapusPemeriksaan from '../components/modalhapus';
 import { ModalVerifikasiBidan } from '../../../components/verifikasi/ModalVerifikasiBidan';
 import type { VerifikasiTarget } from '../../../components/verifikasi/VerifikasiPanel';
 
-// === Types ===
-interface BalitaUrgent {
-  [key: string]: unknown;
+interface PemeriksaanRow {
   no: number;
   id: string;
   nama: string;
-  ibu: string;
   usia: string;
-  bb: string;
-  tb: string;
   statusGizi: string;
   verifikasi: string;
-  prioritas: string;
 }
 
-// === Dummy Data ===
-const INITIAL_BALITA: BalitaUrgent[] = [
-  { no: 1, id: 'b1', nama: 'Danu Saputra', ibu: 'Linda Sari', usia: '38 Bln', bb: '12.1', tb: '84.2', statusGizi: 'Stunting', verifikasi: 'Pending', prioritas: 'Tinggi' },
-  { no: 2, id: 'b2', nama: 'Arka Mahendra', ibu: 'Rina Marlina', usia: '24 Bln', bb: '10.2', tb: '76.0', statusGizi: 'Gizi Kurang', verifikasi: 'Pending', prioritas: 'Tinggi' },
-  { no: 3, id: 'b3', nama: 'Nabila Putri', ibu: 'Dewi Anggraini', usia: '18 Bln', bb: '8.5', tb: '72.1', statusGizi: 'Gizi Kurang', verifikasi: 'Verified', prioritas: 'Sedang' },
-  { no: 4, id: 'b4', nama: 'Rizki Aditya', ibu: 'Yuni Rahayu', usia: '30 Bln', bb: '11.0', tb: '80.5', statusGizi: 'Stunting', verifikasi: 'Pending', prioritas: 'Tinggi' },
-  { no: 5, id: 'b5', nama: 'Sari Indah', ibu: 'Mega Lestari', usia: '12 Bln', bb: '7.8', tb: '68.0', statusGizi: 'Gizi Kurang', verifikasi: 'Verified', prioritas: 'Sedang' },
-  { no: 6, id: 'b6', nama: 'Bima Prasetyo', ibu: 'Ani Wulandari', usia: '42 Bln', bb: '13.5', tb: '90.0', statusGizi: 'Stunting', verifikasi: 'Pending', prioritas: 'Tinggi' },
-];
-
-// Daftar pasien untuk step-1 modal tambah (bisa diganti data dari API)
-const PASIEN_LIST: PasienOption[] = INITIAL_BALITA.map(b => ({
-  id: b.id,
-  nama: b.nama,
-  namaIbu: b.ibu,
-  usia: b.usia,
-  nik: `3273${b.id.padEnd(12, '0')}`,
-  statusGizi: b.statusGizi,
-}));
-
-const DISTRIBUSI_GIZI = [
-  { label: 'Gizi Baik', value: 68, color: '#10b981' },
-  { label: 'Gizi Kurang', value: 18, color: '#f59e0b' },
-  { label: 'Stunting', value: 9, color: '#ef4444' },
-  { label: 'Gizi Lebih', value: 5, color: '#3b82f6' },
-];
-
 export function BidanSection() {
-  const [balitaData, setBalitaData] = useState<BalitaUrgent[]>(INITIAL_BALITA);
+  const notify = useNotification();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Semua');
+  const [data, setData] = useState<PemeriksaanRow[]>([]);
+  const [pasienOptions, setPasienOptions] = useState<PasienOption[]>([]);
 
-  // — Modal Tambah —
   const [modalTambah, setModalTambah] = useState(false);
-
-  // — Modal Edit —
   const [modalEdit, setModalEdit] = useState(false);
   const [editTarget, setEditTarget] = useState<{ nama: string; data: PemeriksaanData } | null>(null);
-
-  // — Modal Hapus —
   const [modalHapus, setModalHapus] = useState(false);
   const [hapusTarget, setHapusTarget] = useState<{ id: string; nama: string; tanggal: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // — Modal Verifikasi —
   const [verifikasiTarget, setVerifikasiTarget] = useState<VerifikasiTarget | null>(null);
 
-  // === Handlers ===
-  const openTambah = () => setModalTambah(true);
+  const loadPasienOptions = useCallback(async () => {
+    if (pasienOptions.length > 0) return;
+    try {
+      const res = await apiGet<PasienListData>('/monitoring/pasien?page=1&per_page=50');
+      const list = (res.pasien ?? []).map(p => ({
+        id: String(p.id_pasien), nama: p.nama, namaIbu: '', usia: p.umur, nik: p.nik, statusGizi: '',
+      }));
+      setPasienOptions(list);
+    } catch { notify.error('Gagal memuat daftar pasien.'); }
+  }, [pasienOptions.length, notify]);
 
-  const openEdit = (row: BalitaUrgent) => {
+  useEffect(() => {
+    apiGet<{ pemeriksaan_pending?: { id_hasil_pemeriksaan: number; nama_pasien: string }[] }>('/monitoring/pemeriksaan/pending')
+      .then((res) => {
+        const list = (res.pemeriksaan_pending ?? []).map((item, idx) => ({
+          no: idx + 1,
+          id: String(item.id_hasil_pemeriksaan),
+          nama: item.nama_pasien,
+          usia: '',
+          statusGizi: '',
+          verifikasi: 'Pending',
+        }));
+        setData(list);
+      })
+      .catch(() => console.error('Gagal memuat pemeriksaan pending'));
+  }, []);
+
+  const filteredData = data.filter(row =>
+    !search || row.nama.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const openEdit = (row: PemeriksaanRow) => {
     setEditTarget({
       nama: row.nama,
-      data: {
-        id: row.id,
-        beratBadan: row.bb,
-        tinggiBadan: row.tb,
-        lingkarKepala: '',
-        terakhirDiperbarui: {
-          nama: 'Bidan Sri Lestari',
-          inisial: 'SL',
-          tanggal: '12 Mei 2024, 10:45 WIB',
-        },
-      },
+      data: { id: row.id, beratBadan: '', tinggiBadan: '', lingkarKepala: '', terakhirDiperbarui: { nama: '', inisial: '', tanggal: '' } },
     });
     setModalEdit(true);
   };
 
-  const openHapus = (row: BalitaUrgent) => {
-    setHapusTarget({ id: row.id, nama: row.nama, tanggal: '12 Mei 2024' });
+  const openHapus = (row: PemeriksaanRow) => {
+    setHapusTarget({ id: row.id, nama: row.nama, tanggal: '' });
     setModalHapus(true);
   };
 
-  const openVerifikasi = (row: BalitaUrgent) => {
-    const WARNA_MAP: Record<number, { bg: string; text: string }> = {
-      0: { bg: 'bg-primary', text: 'text-white' },
-      1: { bg: 'bg-blue-500', text: 'text-white' },
-      2: { bg: 'bg-amber-500', text: 'text-white' },
-      3: { bg: 'bg-violet-500', text: 'text-white' },
-    };
-    const idx = row.no % 4;
-    const warna = WARNA_MAP[idx] ?? WARNA_MAP[0];
-    const inisial = row.nama.split(' ').map(w => w[0]).slice(0, 2).join('');
+  const openVerifikasi = (row: PemeriksaanRow) => {
     setVerifikasiTarget({
-      id: row.id,
-      nama: row.nama,
-      inisial,
-      warnaBg: warna.bg,
-      warnaText: warna.text,
-      usia: row.usia,
-      bb: row.bb,
-      tb: row.tb,
-      petugas: 'Siti Aminah · Posyandu Melati 02',
-      statusGizi: row.statusGizi,
+      id: row.id, nama: row.nama, inisial: row.nama.split(' ').map(w => w[0]).slice(0, 2).join(''),
+      warnaBg: 'bg-primary', warnaText: 'text-white', usia: row.usia, bb: '', tb: '',
+      petugas: '', statusGizi: row.statusGizi,
     });
   };
 
-  const handleVerifikasiSetuju = (id: string, _catatan: string) => {
-    setBalitaData(prev => prev.map(b => b.id === id ? { ...b, verifikasi: 'Verified' } : b));
-    setVerifikasiTarget(null);
+  const handleVerifikasiSetuju = async (id: string, _catatan: string) => {
+    try {
+      await apiPatch('/monitoring/pemeriksaan/' + id + '/verify');
+      setData(prev => prev.map(b => b.id === id ? { ...b, verifikasi: 'Verified' } : b));
+      setVerifikasiTarget(null);
+      notify.success('Data pemeriksaan berhasil diverifikasi.');
+    } catch { notify.error('Gagal memverifikasi.'); }
   };
 
-  const handleVerifikasiTolak = (id: string, _catatan: string) => {
-    setBalitaData(prev => prev.map(b => b.id === id ? { ...b, verifikasi: 'Rejected' } : b));
-    setVerifikasiTarget(null);
+  const handleVerifikasiTolak = async (id: string, _catatan: string) => {
+    try {
+      await apiDelete('/monitoring/pemeriksaan/' + id);
+      setData(prev => prev.filter(b => b.id !== id));
+      setVerifikasiTarget(null);
+      notify.warn('Data pemeriksaan ditolak.');
+    } catch { notify.error('Gagal menolak.'); }
   };
 
-  const handleTambahSubmit = (pasienId: string, namaAnak: string, data: FormDataTambah) => {
-    console.log('Tambah data pasien:', pasienId, namaAnak, data);
-    // TODO: POST ke API
+  const handleTambahSubmit = async (_pasienId: string, namaAnak: string, _idJadwal: number, dataForm: FormDataTambah) => {
+    try {
+      await apiPost('/monitoring/pemeriksaan', {
+        id_jadwal_imunisasi: _idJadwal,
+        berat_badan: parseFloat(dataForm.beratBadan),
+        tinggi_badan: parseFloat(dataForm.tinggiBadan),
+        lingkar_kepala: dataForm.lingkarKepala ? parseFloat(dataForm.lingkarKepala) : 0,
+        tekanan_darah: dataForm.tekananDarah || '-',
+        catatan: dataForm.catatanMedis || undefined,
+      });
+      notify.success(`Data ${namaAnak} berhasil disimpan.`);
+      setModalTambah(false);
+      apiGet<{ pemeriksaan_pending?: { id_hasil_pemeriksaan: number; nama_pasien: string }[] }>('/monitoring/pemeriksaan/pending')
+        .then((res) => {
+          const list = (res.pemeriksaan_pending ?? []).map((item, idx) => ({
+            no: idx + 1,
+            id: String(item.id_hasil_pemeriksaan),
+            nama: item.nama_pasien,
+            usia: '',
+            statusGizi: '',
+            verifikasi: 'Pending',
+          }));
+          setData(list);
+        })
+        .catch(() => {});
+    } catch { notify.error('Gagal menyimpan.'); }
   };
 
-  const handleEditSubmit = (id: string, data: Omit<PemeriksaanData, 'id' | 'terakhirDiperbarui'>) => {
-    console.log('Edit id:', id, data);
-    // TODO: PUT ke API
+  const handleEditSubmit = async (id: string, dataForm: Omit<PemeriksaanData, 'id' | 'terakhirDiperbarui'>) => {
+    const idNum = parseInt(String(id).replace(/[^0-9]/g, ''), 10) || 0;
+    if (!idNum) { notify.error('ID pemeriksaan tidak valid.'); return; }
+    if (!dataForm.beratBadan || !dataForm.tinggiBadan) {
+      notify.warn('Berat badan dan tinggi badan wajib diisi.');
+      return;
+    }
+    try {
+      await apiPut('/monitoring/pemeriksaan/' + idNum, {
+        berat_badan: parseFloat(dataForm.beratBadan),
+        tinggi_badan: parseFloat(dataForm.tinggiBadan),
+        lingkar_kepala: dataForm.lingkarKepala ? parseFloat(dataForm.lingkarKepala) : undefined,
+      });
+      notify.success('Data berhasil diperbarui.');
+      setModalEdit(false);
+      setEditTarget(null);
+    } catch { notify.error('Gagal memperbarui.'); }
   };
 
   const handleHapusConfirm = async () => {
     if (!hapusTarget) return;
     setIsDeleting(true);
+    const idNum = parseInt(String(hapusTarget.id).replace(/[^0-9]/g, ''), 10) || 0;
     try {
-      await new Promise(r => setTimeout(r, 1000));
-      console.log('Hapus id:', hapusTarget.id);
+      await apiDelete('/monitoring/pemeriksaan/' + idNum);
+      setData(prev => prev.filter(b => b.id !== hapusTarget.id));
       setModalHapus(false);
       setHapusTarget(null);
-    } finally {
-      setIsDeleting(false);
-    }
+      notify.success('Data berhasil dihapus.');
+    } catch { notify.error('Gagal menghapus.'); }
+    finally { setIsDeleting(false); }
   };
-
-  // === Tabel dengan kolom Aksi ===
-  const TABLE_COLUMNS: Column<BalitaUrgent>[] = [
-    { header: 'NO', accessor: 'no', className: 'font-medium text-neutral-400 w-12' },
-    {
-      header: 'NAMA BALITA',
-      accessor: 'nama',
-      render: (row) => (
-        <div>
-          <div className="font-bold text-primary">{row.nama}</div>
-          <div className="text-[11px] text-neutral-400 mt-0.5">Ibu: {row.ibu}</div>
-        </div>
-      ),
-    },
-    { header: 'USIA', accessor: 'usia', className: 'font-semibold text-neutral-600' },
-    { header: 'BB (KG)', accessor: 'bb', className: 'font-semibold text-neutral-600' },
-    { header: 'TB (CM)', accessor: 'tb', className: 'font-semibold text-neutral-600' },
-    {
-      header: 'STATUS GIZI',
-      accessor: 'statusGizi',
-      render: (row) => {
-        const v = row.statusGizi === 'Stunting' ? 'stunting' : 'gizi-kurang';
-        return <StatusBadge variant={v} label={row.statusGizi} />;
-      },
-    },
-    {
-      header: 'VERIFIKASI',
-      accessor: 'verifikasi',
-      render: (row) => {
-        const v = row.verifikasi === 'Verified' ? 'verified' : row.verifikasi === 'Rejected' ? 'urgent' : 'pending';
-        return <StatusBadge variant={v} />;
-      },
-    },
-    {
-      header: 'PRIORITAS',
-      accessor: 'prioritas',
-      render: (row) => {
-        const v = row.prioritas === 'Tinggi' ? 'urgent' : 'info';
-        return <StatusBadge variant={v} label={row.prioritas} dot />;
-      },
-    },
-    {
-      header: 'AKSI',
-      accessor: 'id',
-      render: (row) => (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Verifikasi — only for Pending */}
-          {row.verifikasi === 'Pending' && (
-            <button
-              onClick={() => openVerifikasi(row)}
-              className="flex items-center gap-1 text-xs text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1.5 rounded-lg transition-colors font-medium"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Verifikasi
-            </button>
-          )}
-          <button
-            onClick={() => openEdit(row)}
-            className="flex items-center gap-1 text-xs text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1.5 rounded-lg transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Edit
-          </button>
-          <button
-            onClick={() => openHapus(row)}
-            className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1.5 rounded-lg transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            Hapus
-          </button>
-        </div>
-      ),
-    },
-  ];
-
-  // === Filtered data ===
-  const filteredData = balitaData.filter(row => {
-    const matchSearch =
-      !search ||
-      row.nama.toLowerCase().includes(search.toLowerCase()) ||
-      row.ibu.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'Semua' || row.statusGizi === statusFilter;
-    return matchSearch && matchStatus;
-  });
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Balita Dipantau"
-          value="156"
-          subtitle="anak"
-          variant="gradient"
-          color="primary"
-          trend={{ direction: 'up', value: '+8', label: 'bulan ini' }}
-        />
-        <StatCard
-          title="Kasus Stunting Aktif"
-          value="12"
-          icon={<AlertTriangle size={22} />}
-          variant="icon"
-          color="red"
-          trend={{ direction: 'down', value: '-3', label: 'dari bulan lalu' }}
-        />
-        <StatCard
-          title="Perlu Verifikasi"
-          value={String(balitaData.filter(b => b.verifikasi === 'Pending').length)}
-          icon={<ClipboardCheck size={22} />}
-          variant="icon"
-          color="amber"
-          subtitle="data baru belum diverifikasi"
-        />
-        <StatCard
-          title="Jadwal Posyandu"
-          value="3"
-          icon={<CalendarDays size={22} />}
-          variant="icon"
-          color="blue"
-          subtitle="sesi bulan ini tersisa"
-        />
-      </div>
-
-      {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
-        <button
-          onClick={openTambah}
-          className="inline-flex items-center gap-2 bg-primary hover:bg-primary-600 text-white rounded-xl px-5 py-2.5 text-sm font-medium transition-colors"
-        >
-          <Plus size={16} />
-          Tambah Data Pengukuran
+        <button onClick={() => { loadPasienOptions(); setModalTambah(true); }}
+          className="inline-flex items-center gap-2 bg-primary hover:bg-primary-600 text-white rounded-xl px-5 py-2.5 text-sm font-medium transition-colors">
+          <Plus size={16} /> Tambah Data Pengukuran
         </button>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartWidget
-          title="Distribusi Status Gizi"
-          subtitle="Wilayah Binaan Melati"
-          type="donut"
-          data={DISTRIBUSI_GIZI}
-        />
-        <ChartWidget
-          title="Kasus per Bulan"
-          subtitle="Stunting & Gizi Kurang - 6 bulan terakhir"
-          type="bar-vertical"
-          data={[
-            { label: 'Des', value: 18, color: '#ef4444' },
-            { label: 'Jan', value: 16, color: '#ef4444' },
-            { label: 'Feb', value: 15, color: '#f59e0b' },
-            { label: 'Mar', value: 14, color: '#f59e0b' },
-            { label: 'Apr', value: 13, color: '#10b981' },
-            { label: 'Mei', value: 12, color: '#10b981' },
-          ]}
-        />
+      <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-neutral-50">
+          <div className="relative flex-1 max-w-xs">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input type="text" placeholder="Cari nama pasien..." value={search} onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-700 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-5 px-5 py-2.5 bg-neutral-50 border-b border-neutral-100 text-[10px] font-bold text-neutral-400 uppercase tracking-wide">
+          <p>NO</p>
+          <p className="col-span-2">NAMA</p>
+          <p>STATUS</p>
+          <p>AKSI</p>
+        </div>
+
+        {filteredData.length === 0 ? (
+          <div className="py-12 text-center text-neutral-400"><p className="text-sm">Tidak ada data pemeriksaan</p></div>
+        ) : (
+          filteredData.map((row) => (
+            <div key={row.id} className="grid grid-cols-5 px-5 py-3 border-b border-neutral-50 last:border-0 hover:bg-neutral-50/60 items-center">
+              <p className="text-sm text-neutral-400">{row.no}</p>
+              <p className="col-span-2 text-sm font-bold text-primary">{row.nama}</p>
+              <span className={`text-xs font-bold px-2 py-1 rounded-full w-fit ${row.verifikasi === 'Verified' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                {row.verifikasi === 'Verified' ? 'Terverifikasi' : 'Pending'}
+              </span>
+              <div className="flex items-center gap-2">
+                {row.verifikasi === 'Pending' && (
+                  <button onClick={() => openVerifikasi(row)}
+                    className="text-xs text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2 py-1.5 rounded-lg font-medium">Verifikasi</button>
+                )}
+                <button onClick={() => openEdit(row)} className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">Edit</button>
+                <button onClick={() => openHapus(row)} className="text-xs text-red-600 hover:text-red-700 font-medium">Hapus</button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Filter + Table */}
-      <FilterBar
-        searchValue={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Cari nama balita atau ibu..."
-        filters={[
-          {
-            id: 'status',
-            placeholder: 'Status Gizi',
-            value: statusFilter,
-            onChange: setStatusFilter,
-            options: [
-              { label: 'Status: Semua', value: 'Semua' },
-              { label: 'Stunting', value: 'Stunting' },
-              { label: 'Gizi Kurang', value: 'Gizi Kurang' },
-            ],
-          },
-        ]}
-      />
-
-      <DataTable
-        title="Balita Perlu Tindak Lanjut"
-        columns={TABLE_COLUMNS}
-        data={filteredData}
-        pageSize={5}
-        onExport={() => { }}
-      />
-
-      {/* ── Modals ── */}
-      <ModalTambahPemeriksaan
-        isOpen={modalTambah}
-        onClose={() => setModalTambah(false)}
-        pasienList={PASIEN_LIST}
-        onSubmit={handleTambahSubmit}
-      />
-
-      <ModalEditPemeriksaan
-        isOpen={modalEdit}
-        onClose={() => setModalEdit(false)}
-        namaAnak={editTarget?.nama ?? ''}
-        data={editTarget?.data ?? null}
-        onSubmit={handleEditSubmit}
-      />
-
-      <ModalHapusPemeriksaan
-        isOpen={modalHapus}
-        onClose={() => {
-          setModalHapus(false);
-          setHapusTarget(null);
-        }}
-        namaAnak={hapusTarget?.nama ?? ''}
-        tanggalPemeriksaan={hapusTarget?.tanggal ?? ''}
-        onConfirm={handleHapusConfirm}
-        isLoading={isDeleting}
-      />
-
-      {/* Verifikasi Modal — muncul saat bidan klik tombol Verifikasi di tabel */}
+      <ModalTambahPemeriksaan isOpen={modalTambah} onClose={() => setModalTambah(false)} pasienList={pasienOptions} onSubmit={handleTambahSubmit} />
+      <ModalEditPemeriksaan isOpen={modalEdit} onClose={() => setModalEdit(false)} namaAnak={editTarget?.nama ?? ''} data={editTarget?.data ?? null} onSubmit={handleEditSubmit} />
+      <ModalHapusPemeriksaan isOpen={modalHapus} onClose={() => { setModalHapus(false); setHapusTarget(null); }} namaAnak={hapusTarget?.nama ?? ''} tanggalPemeriksaan={hapusTarget?.tanggal ?? ''} onConfirm={handleHapusConfirm} isLoading={isDeleting} />
       {verifikasiTarget && (
-        <ModalVerifikasiBidan
-          target={verifikasiTarget}
-          onClose={() => setVerifikasiTarget(null)}
-          onSetuju={handleVerifikasiSetuju}
-          onTolak={handleVerifikasiTolak}
-        />
+        <ModalVerifikasiBidan target={verifikasiTarget} onClose={() => setVerifikasiTarget(null)} onSetuju={handleVerifikasiSetuju} onTolak={handleVerifikasiTolak} />
       )}
     </div>
   );

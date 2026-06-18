@@ -61,12 +61,13 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
     if (isLoggedIn) {
       apiGet<{ notifikasi: NotifPreview[] }>('/notifikasi?per_page=4')
         .then((res) => setNotifPreviews(res.notifikasi))
-        .catch(() => {});
+        .catch(() => console.error('Gagal memuat notifikasi'));
     }
   }, [isLoggedIn]);
 
   const pageTitle = PAGE_TITLES[location.pathname] || 'SiGizi';
   const unreadCount = notifPreviews.filter((n) => !n.status_baca).length;
+
 
   const handleLogout = async () => {
     setShowProfileMenu(false);

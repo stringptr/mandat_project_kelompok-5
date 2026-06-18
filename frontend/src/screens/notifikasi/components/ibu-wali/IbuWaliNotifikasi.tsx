@@ -3,7 +3,7 @@ import NotifTimeline from '../NotifTimeline';
 import { useNotifikasi } from '../useNotifikasi';
 
 export default function IbuWaliNotifikasi(): JSX.Element {
-  const { loading, notifikasi, markAllRead, toNotifGroups } = useNotifikasi();
+  const { notifikasi, markAllRead, toNotifGroups } = useNotifikasi();
 
   const groups = toNotifGroups(notifikasi);
   const unreadCount = notifikasi.filter((n) => !n.status_baca).length;
@@ -29,7 +29,7 @@ export default function IbuWaliNotifikasi(): JSX.Element {
               Pantau Kesehatan Anak Anda
             </h2>
             <p className="text-white/85 text-sm mb-5 leading-relaxed max-w-sm">
-              {loading ? 'Memuat...' : `${notifikasi.length} notifikasi tersedia`}
+              {notifikasi.length} notifikasi tersedia
             </p>
           </div>
         </div>
@@ -68,9 +68,7 @@ export default function IbuWaliNotifikasi(): JSX.Element {
             </button>
           )}
         </div>
-        {loading ? (
-          <div className="text-center py-12 text-neutral-400 text-sm">Memuat notifikasi...</div>
-        ) : groups.length === 0 ? (
+        {groups.length === 0 ? (
           <div className="text-center py-12 text-neutral-400 text-sm">Belum ada notifikasi</div>
         ) : (
           <NotifTimeline groups={groups} compactLastGroup />

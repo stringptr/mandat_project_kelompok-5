@@ -86,7 +86,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
           {/* 422 validation error breakdown */}
           {toast.errors && toast.errors.length > 0 && (
             <ul className="mt-2 space-y-1">
-              {toast.errors.map((e, i) => (
+              {toast.errors.filter(Boolean).map((e, i) => (
                 <li key={i} className={`text-[11px] leading-relaxed flex items-start gap-1.5 ${styles.message}`}>
                   <span className="flex-shrink-0 mt-0.5">·</span>
                   <span>

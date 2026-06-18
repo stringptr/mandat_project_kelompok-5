@@ -29,14 +29,12 @@ export function ModalVerifikasiArtikel({
         </div>
 
         <div className="p-6 space-y-4">
-          <div className="relative rounded-xl overflow-hidden h-40">
-            <img src={artikel.gambar} alt={artikel.judul} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-            <div className="absolute bottom-3 left-3">
+          <div className="bg-gradient-to-br from-amber-600 to-amber-800 rounded-xl p-4">
+            <div className="flex items-start justify-between">
               <KategoriBadge kategori={artikel.kategori} variant="solid" />
-            </div>
-            <div className="absolute top-3 right-3 bg-amber-500 text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide">
-              Menunggu Verifikasi
+              <span className="bg-amber-500 text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide">
+                Menunggu Verifikasi
+              </span>
             </div>
           </div>
 

@@ -4,9 +4,9 @@ interface FooterLink {
 }
 
 const FOOTER_LINKS: FooterLink[] = [
-    { label: 'Panduan Aplikasi', href: '/panduan' },
-    { label: 'Kebijakan Privasi', href: '/kebijakan-privasi' },
-    { label: 'Pusat Bantuan', href: '/bantuan' },
+    { label: 'Tentang', href: '#' },
+    { label: 'Kebijakan Privasi', href: '#' },
+    { label: 'Kontak', href: '#' },
 ];
 
 export function Footer(): JSX.Element {
@@ -21,7 +21,7 @@ export function Footer(): JSX.Element {
 
             <nav className="flex items-center gap-6">
                 {FOOTER_LINKS.map((link: FooterLink) => (
-                    <a key={link.href} href={link.href} className="text-sm text-neutral-600 hover:text-primary transition-colors font-body">
+                    <a key={link.label} href={link.href} className="text-sm text-neutral-600 hover:text-primary transition-colors font-body">
                         {link.label}
                     </a>
                 ))}

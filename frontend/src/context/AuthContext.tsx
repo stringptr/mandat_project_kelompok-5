@@ -1,29 +1,30 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { apiGet, apiPost, setOnUnauthorized } from '../lib/api';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Role } from '../App';
+import { apiPost, apiGet, ApiError, setOnUnauthorized } from '../lib/api';
 
 export interface UserProfile {
-  id_user: number;
+  idUser: number;
   name: string;
   email: string;
   nik: string;
   role: Role;
   roles: string[];
+  avatarUrl: string;
+}
+
+interface LoginPayload {
+  email?: string;
+  nik?: string;
+  password: string;
 }
 
 interface AuthContextValue {
   user: UserProfile | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (payload: LoginPayload) => Promise<void>;
   register: (data: RegisterFormData) => Promise<void>;
   logout: () => Promise<void>;
   isLoggedIn: boolean;
-  isLoading: boolean;
-}
-
-export interface LoginRequest {
-  email?: string;
-  nik?: string;
-  password: string;
+  loading: boolean;
 }
 
 export interface AuthResponse {
@@ -31,16 +32,6 @@ export interface AuthResponse {
   refresh_token: string;
   access_token_expires_in: number;
   refresh_token_expires_in: number;
-}
-
-export interface JwtClaim {
-  id_user: number;
-  roles: string[];
-  email: string;
-  nik: string;
-  jti: string;
-  exp: number;
-  iat: number;
 }
 
 export interface RegisterFormData {
@@ -63,22 +54,27 @@ export interface RegisterFormData {
   id_posyandu?: number | null;
 }
 
-function mapRolesToDisplayRole(roles: string[]): Role {
-  if (roles.includes('IBU_HAMIL') || roles.includes('PASIEN')) return 'Ibu/Wali';
-  if (roles.includes('BIDAN')) return 'Bidan';
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+function mapRolesToFrontendRole(roles: string[]): Role {
   if (roles.includes('DINKES')) return 'Dinas Kesehatan';
+  if (roles.includes('BIDAN')) return 'Bidan';
   if (roles.includes('KADER')) return 'Kader Posyandu';
-  return 'Kader Posyandu';
+  return 'Ibu/Wali';
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+function getAvatarUrl(name: string): string {
+  const seed = encodeURIComponent(name);
+  return `https://ui-avatars.com/api/?name=${seed}&background=6366f1&color=fff&size=256`;
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }): JSX.Element {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   const clearAuth = useCallback(() => {
     setUser(null);
+    localStorage.removeItem('sigizi_user');
   }, []);
 
   useEffect(() => {
@@ -88,53 +84,108 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const claim = await apiGet<JwtClaim>('/auth/me');
-        setUser({
-          id_user: claim.id_user,
-          name: claim.email,
-          email: claim.email,
-          nik: claim.nik,
-          role: mapRolesToDisplayRole(claim.roles),
-          roles: claim.roles,
-        });
+        const me = await apiGet<{
+          id_user: number;
+          nama: string;
+          roles: string[];
+          email: string;
+          nik: string;
+        }>('/auth/me');
+
+        const profile: UserProfile = {
+          idUser: me.id_user,
+          name: me.nama,
+          email: me.email,
+          nik: me.nik,
+          role: mapRolesToFrontendRole(me.roles),
+          roles: me.roles,
+          avatarUrl: getAvatarUrl(me.nama),
+        };
+
+        localStorage.setItem('sigizi_user', JSON.stringify(profile));
+        setUser(profile);
       } catch {
-        setUser(null);
+        const stored = localStorage.getItem('sigizi_user');
+        if (stored) {
+          try {
+            setUser(JSON.parse(stored));
+          } catch {
+            localStorage.removeItem('sigizi_user');
+          }
+        }
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
     checkSession();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const body: LoginRequest = { email, password };
-    await apiPost<AuthResponse>('/auth/login', body);
-    const claim = await apiGet<JwtClaim>('/auth/me');
-    setUser({
-      id_user: claim.id_user,
-      name: claim.email,
-      email: claim.email,
-      nik: claim.nik,
-      role: mapRolesToDisplayRole(claim.roles),
-      roles: claim.roles,
+  const login = useCallback(async (payload: LoginPayload) => {
+    await apiPost<AuthResponse>('/auth/login', {
+      email: payload.email || undefined,
+      nik: payload.nik || undefined,
+      password: payload.password,
     });
-  };
 
-  const register = async (data: RegisterFormData) => {
+    const me = await apiGet<{
+      id_user: number;
+      nama: string;
+      roles: string[];
+      email: string;
+      nik: string;
+    }>('/auth/me');
+
+    const profile: UserProfile = {
+      idUser: me.id_user,
+      name: me.nama,
+      email: me.email,
+      nik: me.nik,
+      role: mapRolesToFrontendRole(me.roles),
+      roles: me.roles,
+      avatarUrl: getAvatarUrl(me.nama),
+    };
+
+    localStorage.setItem('sigizi_user', JSON.stringify(profile));
+    setUser(profile);
+  }, []);
+
+  const register = useCallback(async (data: RegisterFormData) => {
     await apiPost<null>('/auth/register', data);
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
-      await apiPost<null>('/auth/logout');
-    } catch {
-      // ignore errors on logout
+      await apiPost('/auth/logout');
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        // session already expired, that's fine
+      }
     }
+    localStorage.removeItem('sigizi_user');
     setUser(null);
-  };
+    // Reset global store on logout so next login fetches fresh data
+    try {
+      const { useAppStore } = await import('../store/useAppStore');
+      useAppStore.setState({
+        dashboardStats: null,
+        distribusiGizi: [],
+        trenStunting: [],
+        stuntingPerWilayah: [],
+        kehadiranBulanan: [],
+        jadwalTerdekat: [],
+        aktivitas: [],
+        imunisasiPersen: 0,
+        artikelList: [],
+        imunisasiList: [],
+        rujukanList: [],
+      });
+    } catch {
+      // ignore if store not yet initialized
+    }
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoggedIn: user !== null, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoggedIn: user !== null, loading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -26,17 +26,15 @@ export function ModalDetailArtikel({ artikel, onClose }: ModalDetailArtikelProps
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Hero */}
-        <div className="relative h-52 overflow-hidden rounded-t-2xl">
-          <img src={artikel.gambar} alt={artikel.judul} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-xl text-white transition-colors"
-          >
-            <X size={18} />
-          </button>
-          <div className="absolute bottom-4 left-6">
+        <div className="relative bg-gradient-to-br from-primary-600 to-primary-800 rounded-t-2xl p-6">
+          <div className="flex items-start justify-between">
             <KategoriBadge kategori={artikel.kategori} variant="solid" />
+            <button
+              onClick={onClose}
+              className="p-2 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-xl text-white transition-colors"
+            >
+              <X size={18} />
+            </button>
           </div>
         </div>
 

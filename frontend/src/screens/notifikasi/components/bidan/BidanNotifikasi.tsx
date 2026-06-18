@@ -37,13 +37,13 @@ interface BidanDashboard {
 }
 
 export default function BidanNotifikasi(): JSX.Element {
-  const { loading, notifikasi, markAllRead, toNotifGroups } = useNotifikasi();
+  const { notifikasi, markAllRead, toNotifGroups } = useNotifikasi();
   const [dashboard, setDashboard] = useState<BidanDashboard | null>(null);
 
   useEffect(() => {
     apiGet<BidanDashboard>('/notifikasi/bidan')
       .then(setDashboard)
-      .catch(() => {});
+      .catch(() => console.error('Gagal memuat dashboard bidan'));
   }, []);
 
   const groups = toNotifGroups(notifikasi);
@@ -97,9 +97,7 @@ export default function BidanNotifikasi(): JSX.Element {
             </button>
           )}
         </div>
-        {loading ? (
-          <div className="text-center py-12 text-neutral-400 text-sm">Memuat notifikasi...</div>
-        ) : groups.length === 0 ? (
+        {groups.length === 0 ? (
           <div className="text-center py-12 text-neutral-400 text-sm">Belum ada notifikasi</div>
         ) : (
           <NotifTimeline groups={groups} compactLastGroup />

@@ -1,5 +1,7 @@
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { NotificationProvider } from "./context/NotificationContext";
+import ToastContainer from "./components/ToastContainer";
 
 import { Sidebar } from "./components/sidebar";
 import {Header} from "./components/header";
@@ -24,8 +26,19 @@ export type Role =
   | "Kader Posyandu";
 
 function AppShell(): JSX.Element {
-  const { isLoggedIn, user } = useAuth();
+  const { isLoggedIn, user, loading } = useAuth();
   const navigate = useNavigate();
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-neutral-50">
+        <div className="flex flex-col items-center gap-3">
+          <img src="/logo-sigizi.svg" alt="SiGizi" className="w-12 h-12 object-contain" />
+          <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   const currentRole: Role =
     isLoggedIn && user ? user.role : "Kader Posyandu";
@@ -103,7 +116,10 @@ function AppShell(): JSX.Element {
 export default function App(): JSX.Element {
   return (
     <AuthProvider>
-      <AppShell />
+      <NotificationProvider>
+        <AppShell />
+        <ToastContainer />
+      </NotificationProvider>
     </AuthProvider>
   );
 }

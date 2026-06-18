@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNotification } from '../../../context/NotificationContext';
 
 export interface PemeriksaanData {
     id: string;
@@ -34,6 +35,7 @@ export default function ModalEditPemeriksaan({
     data,
     onSubmit,
 }: ModalEditPemeriksaanProps) {
+    const notify = useNotification();
     const [beratBadan, setBeratBadan] = useState('');
     const [tinggiBadan, setTinggiBadan] = useState('');
     const [lingkarKepala, setLingkarKepala] = useState('');
@@ -71,6 +73,8 @@ export default function ModalEditPemeriksaan({
         if (!bbErr && !tbErr) {
             onSubmit(data.id, { beratBadan, tinggiBadan, lingkarKepala });
             onClose();
+        } else {
+            notify.warn('Mohon lengkapi semua data form yang wajib diisi sebelum mengirim.');
         }
     };
 

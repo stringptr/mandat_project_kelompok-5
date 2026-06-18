@@ -1,6 +1,8 @@
 // UpdateRujukanModal with autocomplete for faskes
 import { X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useNotification } from '../../../context/NotificationContext';
+import { apiPatch } from '../../../lib/api';
 import type { Rujukan } from './RujukanAktif';
 
 // Static list of facilities (could be fetched later)
@@ -25,6 +27,7 @@ export default function UpdateRujukanModal({
 }: UpdateRujukanModalProps): JSX.Element | null {
   if (!isOpen) return null;
 
+  const notify = useNotification();
   const [status, setStatus] = useState(rujukan.status);
   const [faskes, setFaskes] = useState(rujukan.faskes);
   const [query, setQuery] = useState('');
@@ -35,15 +38,23 @@ export default function UpdateRujukanModal({
     ? FACILITIES.filter((f) => f.toLowerCase().startsWith(query.toLowerCase()))
     : [];
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!faskes.trim()) {
+      notify.warn('Mohon lengkapi semua data form yang wajib diisi sebelum mengirim.');
+      return;
+    }
     setIsSubmitting(true);
     const updated: Rujukan = { ...rujukan, status, faskes };
-    // Simulate async save
-    setTimeout(() => {
+    try {
+      const idNum = parseInt(String(rujukan.id).replace(/[^0-9]/g, ''), 10) || 0;
+      await apiPatch('/rujukan/' + idNum + '/status', { status_rujukan: status });
       onSave(updated);
       setIsSubmitting(false);
       onClose();
-    }, 500);
+    } catch {
+      setIsSubmitting(false);
+      notify.error('Gagal memperbarui rujukan. Silakan coba lagi.');
+    }
   };
 
   return (

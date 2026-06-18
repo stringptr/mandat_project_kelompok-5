@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, ShieldCheck, Headset, ArrowLeft, ArrowRight, User, Mail, Lock, Phone, Calendar, MapPin, BookOpen, Briefcase, Users, CreditCard } from 'lucide-react';
+import { CheckCircle, ShieldCheck, Headset, ArrowLeft, ArrowRight, User, Mail, Lock, Phone, Calendar, MapPin, BookOpen, Briefcase, Users, CreditCard, FileText, Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -63,8 +63,8 @@ function LeftPanel(): JSX.Element {
 // ── Form wrapper ───────────────────────────────────────────────────────────
 function FormWrap({ children, onLogin }: { children: React.ReactNode; onLogin: () => void }): JSX.Element {
   return (
-    <div className="flex flex-col justify-between min-h-full p-10 overflow-y-auto">
-      <div className="flex-1 flex flex-col justify-center max-w-md w-full mx-auto">
+    <div className="flex flex-col min-h-full p-10">
+      <div className="flex-1 flex flex-col max-w-md w-full mx-auto">
         {children}
       </div>
       <div className="max-w-md w-full mx-auto mt-6 text-center space-y-3">
@@ -131,7 +131,7 @@ export default function RegisterPage(): JSX.Element {
   const [error, setError] = useState('');
 
   // Form state
-  const [form1, setForm1] = useState({ email: '', password: '', nama: '', nik: '', telepon: '', jenisKelamin: 'Laki-Laki' });
+  const [form1, setForm1] = useState({ email: '', password: '', nama: '', nik: '', telepon: '', jenisKelamin: 'Laki-Laki', noSk: '', idPosyandu: '' });
   const [form2, setForm2] = useState({ tanggalLahir: '', provinsi: 'Jawa Tengah', kabupaten: 'Sukoharjo', kecamatan: 'Tembalang', kelurahan: 'Bulusan' });
   const [form3, setForm3] = useState({ pendidikan: 'Sarjana 1', pekerjaan: 'Dosen', pendapatan: 'Rp2.500.000 – Rp5.000.000', tanggungan: '1' });
 
@@ -156,13 +156,15 @@ export default function RegisterPage(): JSX.Element {
         nama: form1.nama,
         nik: form1.nik,
         jenis_kelamin: form1.jenisKelamin,
-        tanggal_lahir: new Date().toISOString(),
+        tanggal_lahir: new Date(`${form2.tanggalLahir || '2000'}-01-01T00:00:00Z`).toISOString(),
         id_lokasi: 1,
         id_pendidikan: form3.pendidikan ? 1 : null,
         id_pekerjaan: form3.pekerjaan ? 1 : null,
         id_pendapatan: form3.pendapatan ? 1 : null,
         jumlah_tanggungan: form3.tanggungan ? parseInt(form3.tanggungan) : null,
         role: roleMap[selectedRole] || 'Ibu Hamil',
+        no_sk: form1.noSk || undefined,
+        id_posyandu: form1.idPosyandu ? parseInt(form1.idPosyandu, 10) : null,
       });
       if (isPendingRole) {
         setStep('done-pending');
@@ -181,7 +183,7 @@ export default function RegisterPage(): JSX.Element {
     return (
       <div className="min-h-screen flex font-body">
         <LeftPanel />
-        <div className="flex-1 bg-white">
+        <div className="flex-1 bg-white overflow-y-auto">
           <FormWrap onLogin={goLogin}>
             <h1 className="text-2xl font-bold text-neutral-900 font-headline mb-1">Buat Akun Baru</h1>
             <p className="text-sm text-neutral-500 mb-6">Lengkapi data diri Anda untuk memulai pemantauan gizi.</p>
@@ -222,7 +224,7 @@ export default function RegisterPage(): JSX.Element {
     return (
       <div className="min-h-screen flex font-body">
         <LeftPanel />
-        <div className="flex-1 bg-white">
+        <div className="flex-1 bg-white overflow-y-auto">
           <FormWrap onLogin={goLogin}>
             <h1 className="text-2xl font-bold text-neutral-900 font-headline mb-1">Daftar {selectedRole}</h1>
             <p className="text-sm text-neutral-500 mb-6">Lengkapi berkas untuk melanjutkan pendaftaran.</p>
@@ -245,6 +247,19 @@ export default function RegisterPage(): JSX.Element {
                 <input type="password" value={form1.password} onChange={(e) => setForm1({ ...form1, password: e.target.value })}
                   placeholder="dani1234" className={inputCls} />
               </Field>
+
+              {isPendingRole && selectedRole === 'Kader Posyandu' && (
+                <>
+                  <Field label="No. Surat Keputusan (SK)" icon={<FileText size={13} />}>
+                    <input type="text" value={form1.noSk} onChange={(e) => setForm1({ ...form1, noSk: e.target.value })}
+                      placeholder="SK.01/Posyandu/2025" className={inputCls} />
+                  </Field>
+                  <Field label="ID Posyandu" icon={<Building2 size={13} />}>
+                    <input type="number" value={form1.idPosyandu} onChange={(e) => setForm1({ ...form1, idPosyandu: e.target.value })}
+                      placeholder="1" className={inputCls} />
+                  </Field>
+                </>
+              )}
 
               {!isPendingRole && (
                 <>
@@ -291,7 +306,7 @@ export default function RegisterPage(): JSX.Element {
     return (
       <div className="min-h-screen flex font-body">
         <LeftPanel />
-        <div className="flex-1 bg-white">
+        <div className="flex-1 bg-white overflow-y-auto">
           <FormWrap onLogin={goLogin}>
             <h1 className="text-2xl font-bold text-neutral-900 font-headline mb-1">Daftar {selectedRole}</h1>
             <p className="text-sm text-neutral-500 mb-6">Lengkapi berkas untuk melanjutkan pendaftaran.</p>
@@ -349,7 +364,7 @@ export default function RegisterPage(): JSX.Element {
     return (
       <div className="min-h-screen flex font-body">
         <LeftPanel />
-        <div className="flex-1 bg-white">
+        <div className="flex-1 bg-white overflow-y-auto">
           <FormWrap onLogin={goLogin}>
             <h1 className="text-2xl font-bold text-neutral-900 font-headline mb-1">Daftar {selectedRole}</h1>
             <p className="text-sm text-neutral-500 mb-6">Lengkapi berkas untuk melanjutkan pendaftaran.</p>
@@ -401,7 +416,7 @@ export default function RegisterPage(): JSX.Element {
     return (
       <div className="min-h-screen flex font-body">
         <LeftPanel />
-        <div className="flex-1 bg-white">
+        <div className="flex-1 bg-white overflow-y-auto">
           <FormWrap onLogin={goLogin}>
             <div className="text-center py-8">
               <h1 className="text-2xl font-bold text-neutral-900 font-headline mb-2">Registrasi Awal Selesai</h1>
@@ -426,7 +441,7 @@ export default function RegisterPage(): JSX.Element {
   return (
     <div className="min-h-screen flex font-body">
       <LeftPanel />
-      <div className="flex-1 bg-white">
+      <div className="flex-1 bg-white overflow-y-auto">
         <FormWrap onLogin={goLogin}>
           <div className="text-center py-8">
             <h1 className="text-2xl font-bold text-neutral-900 font-headline mb-2">Registrasi Selesai</h1>

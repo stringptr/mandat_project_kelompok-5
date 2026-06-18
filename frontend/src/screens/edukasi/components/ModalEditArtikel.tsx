@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { useNotification } from '../../../context/NotificationContext';
+import { apiPatch } from '../../../lib/api';
 import type { Artikel, KategoriArtikel } from '../data/artikel.data';
 import { KATEGORI_LIST, WAKTU_BACA_OPTIONS } from '../data/artikel.data';
 
@@ -12,6 +14,7 @@ interface ModalEditArtikelProps {
 }
 
 export function ModalEditArtikel({ artikel, onClose, onSubmit }: ModalEditArtikelProps): JSX.Element {
+  const notify = useNotification();
   const [form, setForm] = useState<Artikel>({ ...artikel });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -23,11 +26,21 @@ export function ModalEditArtikel({ artikel, onClose, onSubmit }: ModalEditArtike
     return e;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-    onSubmit(form);
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      notify.warn('Mohon lengkapi semua data form yang wajib diisi sebelum mengirim.');
+      return;
+    }
+    try {
+      const idNum = parseInt(String(form.id).replace(/[^0-9]/g, ''), 10) || 0;
+      await apiPatch('/artikel/' + idNum, { judul: form.judul, isi_artikel: form.konten, kategori: form.kategori });
+      onSubmit(form);
+    } catch {
+      notify.error('Gagal memperbarui artikel. Silakan coba lagi.');
+    }
   };
 
   return (
@@ -114,15 +127,6 @@ export function ModalEditArtikel({ artikel, onClose, onSubmit }: ModalEditArtike
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-semibold text-neutral-700 mb-1.5 block font-body">URL Gambar</label>
-              <input
-                type="text"
-                value={form.gambar}
-                onChange={(e) => setForm({ ...form, gambar: e.target.value })}
-                className="w-full px-4 py-3 border border-neutral-200 rounded-xl text-sm font-body focus:outline-none focus:ring-2 focus:ring-primary-200"
-              />
-            </div>
             <div>
               <label className="text-sm font-semibold text-neutral-700 mb-1.5 block font-body">
                 Estimasi Waktu Baca

@@ -57,7 +57,7 @@ function parseApiError(err: unknown): { status: number; title: string; detail: s
       status: responseData.status as number,
       title: (responseData.title as string) ?? '',
       detail: (responseData.detail as string) ?? '',
-      errors: (Array.isArray(responseData.errors) ? responseData.errors : []) as ApiErrorItem[],
+      errors: (Array.isArray(responseData.errors) ? responseData.errors.filter(Boolean) : []) as ApiErrorItem[],
     };
   }
 

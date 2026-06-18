@@ -31,60 +31,50 @@ export function ArtikelCard({
         ${isPending ? 'border-amber-200' : isRejected ? 'border-red-200' : 'border-neutral-100'}
       `}
     >
-      {/* Thumbnail */}
-      <div className="relative h-44 overflow-hidden">
-        <img
-          src={artikel.gambar}
-          alt={artikel.judul}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-
-        {/* Status badge overlay */}
-        {(isPending || isRejected) && (
-          <div
-            className={`absolute inset-0 flex items-center justify-center ${
-              isPending ? 'bg-amber-500/20' : 'bg-red-500/20'
-            }`}
-          >
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-bold text-white ${
-                isPending ? 'bg-amber-500' : 'bg-red-500'
-              }`}
-            >
-              {isPending ? '⏳ Menunggu Verifikasi' : '✗ Ditolak'}
-            </span>
+      {/* Status & action header */}
+      <div className="px-4 pt-4 pb-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {isPending && (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500 text-white">
+                Menunggu Verifikasi
+              </span>
+            )}
+            {isRejected && (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-500 text-white">
+                Ditolak
+              </span>
+            )}
           </div>
-        )}
-
-        {/* Hover action buttons */}
-        <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {showVerifikasi && isPending && onVerifikasi && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onVerifikasi(artikel); }}
-              title="Verifikasi Artikel"
-              className="p-2 bg-amber-500 hover:bg-amber-600 rounded-lg text-white transition-colors"
-            >
-              <CheckCircle size={14} />
-            </button>
-          )}
-          {canEdit && onEdit && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onEdit(artikel); }}
-              title="Edit Artikel"
-              className="p-2 bg-white/90 hover:bg-white rounded-lg text-neutral-700 hover:text-primary transition-colors shadow-sm"
-            >
-              <Pencil size={14} />
-            </button>
-          )}
-          {canEdit && onHapus && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onHapus(artikel); }}
-              title="Hapus Artikel"
-              className="p-2 bg-white/90 hover:bg-white rounded-lg text-neutral-700 hover:text-red-500 transition-colors shadow-sm"
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {showVerifikasi && isPending && onVerifikasi && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onVerifikasi(artikel); }}
+                title="Verifikasi Artikel"
+                className="p-1.5 bg-amber-500 hover:bg-amber-600 rounded-lg text-white transition-colors"
+              >
+                <CheckCircle size={14} />
+              </button>
+            )}
+            {canEdit && onEdit && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(artikel); }}
+                title="Edit Artikel"
+                className="p-1.5 text-neutral-400 hover:text-primary hover:bg-primary-50 rounded-lg transition-colors"
+              >
+                <Pencil size={14} />
+              </button>
+            )}
+            {canEdit && onHapus && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onHapus(artikel); }}
+                title="Hapus Artikel"
+                className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

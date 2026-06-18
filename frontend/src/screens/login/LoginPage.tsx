@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext';
+import { ApiError } from '../../lib/api';
 
 export default function LoginPage(): JSX.Element {
   const { login } = useAuth();
+  const notify = useNotification();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [nik, setNik] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -15,13 +19,25 @@ export default function LoginPage(): JSX.Element {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!email.trim() || !nik.trim() || !password.trim()) {
+      notify.warn('Mohon lengkapi semua data form yang wajib diisi sebelum mengirim.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await login(email.trim().toLowerCase(), password);
+      await login({ email: email.trim(), nik: nik.trim(), password });
+      notify.success('Selamat datang kembali!');
       navigate('/');
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Email atau password salah. Coba lagi.';
-      setError(message);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.detail || 'Email, NIK, atau password salah. Coba lagi.');
+        notify.apiError(err, 'Email, NIK, atau password salah. Silakan coba lagi.');
+      } else {
+        setError('Terjadi kesalahan. Silakan coba lagi.');
+        notify.error('Terjadi kesalahan. Silakan coba lagi.');
+      }
     } finally {
       setLoading(false);
     }
@@ -49,6 +65,15 @@ export default function LoginPage(): JSX.Element {
             <div className="relative">
               <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@email.com" required
+                className="w-full pl-10 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary transition-colors" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wide block mb-1.5">NIK</label>
+            <div className="relative">
+              <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input type="text" value={nik} onChange={(e) => setNik(e.target.value)} placeholder="16 digit NIK" required minLength={16} maxLength={16}
                 className="w-full pl-10 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-xl text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary transition-colors" />
             </div>
           </div>

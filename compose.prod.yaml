@@ -59,6 +59,7 @@ services:
     volumes:
       - ./storage/master:/var/lib/postgresql
       - ./migrations:/docker-entrypoint-initdb.d
+      - ./migrations/data:/data-csv:z
     env_file:
       - .env.prod
     environment:
@@ -223,6 +224,8 @@ services:
       context: ./frontend
       target: production
       dockerfile: Containerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-backend:8080}
     restart: unless-stopped
     volumes:
       - ./frontend:/app:z

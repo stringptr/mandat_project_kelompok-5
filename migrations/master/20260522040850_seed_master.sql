@@ -133,8 +133,8 @@ FROM '/data-csv/user_session.csv' CSV HEADER;
 -- ============================================================
 -- 21. AUDIT LOG (FK ke user_account, user_session)
 -- ============================================================
-COPY audit_log (id_log, tipe_aktor, id_user, id_user_session, tipe_aktivitas, berhasil, endpoint, table_name, record_id, old_value, new_value, detail, ip_address, user_agent, waktu_aktivitas)
-FROM '/data-csv/audit_log.csv' CSV HEADER;
+-- COPY audit_log (id_log, tipe_aktor, id_user, id_user_session, tipe_aktivitas, berhasil, endpoint, table_name, record_id, old_value, new_value, detail, ip_address, user_agent, waktu_aktivitas)
+-- FROM '/data-csv/audit_log.csv' CSV HEADER;
 
 -- ============================================================
 -- RESET ALL SEQUENCES after explicit ID inserts

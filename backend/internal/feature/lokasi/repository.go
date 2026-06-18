@@ -4,21 +4,8 @@ import (
 	"context"
 
 	lokasiDomain "github.com/stringptr/SiGizi/backend/internal/domain/lokasi"
-	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/enum"
-	. "github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/table"
-
-	"github.com/go-jet/jet/v2/pgxV5"
-	. "github.com/go-jet/jet/v2/postgres"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-var tipeLokasiMap = map[string]StringExpression{
-	"Provinsi":  enum.TipeLokasi.Provinsi,
-	"Kabupaten": enum.TipeLokasi.Kabupaten,
-	"Kota":      enum.TipeLokasi.Kota,
-	"Kecamatan": enum.TipeLokasi.Kecamatan,
-	"Kelurahan": enum.TipeLokasi.Kelurahan,
-}
 
 type Repo struct {
 	db *pgxpool.Pool
@@ -29,32 +16,34 @@ func NewRepo(db *pgxpool.Pool) *Repo {
 }
 
 func (r *Repo) GetByTipeAndParent(ctx context.Context, tipe string, bagianDari int32) ([]*lokasiDomain.LokasiItem, error) {
-	conditions := []BoolExpression{
-		Lokasi.TipeLokasi.EQ(tipeLokasiMap[tipe]),
-	}
+	sql := `SELECT id_lokasi, nama_lokasi, tipe_lokasi::text, bagian_dari FROM lokasi WHERE tipe_lokasi::text = $1`
 
 	if bagianDari > 0 {
-		conditions = append(conditions, Lokasi.BagianDari.EQ(Int32(bagianDari)))
+		sql += ` AND bagian_dari = $2`
 	} else {
-		conditions = append(conditions, Lokasi.BagianDari.IS_NULL())
+		sql += ` AND bagian_dari IS NULL`
+	}
+	sql += ` ORDER BY nama_lokasi ASC`
+
+	args := []interface{}{tipe}
+	if bagianDari > 0 {
+		args = append(args, bagianDari)
 	}
 
-	whereCond := conditions[0]
-	for _, c := range conditions[1:] {
-		whereCond = whereCond.AND(c)
-	}
-
-	var result []*lokasiDomain.LokasiItem
-	stmt := SELECT(
-		Lokasi.IDLokasi,
-		Lokasi.NamaLokasi,
-		Lokasi.TipeLokasi,
-		Lokasi.BagianDari,
-	).FROM(Lokasi).WHERE(whereCond).ORDER_BY(Lokasi.NamaLokasi.ASC())
-
-	err := pgxV5.Query(ctx, stmt, r.db, &result)
+	pgxRows, err := r.db.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
+	}
+	defer pgxRows.Close()
+
+	var result []*lokasiDomain.LokasiItem
+	for pgxRows.Next() {
+		var row lokasiDomain.LokasiItem
+		err := pgxRows.Scan(&row.IDLokasi, &row.NamaLokasi, &row.TipeLokasi, &row.BagianDari)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, &row)
 	}
 
 	return result, nil

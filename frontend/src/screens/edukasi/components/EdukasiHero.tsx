@@ -25,41 +25,32 @@ export function EdukasiHero({
       {main && (
         <div
           onClick={() => onRead(main)}
-          className="lg:col-span-2 relative rounded-2xl overflow-hidden cursor-pointer group min-h-64"
+          className="lg:col-span-2 bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl p-6 cursor-pointer group hover:shadow-md transition-shadow min-h-64 flex flex-col justify-end"
         >
-          <img
-            src={main.gambar}
-            alt={main.judul}
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-
-          <div className="absolute top-4 left-4">
+          <div className="flex items-start justify-between mb-3">
             <KategoriBadge kategori={main.kategori} variant="solid" />
+            {canEdit?.(main) && (
+              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                {onEdit && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onEdit(main); }}
+                    className="p-2 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-lg text-white transition-colors"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+                {onHapus && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onHapus(main); }}
+                    className="p-2 bg-red-500/70 hover:bg-red-500 backdrop-blur-sm rounded-lg text-white transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-
-          {canEdit?.(main) && (
-            <div className="absolute top-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              {onEdit && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onEdit(main); }}
-                  className="p-2 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-lg text-white transition-colors"
-                >
-                  <Pencil size={14} />
-                </button>
-              )}
-              {onHapus && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onHapus(main); }}
-                  className="p-2 bg-red-500/70 hover:bg-red-500 backdrop-blur-sm rounded-lg text-white transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
-          )}
-
-          <div className="absolute bottom-0 left-0 right-0 p-6">
+          <div className="mt-auto">
             <h3 className="text-xl font-bold text-white font-headline leading-snug mb-2 line-clamp-2">
               {main.judul}
             </h3>

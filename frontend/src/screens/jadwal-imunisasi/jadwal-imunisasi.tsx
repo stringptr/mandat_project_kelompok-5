@@ -1,14 +1,16 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Search, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { useNotification } from '../../context/NotificationContext';
+import { useAuth } from '../../context/AuthContext';
+import { apiGet, apiDelete } from '../../lib/api';
+import { useAppStore } from '../../store/useAppStore';
+import type { ImunisasiListData, RiwayatImunisasiResponse } from '../../types/entities';
 import type { Role } from '../../App';
-import { DUMMY_JADWAL, type JadwalImunisasi } from './data/imunisasi.data';
+import type { JadwalImunisasi } from './data/imunisasi.data';
 import { ModalTambahJadwal } from './components/ModalTambahJadwal';
 import { ModalUpdateJadwal } from './components/ModalUpdateJadwal';
 import { ModalHapusJadwal } from './components/ModalHapusJadwal';
 import { ModalDetailJadwal } from './components/ModalDetailJadwal';
-
-// Ibu/Wali hanya melihat jadwal anaknya sendiri (mock: #PST-09221)
-const IBU_WALI_PASIEN_ID = '#PST-09221';
 
 const PAGE_SIZE = 4;
 
@@ -17,7 +19,10 @@ interface JadwalImunisasiProps {
 }
 
 export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): JSX.Element {
-  const [data, setData] = useState<JadwalImunisasi[]>(DUMMY_JADWAL);
+  const notify = useNotification();
+  const { user } = useAuth();
+  const { imunisasiList, setImunisasiList, setImunisasiLoading } = useAppStore();
+  const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'SEMUA' | 'SUDAH' | 'BELUM'>('SEMUA');
   const [page, setPage] = useState(1);
@@ -31,14 +36,58 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
   const canCRUD = currentRole === 'Bidan' || currentRole === 'Kader Posyandu';
   const isIbuWali = currentRole === 'Ibu/Wali';
 
-  // ── Derived data ───────────────────────────────────────────────────────────
-  // Ibu/Wali hanya melihat data anaknya
-  const roleFilteredData = isIbuWali
-    ? data.filter((j) => j.idPasien === IBU_WALI_PASIEN_ID)
-    : data;
+  // ── Fetch data from backend ────────────────────────────────────────────────
+  const fetchData = useCallback(async (force = false) => {
+    // Skip if already loaded unless forced
+    if (imunisasiList.length > 0 && !force) return;
+    setImunisasiLoading(true);
+    try {
+      if (isIbuWali && user) {
+        const res = await apiGet<RiwayatImunisasiResponse>(`/imunisasi/pasien/${user.idUser}`);
+        const list = res.riwayat_imunisasi ?? [];
+        const mapped: JadwalImunisasi[] = list.map((item) => ({
+          id: String(item.id_imunisasi),
+          idPasien: String(res.id_pasien),
+          namaAnak: user.name,
+          namaVaksin: item.nama_vaksin,
+          dosis: 'Primary Dose',
+          tanggalJadwal: item.tanggal_jadwal,
+          tanggalRealisasi: item.tanggal_realisasi ?? null,
+          status: item.status_imunisasi === 'Sudah' ? 'SUDAH' : 'BELUM',
+        }));
+        setImunisasiList(mapped);
+      } else {
+        const res = await apiGet<ImunisasiListData>('/imunisasi', { page: '1', per_page: '100' });
+        const list = res.jadwal ?? [];
+        const mapped: JadwalImunisasi[] = list.map((item) => ({
+          id: String(item.id_imunisasi),
+          idPasien: String(item.id_imunisasi),
+          namaAnak: item.nama_pasien,
+          namaVaksin: item.nama_vaksin,
+          dosis: 'Primary Dose',
+          tanggalJadwal: item.tanggal_jadwal,
+          tanggalRealisasi: null,
+          status: item.status_imunisasi === 'Sudah' ? 'SUDAH' : 'BELUM',
+        }));
+        setImunisasiList(mapped);
+      }
+    } catch (err) {
+      console.error('Gagal memuat jadwal imunisasi:', err);
+    } finally {
+      setImunisasiLoading(false);
+    }
+  }, [currentRole, user, isIbuWali, imunisasiList.length, setImunisasiList, setImunisasiLoading]);
 
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Use store list as data
+  const data = imunisasiList;
+
+  // ── Derived data ───────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    return roleFilteredData.filter((j) => {
+    return data.filter((j) => {
       const matchSearch =
         search === '' ||
         j.idPasien.toLowerCase().includes(search.toLowerCase()) ||
@@ -47,38 +96,56 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
       const matchStatus = statusFilter === 'SEMUA' || j.status === statusFilter;
       return matchSearch && matchStatus;
     });
-  }, [roleFilteredData, search, statusFilter]);
+  }, [data, search, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const totalSudah = roleFilteredData.filter((j) => j.status === 'SUDAH').length;
-  const totalBelum = roleFilteredData.filter((j) => j.status === 'BELUM').length;
+  const totalSudah = data.filter((j) => j.status === 'SUDAH').length;
+  const totalBelum = data.filter((j) => j.status === 'BELUM').length;
 
   // ── Handlers ───────────────────────────────────────────────────────────────
-  const handleTambah = (item: Omit<JadwalImunisasi, 'id'>) => {
-    setData((prev) => [{ ...item, id: String(Date.now()) }, ...prev]);
+  const handleTambah = () => {
     setModalTambah(false);
     setPage(1);
+    notify.success('Jadwal imunisasi baru berhasil ditambahkan.');
+    fetchData(true); // Force re-fetch from backend
   };
 
-  const handleUpdate = (updated: JadwalImunisasi) => {
-    setData((prev) => prev.map((j) => (j.id === updated.id ? updated : j)));
+  const handleUpdate = () => {
     setModalUpdate(null);
+    notify.success('Data jadwal imunisasi berhasil diperbarui.');
+    fetchData(true); // Force re-fetch from backend
   };
 
-  const handleHapus = () => {
+  const handleHapus = async () => {
     if (!modalHapus) return;
-    setData((prev) => prev.filter((j) => j.id !== modalHapus.id));
-    setModalHapus(null);
-    if (page > Math.ceil((filtered.length - 1) / PAGE_SIZE)) setPage((p) => Math.max(1, p - 1));
+    const idNum = parseInt(String(modalHapus.id).replace(/[^0-9]/g, ''), 10);
+    if (!idNum) {
+      notify.error('ID imunisasi tidak valid.');
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await apiDelete(`/imunisasi/${idNum}`);
+      setImunisasiList(imunisasiList.filter((j) => j.id !== modalHapus.id));
+      setModalHapus(null);
+      if (page > Math.ceil((filtered.length - 1) / PAGE_SIZE)) setPage((p) => Math.max(1, p - 1));
+      notify.success('Jadwal imunisasi berhasil dihapus.');
+    } catch {
+      notify.error('Gagal menghapus jadwal imunisasi. Silakan coba lagi.');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const changePage = (n: number) => setPage(Math.max(1, Math.min(totalPages, n)));
 
   // ── Page heading info per role ─────────────────────────────────────────────
+  const firstChildName = data.length > 0 ? data[0].namaAnak : 'Anak Anda';
   const pageDesc = isIbuWali
-    ? `Jadwal imunisasi untuk Arka Ramadhan (${IBU_WALI_PASIEN_ID}). Pantau status dan tanggal pelaksanaan vaksin anak Anda.`
+    ? `Jadwal imunisasi untuk ${firstChildName}. Pantau status dan tanggal pelaksanaan vaksin anak Anda.`
     : canCRUD
     ? 'Monitor dan kelola jadwal imunisasi komunitas. Tambah, edit, atau hapus catatan vaksinasi pasien.'
     : 'Monitor jadwal imunisasi komunitas. Data diperbarui secara real-time dari posyandu.';
@@ -93,12 +160,12 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
           <p className="text-xs text-neutral-500 mt-1 max-w-xl">{pageDesc}</p>
         </div>
         {/* Ibu/Wali: banner pasien */}
-        {isIbuWali && (
+        {isIbuWali && data.length > 0 && (
           <div className="bg-primary-50 border border-primary-100 rounded-xl px-4 py-2.5 flex items-center gap-2 flex-shrink-0">
             <span className="text-primary text-base">👶</span>
             <div>
-              <p className="text-xs font-bold text-primary font-body">Arka Ramadhan</p>
-              <p className="text-[10px] text-neutral-500 font-body">{IBU_WALI_PASIEN_ID} · 14 bulan</p>
+              <p className="text-xs font-bold text-primary font-body">{firstChildName}</p>
+              <p className="text-[10px] text-neutral-500 font-body">ID: {data[0].idPasien}</p>
             </div>
           </div>
         )}
@@ -112,12 +179,14 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
             <span className="text-primary text-lg">📅</span>
           </div>
           <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">Total Jadwal Imunisasi</p>
-          <p className="text-4xl font-bold text-neutral-900 font-headline mt-1">{roleFilteredData.length}</p>
+          <p className="text-4xl font-bold text-neutral-900 font-headline mt-1">{data.length}</p>
           <div className="h-0.5 bg-primary mt-3 rounded-full" />
         </div>
 
         <div className="bg-white rounded-2xl border border-neutral-100 p-5 relative">
-          <span className="absolute top-4 right-4 text-[10px] font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full">+12%</span>
+          <span className="absolute top-4 right-4 text-[10px] font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full">
+            {data.length > 0 ? `${Math.round((totalSudah / data.length) * 100)}%` : '0%'}
+          </span>
           <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center mb-3">
             <span className="text-emerald-500 text-xl">✓</span>
           </div>
@@ -183,7 +252,6 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
           ))}
         </div>
 
-        {/* Rows */}
         {paged.length === 0 ? (
           <div className="py-16 text-center text-neutral-400">
             <p className="text-4xl mb-3">📅</p>
@@ -217,7 +285,7 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
               ) : (
                 <>
                   {/* Non-Ibu/Wali view: ID first */}
-                  <p className="text-sm font-bold text-primary">{j.idPasien}</p>
+                  <p className="text-sm font-bold text-primary">{j.namaAnak}</p>
                   <div>
                     <p className="text-sm font-bold text-neutral-800">{j.namaVaksin.split(' (')[0]}</p>
                     <p className="text-xs text-neutral-400 mt-0.5">{j.dosis}</p>
@@ -363,7 +431,7 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
         <ModalUpdateJadwal jadwal={modalUpdate} onClose={() => setModalUpdate(null)} onSimpan={handleUpdate} />
       )}
       {modalHapus && canCRUD && (
-        <ModalHapusJadwal jadwal={modalHapus} onClose={() => setModalHapus(null)} onHapus={handleHapus} />
+        <ModalHapusJadwal jadwal={modalHapus} onClose={() => setModalHapus(null)} onHapus={handleHapus} loading={deleting} />
       )}
       {modalDetail && (
         <ModalDetailJadwal jadwal={modalDetail} onClose={() => setModalDetail(null)} />

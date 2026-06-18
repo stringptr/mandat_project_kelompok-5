@@ -24,13 +24,13 @@ interface AktivitasResponse {
 }
 
 export default function DinkesNotifikasi(): JSX.Element {
-  const { loading, notifikasi, markAllRead, toNotifGroups } = useNotifikasi();
+  const { notifikasi, markAllRead, toNotifGroups } = useNotifikasi();
   const [statistik, setStatistik] = useState<StatistikNotifikasi | null>(null);
   const [aktivitas, setAktivitas] = useState<AktivitasResponse | null>(null);
 
   useEffect(() => {
-    apiGet<StatistikNotifikasi>('/notifikasi/statistik').then(setStatistik).catch(() => {});
-    apiGet<AktivitasResponse>('/notifikasi/aktivitas').then(setAktivitas).catch(() => {});
+    apiGet<StatistikNotifikasi>('/notifikasi/statistik').then(setStatistik).catch(() => console.error('Gagal memuat statistik'));
+    apiGet<AktivitasResponse>('/notifikasi/aktivitas').then(setAktivitas).catch(() => console.error('Gagal memuat aktivitas'));
   }, []);
 
   const groups = toNotifGroups(notifikasi);
@@ -108,9 +108,7 @@ export default function DinkesNotifikasi(): JSX.Element {
             </button>
           )}
         </div>
-        {loading ? (
-          <div className="text-center py-12 text-neutral-400 text-sm">Memuat notifikasi...</div>
-        ) : groups.length === 0 ? (
+        {groups.length === 0 ? (
           <div className="text-center py-12 text-neutral-400 text-sm">Belum ada notifikasi</div>
         ) : (
           <NotifTimeline groups={groups} compactLastGroup />

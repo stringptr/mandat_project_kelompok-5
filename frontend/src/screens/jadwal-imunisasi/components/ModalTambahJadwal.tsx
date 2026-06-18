@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { X, Search, CheckCircle, Clock } from 'lucide-react';
+import { useNotification } from '../../../context/NotificationContext';
+import { apiPost } from '../../../lib/api';
 import type { JadwalImunisasi } from '../data/imunisasi.data';
 import { VAKSIN_OPTIONS } from '../data/imunisasi.data';
 
@@ -9,6 +11,7 @@ interface ModalTambahJadwalProps {
 }
 
 export function ModalTambahJadwal({ onClose, onSimpan }: ModalTambahJadwalProps): JSX.Element {
+  const notify = useNotification();
   const [idPasien, setIdPasien] = useState('');
   const [namaAnak] = useState('');
   const [namaVaksin, setNamaVaksin] = useState('');
@@ -24,19 +27,29 @@ export function ModalTambahJadwal({ onClose, onSimpan }: ModalTambahJadwalProps)
     return e;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-    onSimpan({
-      idPasien: idPasien.startsWith('#') ? idPasien : `#${idPasien}`,
-      namaAnak: namaAnak || idPasien,
-      namaVaksin,
-      dosis: 'Primary Dose',
-      tanggalJadwal: new Date(tanggalJadwal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
-      tanggalRealisasi: status === 'SUDAH' ? new Date(tanggalJadwal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
-      status,
-    });
+    if (Object.keys(errs).length > 0) { setErrors(errs); notify.warn('Mohon lengkapi semua data form yang wajib diisi sebelum mengirim.'); return; }
+    try {
+      const pid = parseInt(idPasien.replace(/[^0-9]/g, ''), 10) || 0;
+      await apiPost('/imunisasi', {
+        id_pasien: pid,
+        nama_vaksin: namaVaksin,
+        tanggal_jadwal: tanggalJadwal,
+      });
+      onSimpan({
+        idPasien: idPasien.startsWith('#') ? idPasien : `#${idPasien}`,
+        namaAnak: namaAnak || idPasien,
+        namaVaksin,
+        dosis: 'Primary Dose',
+        tanggalJadwal: new Date(tanggalJadwal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+        tanggalRealisasi: status === 'SUDAH' ? new Date(tanggalJadwal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        status,
+      });
+    } catch {
+      notify.error('Gagal menambahkan jadwal. Silakan coba lagi.');
+    }
   };
 
   return (

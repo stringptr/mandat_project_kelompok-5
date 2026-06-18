@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Pencil, Trash2, MoreHorizontal, MapPin, ChevronLeft, ChevronRight, X, Check } from 'lucide-react';
+import { Pencil, Trash2, MoreHorizontal, MapPin, ChevronLeft, ChevronRight, X, Check, Loader2 } from 'lucide-react';
+import { useNotification } from '../../context/NotificationContext';
 import { StatusBadge } from '../monitoring/components/statusbadge';
-import { apiGet, apiPatch } from '../../lib/api';
+import { apiGet, apiPatch, apiDelete } from '../../lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -11,6 +12,7 @@ interface UserData {
   id: number;
   name: string;
   email: string;
+  nik: string;
   initials: string;
   avatarColor: string;
   role: string;
@@ -37,6 +39,7 @@ interface BackendUser {
   status_verifikasi: string;
   roles: string[];
   id_lokasi: number;
+  nama_lokasi: string;
   created_at: string;
   updated_at: string;
 }
@@ -88,11 +91,12 @@ function mapUser(b: BackendUser, idx: number): UserData {
     id: b.id_user,
     name: b.nama,
     email: b.email,
+    nik: b.nik,
     initials: getInitials(b.nama),
     avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
     role: mapBackendRole(b.roles),
     roleBackend: b.roles[0] || '',
-    wilayah: '',
+    wilayah: b.nama_lokasi || '',
     status: mapStatus(b.status_verifikasi),
   };
 }
@@ -189,10 +193,12 @@ function EditModal({ user, onSave, onClose }: EditModalProps): JSX.Element {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function UserManagement(): JSX.Element {
+  const notify = useNotification();
   const [users, setUsers] = useState<UserData[]>([]);
   const [page, setPage] = useState(1);
   const [menuOpen, setMenuOpen] = useState<number | null>(null);
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [totalData, setTotalData] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -241,8 +247,9 @@ export default function UserManagement(): JSX.Element {
       setUsers((prev) =>
         prev.map((u) => u.id === editingUser.id ? { ...u, ...updated } : u),
       );
+      notify.success('Data pengguna berhasil diperbarui');
     } catch {
-      // silent
+      notify.error('Gagal memperbarui data pengguna.');
     }
     setEditingUser(null);
   };
@@ -251,8 +258,25 @@ export default function UserManagement(): JSX.Element {
     try {
       await apiPatch(`/users/${id}/verification`, { status: 'Aktif' });
       setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'verified' as UserStatus } : u)));
+      notify.success('Pengguna berhasil diverifikasi');
     } catch {
-      // silent
+      notify.error('Gagal memverifikasi pengguna.');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Hapus pengguna ini? Tindakan ini tidak dapat dibatalkan.')) return;
+    setDeletingId(id);
+    try {
+      await apiDelete(`/users/${id}`);
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      setTotalData((prev) => Math.max(0, prev - 1));
+      notify.success('Pengguna berhasil dihapus');
+    } catch {
+      notify.error('Gagal menghapus pengguna.');
+    } finally {
+      setDeletingId(null);
+      setMenuOpen(null);
     }
   };
 
@@ -268,6 +292,7 @@ export default function UserManagement(): JSX.Element {
             <thead>
               <tr className="border-t border-neutral-100">
                 <th className="px-6 py-3 text-left text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Nama Lengkap</th>
+                <th className="px-4 py-3 text-left text-[11px] font-bold text-neutral-400 uppercase tracking-widest">NIK</th>
                 <th className="px-4 py-3 text-left text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Peran</th>
                 <th className="px-4 py-3 text-left text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Wilayah Kerja</th>
                 <th className="px-4 py-3 text-left text-[11px] font-bold text-neutral-400 uppercase tracking-widest">Status</th>
@@ -275,41 +300,40 @@ export default function UserManagement(): JSX.Element {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="py-16 text-center text-neutral-400 text-sm">Memuat data...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-16 text-center text-neutral-400 text-sm">Tidak ada pengguna.</td>
-                </tr>
-              ) : (
-                filtered.map((user) => (
-                  <tr key={user.id} className="hover:bg-neutral-50 transition-colors" onClick={() => setMenuOpen(null)}>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${user.avatarColor}`}>
-                          {user.initials}
+                {filtered.length === 0 && !loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-16 text-center text-neutral-400 text-sm">Tidak ada pengguna.</td>
+                  </tr>
+                ) : (
+                  filtered.map((user) => (
+                    <tr key={user.id} className="hover:bg-neutral-50 transition-colors" onClick={() => setMenuOpen(null)}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${user.avatarColor}`}>
+                            {user.initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-neutral-800 leading-tight truncate">{user.name}</p>
+                            <p className="text-[12px] text-neutral-400 mt-0.5 truncate">{user.email}</p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-neutral-800 leading-tight truncate">{user.name}</p>
-                          <p className="text-[12px] text-neutral-400 mt-0.5 truncate">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="text-primary font-semibold text-sm">{user.role}</span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="flex items-center gap-1 text-neutral-600 text-sm">
-                        <MapPin className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-                        {user.wilayah || '-'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <StatusBadge variant={user.status} />
-                    </td>
-                    <td className="px-4 py-4 pr-6">
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="text-neutral-700 text-sm font-mono">{user.nik}</span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="text-primary font-semibold text-sm">{user.role}</span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="flex items-center gap-1 text-neutral-600 text-sm">
+                          <MapPin className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                          {user.wilayah || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <StatusBadge variant={user.status} />
+                      </td>
+                      <td className="px-4 py-4 pr-6">
                       <div className="flex items-center justify-end gap-1">
                         {user.status === 'pending' ? (
                           <>
@@ -327,7 +351,7 @@ export default function UserManagement(): JSX.Element {
                                     <Pencil className="w-3.5 h-3.5 text-neutral-400" /> Edit
                                   </button>
                                   <button className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
-                                    onClick={(e) => { e.stopPropagation(); setMenuOpen(null); }}>
+                                    onClick={(e) => { e.stopPropagation(); handleDelete(user.id); }}>
                                     <Trash2 className="w-3.5 h-3.5" /> Hapus
                                   </button>
                                 </div>
@@ -340,9 +364,12 @@ export default function UserManagement(): JSX.Element {
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors text-neutral-400 hover:text-primary">
                               <Pencil className="w-4 h-4" />
                             </button>
-                            <button onClick={(e) => e.stopPropagation()}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors text-neutral-400 hover:text-red-500">
-                              <Trash2 className="w-4 h-4" />
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(user.id); }}
+                              disabled={deletingId === user.id}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 transition-colors text-neutral-400 hover:text-red-500 disabled:opacity-40">
+                              {deletingId === user.id
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <Trash2 className="w-4 h-4" />}
                             </button>
                           </>
                         )}

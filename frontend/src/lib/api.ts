@@ -1,8 +1,28 @@
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/v1').replace(/\/+$/, '');
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/v1';
 
 let onUnauthorized: (() => void) | null = null;
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
+
+const CACHE_TTL = 30000;
+const cache = new Map<string, { data: unknown; timestamp: number }>();
+
+function getCached<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
+    return entry.data as T;
+  }
+  cache.delete(key);
+  return null;
+}
+
+function setCache(key: string, data: unknown): void {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
+function clearCache(): void {
+  cache.clear();
+}
 
 export function setOnUnauthorized(cb: () => void) {
   onUnauthorized = cb;
@@ -99,6 +119,8 @@ async function attemptRefresh(): Promise<boolean> {
   return success;
 }
 
+const REQUEST_TIMEOUT = 30000;
+
 async function request<T>(method: string, path: string, body?: unknown, params?: Record<string, string>, retries = 1): Promise<T> {
   let url = `${BASE_URL}${path}`;
   if (params) {
@@ -106,20 +128,46 @@ async function request<T>(method: string, path: string, body?: unknown, params?:
     url += `?${search}`;
   }
 
-  const res = await fetch(url, {
-    method,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const cacheKey = `${method}:${url}`;
+
+  if (method === 'GET') {
+    const cached = getCached<T>(cacheKey);
+    if (cached) return cached;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   try {
-    return await handleResponse<T>(res);
+    const res = await fetch(url, {
+      method,
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+
+    try {
+      const data = await handleResponse<T>(res);
+      if (method === 'GET') {
+        setCache(cacheKey, data);
+      } else {
+        clearCache();
+      }
+      return data;
+    } catch (err) {
+      if (err instanceof RetryError && retries > 0) {
+        return request<T>(method, path, body, params, retries - 1);
+      }
+      throw err;
+    }
   } catch (err) {
-    if (err instanceof RetryError && retries > 0) {
-      return request<T>(method, path, body, params, retries - 1);
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error('Request timeout');
     }
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { X, Calendar } from 'lucide-react';
+import { useNotification } from '../../../context/NotificationContext';
+import { apiPut, apiPatch } from '../../../lib/api';
 import type { JadwalImunisasi } from '../data/imunisasi.data';
 import { VAKSIN_OPTIONS } from '../data/imunisasi.data';
 
@@ -10,6 +12,7 @@ interface ModalUpdateJadwalProps {
 }
 
 export function ModalUpdateJadwal({ jadwal, onClose, onSimpan }: ModalUpdateJadwalProps): JSX.Element {
+  const notify = useNotification();
   const [namaVaksin, setNamaVaksin] = useState(jadwal.namaVaksin);
   const [tanggalRealisasi, setTanggalRealisasi] = useState(
     jadwal.tanggalRealisasi
@@ -18,17 +21,32 @@ export function ModalUpdateJadwal({ jadwal, onClose, onSimpan }: ModalUpdateJadw
   );
   const [catatan, setCatatan] = useState(jadwal.catatan ?? '');
 
-  const handleSimpan = () => {
+  const handleSimpan = async () => {
+    if (!namaVaksin) {
+      notify.warn('Mohon lengkapi semua data form yang wajib diisi sebelum mengirim.');
+      return;
+    }
     const formatted = new Date(tanggalRealisasi).toLocaleDateString('id-ID', {
       day: '2-digit', month: 'short', year: 'numeric',
     });
-    onSimpan({
-      ...jadwal,
-      namaVaksin,
-      status: 'SUDAH',
-      tanggalRealisasi: formatted,
-      catatan: catatan || undefined,
-    });
+    const idNum = parseInt(String(jadwal.id).replace(/[^0-9]/g, ''), 10) || 0;
+    try {
+      if (namaVaksin !== jadwal.namaVaksin) {
+        await apiPut('/imunisasi/' + idNum, { nama_vaksin: namaVaksin });
+      }
+      await apiPatch('/imunisasi/' + idNum + '/realisasi', {
+        tanggal_realisasi: tanggalRealisasi,
+      });
+      onSimpan({
+        ...jadwal,
+        namaVaksin,
+        status: 'SUDAH',
+        tanggalRealisasi: formatted,
+        catatan: catatan || undefined,
+      });
+    } catch {
+      notify.error('Gagal memperbarui jadwal. Silakan coba lagi.');
+    }
   };
 
   return (

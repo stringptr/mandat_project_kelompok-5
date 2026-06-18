@@ -54,7 +54,8 @@ export function useNotifikasi() {
       const res = await apiGet<NotifikasiResponse>(`/notifikasi?page=${page}&per_page=15`);
       setNotifikasi(res.notifikasi);
       setMeta(res.meta);
-    } catch {
+    } catch (err) {
+      console.error('Gagal memuat notifikasi:', err);
       setNotifikasi([]);
     } finally {
       setLoading(false);
@@ -71,8 +72,8 @@ export function useNotifikasi() {
       setNotifikasi((prev) =>
         prev.map((n) => (n.id_notifikasi === id ? { ...n, status_baca: true } : n)),
       );
-    } catch {
-      // silent
+    } catch (err) {
+      console.error('Gagal mark read:', err);
     }
   };
 
@@ -80,8 +81,8 @@ export function useNotifikasi() {
     try {
       await apiPatch('/notifikasi/read-all');
       setNotifikasi((prev) => prev.map((n) => ({ ...n, status_baca: true })));
-    } catch {
-      // silent
+    } catch (err) {
+      console.error('Gagal mark all read:', err);
     }
   };
 

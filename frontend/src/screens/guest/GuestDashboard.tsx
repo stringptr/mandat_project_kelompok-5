@@ -1,32 +1,41 @@
-/**
- * GuestDashboard — landing page untuk pengguna yang belum login.
- * Menampilkan:
- *  - Hero banner program SiGizi
- *  - Statistik publik Jawa Tengah
- *  - Preview artikel edukasi terbaru
- *  - CTA login per jenis pengguna
- */
-import { Users, Baby, TrendingDown, BookOpen, ChevronRight, Clock, User } from 'lucide-react';
-import { DUMMY_ARTIKEL } from '../edukasi/data/artikel.data';
-import { KABUPATEN_DATA, TARGET_WILAYAH } from '../dashboard/data/dashboard.data';
-import { ProgressBar } from '../dashboard/components/ProgressBar';
-import { TrendChart } from '../dashboard/components/TrendChart';
-import { TREN_NUTRISI } from '../dashboard/data/dashboard.data';
+import { useEffect, useState } from 'react';
+import { Users, Baby, TrendingDown, BookOpen, ChevronRight, Clock, User, Target, AlertTriangle } from 'lucide-react';
+import { apiGet } from '../../lib/api';
+import type { PublicStatsResponse, PublicArtikelItem, PublicArtikelResponse } from '../../types/api';
 
 interface GuestDashboardProps {
   onLoginClick: () => void;
 }
 
-const PUBLIC_STATS = [
-  { icon: <Users size={22} />, label: 'Total Pasien Terdaftar', value: '12,482', delta: '+13% bulan ini', color: 'bg-primary text-white' },
-  { icon: <Baby size={22} />, label: 'Balita Dipantau', value: '8,934', delta: 'Aktif di 35 kab/kota', color: 'bg-blue-600 text-white' },
-  { icon: <TrendingDown size={22} />, label: 'Kasus Stunting', value: '342', delta: '↓ Turun 8% dari tahun lalu', color: 'bg-white border border-neutral-100 text-neutral-800' },
-  { icon: <BookOpen size={22} />, label: 'Artikel Edukasi', value: '120+', delta: 'Diperbarui setiap minggu', color: 'bg-white border border-neutral-100 text-neutral-800' },
-];
-
-const PREVIEW_ARTIKEL = DUMMY_ARTIKEL.filter((a) => a.status === 'published').slice(0, 3);
-
 export function GuestDashboard({ onLoginClick }: GuestDashboardProps): JSX.Element {
+  const [stats, setStats] = useState<PublicStatsResponse | null>(null);
+  const [artikel, setArtikel] = useState<PublicArtikelItem[]>([]);
+
+  useEffect(() => {
+    apiGet<PublicStatsResponse>('/public/stats')
+      .then((res) => setStats(res))
+      .catch(() => console.error('Gagal memuat statistik publik'));
+    apiGet<PublicArtikelResponse>('/public/artikel')
+      .then((res) => setArtikel((res.artikel ?? []).filter((a) => a.status_artikel === 'Dipublikasikan').slice(0, 3)))
+      .catch(() => console.error('Gagal memuat artikel publik'));
+  }, []);
+
+  const publicStats = stats
+    ? [
+        { icon: <Users size={22} />, label: 'Total Pasien Terdaftar', value: stats.total_pasien.toLocaleString('id-ID'), delta: 'Terdaftar di sistem', color: 'bg-primary text-white' },
+        { icon: <Baby size={22} />, label: 'Balita Dipantau', value: stats.balita_dipantau.toLocaleString('id-ID'), delta: 'Aktif di 35 kab/kota', color: 'bg-blue-600 text-white' },
+        { icon: <TrendingDown size={22} />, label: 'Kasus Stunting', value: stats.kasus_stunting.toLocaleString('id-ID'), delta: 'Data terbaru', color: 'bg-white border border-neutral-100 text-neutral-800' },
+        { icon: <BookOpen size={22} />, label: 'Artikel Edukasi', value: `${stats.total_artikel}+`, delta: 'Diperbarui setiap minggu', color: 'bg-white border border-neutral-100 text-neutral-800' },
+      ]
+    : [];
+
+  const prevalensiStunting = stats && stats.balita_dipantau > 0
+    ? ((stats.kasus_stunting / stats.balita_dipantau) * 100).toFixed(1)
+    : null;
+  const rasioArtikel = stats && stats.total_pasien > 0
+    ? ((stats.total_artikel / stats.total_pasien) * 100000).toFixed(1)
+    : null;
+
   return (
     <div className="space-y-8 font-body text-neutral-800">
 
@@ -63,7 +72,7 @@ export function GuestDashboard({ onLoginClick }: GuestDashboardProps): JSX.Eleme
           <span className="text-xs text-neutral-400 font-body">Diperbarui: Februari 2024</span>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {PUBLIC_STATS.map((s) => (
+          {publicStats.map((s) => (
             <div key={s.label} className={`rounded-2xl p-5 relative overflow-hidden ${s.color}`}>
               <div className={`mb-3 ${s.color.includes('bg-white') ? 'text-primary' : 'text-white/80'}`}>
                 {s.icon}
@@ -90,53 +99,81 @@ export function GuestDashboard({ onLoginClick }: GuestDashboardProps): JSX.Eleme
         {/* Capaian program wilayah */}
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-2 mb-5">
-            <span className="text-lg">🎯</span>
+            <Target size={20} className="text-primary" />
             <div>
-              <h4 className="text-sm font-bold text-neutral-800 font-headline">Capaian Program Wilayah</h4>
-              <p className="text-xs text-neutral-500 font-body mt-0.5">Target nasional program gizi 2024</p>
+              <h4 className="text-sm font-bold text-neutral-800 font-headline">Indikator Program</h4>
+              <p className="text-xs text-neutral-500 font-body mt-0.5">Ringkasan capaian berdasarkan data terkini</p>
             </div>
           </div>
-          <div className="space-y-4">
-            {TARGET_WILAYAH.map((t) => (
-              <ProgressBar key={t.label} label={t.label} persen={t.persen} color={t.color} />
-            ))}
-          </div>
-          <div className="mt-5 pt-4 border-t border-neutral-50 grid grid-cols-2 gap-3">
-            {KABUPATEN_DATA.slice(0, 4).map((k) => (
-              <div key={k.nama} className="flex items-center justify-between text-xs font-body">
-                <span className="text-neutral-600 truncate mr-2">{k.nama.replace('Kab. ', '').replace('Kota ', '')}</span>
-                <span className={`font-bold flex-shrink-0 ${k.level === 'tinggi' ? 'text-red-500' : k.level === 'sedang' ? 'text-orange-500' : 'text-emerald-600'}`}>
-                  {k.prevalensi}%
-                </span>
+          {stats ? (
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="font-semibold text-neutral-700">Cakupan Pemantauan</span>
+                  <span className="text-neutral-500">{stats.balita_dipantau.toLocaleString('id-ID')} balita</span>
+                </div>
+                <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-primary rounded-full" style={{ width: `${Math.min(100, (stats.balita_dipantau / 2500000) * 100)}%` }} />
+                </div>
               </div>
-            ))}
-          </div>
+              <div>
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="font-semibold text-neutral-700">Prevalensi Stunting</span>
+                  <span className="text-red-500 font-bold">{prevalensiStunting ?? 'N/A'}%</span>
+                </div>
+                <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-red-500 rounded-full" style={{ width: `${Math.min(100, parseFloat(prevalensiStunting ?? '0'))}%` }} />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="font-semibold text-neutral-700">Ketersediaan Edukasi</span>
+                  <span className="text-neutral-500">{stats.total_artikel} artikel ({rasioArtikel}/100rb pasien)</span>
+                </div>
+                <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, (stats.total_artikel / 50) * 100)}%` }} />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-neutral-500 mt-3 pt-3 border-t border-neutral-100">
+                <AlertTriangle size={12} />
+                <span>Data diperbarui secara berkala. Login untuk melihat detail per wilayah.</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-neutral-400 text-center py-4">Memuat data...</p>
+          )}
         </div>
 
-        {/* Tren nutrisi */}
-        <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100 flex flex-col">
-          <div className="mb-1">
-            <h4 className="text-sm font-bold text-neutral-800 font-headline">Tren Perbaikan Gizi Regional</h4>
-            <p className="text-xs text-neutral-500 font-body mt-0.5">Indeks gizi Jawa Tengah — Okt 2023 s/d Apr 2024</p>
-          </div>
-          <div className="flex-1 mt-4">
-            <TrendChart
-              data={TREN_NUTRISI}
-              height={120}
-              color="#1d4ed8"
-              fillColor="rgba(29,78,216,0.08)"
-            />
-          </div>
-          <div className="mt-4 pt-4 border-t border-blue-100 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-neutral-500 font-body">Tingkat keberhasilan intervensi</p>
-              <p className="text-xl font-bold text-blue-700 font-headline">86.4%</p>
+        {/* Distribusi */}
+        <div className="bg-gradient-to-br from-blue-50 to-primary-50 rounded-2xl p-6 border border-blue-100">
+          <h4 className="text-sm font-bold text-neutral-800 font-headline mb-4 flex items-center gap-2">
+            <Users size={18} className="text-primary" />
+            Komposisi Data Kesehatan
+          </h4>
+          {stats ? (
+            <div className="flex flex-col justify-center h-[calc(100%-3rem)]">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/80 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-primary font-headline">{stats.total_pasien.toLocaleString('id-ID')}</p>
+                  <p className="text-[10px] text-neutral-500 mt-1 font-semibold uppercase tracking-wide">Total Pasien</p>
+                </div>
+                <div className="bg-white/80 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-blue-600 font-headline">{stats.balita_dipantau.toLocaleString('id-ID')}</p>
+                  <p className="text-[10px] text-neutral-500 mt-1 font-semibold uppercase tracking-wide">Balita Dipantau</p>
+                </div>
+                <div className="bg-white/80 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-red-500 font-headline">{stats.kasus_stunting.toLocaleString('id-ID')}</p>
+                  <p className="text-[10px] text-neutral-500 mt-1 font-semibold uppercase tracking-wide">Kasus Stunting</p>
+                </div>
+                <div className="bg-white/80 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-emerald-600 font-headline">{stats.total_artikel}</p>
+                  <p className="text-[10px] text-neutral-500 mt-1 font-semibold uppercase tracking-wide">Artikel Edukasi</p>
+                </div>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-neutral-500 font-body">Kenaikan indeks</p>
-              <p className="text-xl font-bold text-emerald-600 font-headline">+22 poin</p>
-            </div>
-          </div>
+          ) : (
+            <p className="text-sm text-neutral-400 text-center py-4">Memuat data...</p>
+          )}
         </div>
       </div>
 
@@ -155,13 +192,12 @@ export function GuestDashboard({ onLoginClick }: GuestDashboardProps): JSX.Eleme
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {PREVIEW_ARTIKEL.map((a) => (
-            <div key={a.id} className="bg-white rounded-2xl overflow-hidden border border-neutral-100 hover:shadow-md transition-shadow group cursor-pointer" onClick={onLoginClick}>
-              <div className="relative h-40 overflow-hidden">
-                <img src={a.gambar} alt={a.judul} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+          {artikel.map((a) => (
+            <div key={a.id_artikel} className="bg-white rounded-2xl overflow-hidden border border-neutral-100 hover:shadow-md transition-shadow group cursor-pointer" onClick={onLoginClick}>
+              <div className="relative h-40 overflow-hidden bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">
+                <BookOpen size={48} className="text-primary/40" />
                 <span className="absolute bottom-3 left-3 text-[10px] font-bold uppercase tracking-wide bg-primary text-white px-2.5 py-1 rounded-full">
-                  {a.kategori}
+                  {a.kategori || 'Edukasi'}
                 </span>
               </div>
               <div className="p-4">
@@ -170,8 +206,8 @@ export function GuestDashboard({ onLoginClick }: GuestDashboardProps): JSX.Eleme
                 </h4>
                 <p className="text-xs text-neutral-500 font-body line-clamp-2 mb-3">{a.ringkasan}</p>
                 <div className="flex items-center gap-3 text-neutral-400 text-xs">
-                  <span className="flex items-center gap-1"><User size={11} />{a.penulis}</span>
-                  <span className="flex items-center gap-1"><Clock size={11} />{a.waktuBaca}</span>
+                  <span className="flex items-center gap-1"><User size={11} />{a.nama_penulis}</span>
+                  {a.tanggal_publish && <span className="flex items-center gap-1"><Clock size={11} />{a.tanggal_publish}</span>}
                 </div>
               </div>
             </div>

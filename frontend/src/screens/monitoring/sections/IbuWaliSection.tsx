@@ -1,53 +1,127 @@
-import { Baby, Ruler, Weight, Calendar, Heart, Utensils } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Baby, Ruler, Weight, Calendar, Heart, Utensils, Loader2, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
+import { apiGet } from '../../../lib/api';
+import type { PasienDetail } from '../../../types/entities';
+import type { PasienRiwayatItem } from '../../../types/entities';
 import { StatCard } from '../components/statcard';
 import { ChartWidget } from '../components/chartwidget';
 import { DataTable, type Column } from '../components/datatable';
 import { StatusBadge } from '../components/statusbadge';
 
-// === Dummy Data ===
-interface Pengukuran {
-  [key: string]: unknown;
-  tanggal: string;
-  bb: string;
-  tb: string;
-  statusGizi: string;
-  catatan: string;
+interface TumbuhKembangItem {
+  bulan: string;
+  berat_badan: number;
+  tinggi_badan: number;
 }
 
-const RIWAYAT_PENGUKURAN: Pengukuran[] = [
-  { tanggal: '12 Mei 2024', bb: '13.2', tb: '82.0', statusGizi: 'Gizi Baik', catatan: 'Pertumbuhan normal' },
-  { tanggal: '14 Apr 2024', bb: '12.8', tb: '80.5', statusGizi: 'Gizi Baik', catatan: 'Pertumbuhan normal' },
-  { tanggal: '10 Mar 2024', bb: '12.3', tb: '79.1', statusGizi: 'Gizi Baik', catatan: 'BB naik 0.4 kg' },
-  { tanggal: '12 Feb 2024', bb: '11.9', tb: '77.8', statusGizi: 'Gizi Kurang', catatan: 'Perlu pemantauan' },
-  { tanggal: '15 Jan 2024', bb: '11.5', tb: '76.2', statusGizi: 'Gizi Kurang', catatan: 'BB di bawah standar' },
-  { tanggal: '11 Des 2023', bb: '11.1', tb: '74.9', statusGizi: 'Gizi Kurang', catatan: 'Rujukan PMT' },
-];
+interface RiwayatPemeriksaanData {
+  riwayat: PasienRiwayatItem[];
+}
 
-const GROWTH_CHART_DATA = [
-  { label: 'Des', value: 11.1, color: '#ef4444' },
-  { label: 'Jan', value: 11.5, color: '#f59e0b' },
-  { label: 'Feb', value: 11.9, color: '#f59e0b' },
-  { label: 'Mar', value: 12.3, color: '#10b981' },
-  { label: 'Apr', value: 12.8, color: '#10b981' },
-  { label: 'Mei', value: 13.2, color: '#095c3e' },
-];
+interface TumbuhKembangData {
+  data: TumbuhKembangItem[];
+}
 
-const TABLE_COLUMNS: Column<Pengukuran>[] = [
-  { header: 'TANGGAL', accessor: 'tanggal', className: 'font-medium text-neutral-500' },
-  { header: 'BB (KG)', accessor: 'bb', className: 'font-semibold text-neutral-700' },
-  { header: 'TB (CM)', accessor: 'tb', className: 'font-semibold text-neutral-700' },
-  {
-    header: 'STATUS GIZI',
-    accessor: 'statusGizi',
-    render: (row) => {
-      const variant = row.statusGizi === 'Gizi Baik' ? 'gizi-baik' : 'gizi-kurang';
-      return <StatusBadge variant={variant} label={row.statusGizi} />;
-    },
-  },
-  { header: 'CATATAN', accessor: 'catatan', className: 'text-neutral-500' },
-];
+const CHART_COLORS = ['#ef4444', '#f59e0b', '#10b981', '#095c3e', '#3b82f6', '#8b5cf6'];
 
 export function IbuWaliSection() {
+  const { user } = useAuth();
+  const idPasien = user?.idUser;
+
+  const [pasien, setPasien] = useState<PasienDetail | null>(null);
+  const [riwayat, setRiwayat] = useState<PasienRiwayatItem[]>([]);
+  const [tumbuhKembang, setTumbuhKembang] = useState<TumbuhKembangItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!idPasien) return;
+    setLoading(true);
+
+    Promise.all([
+      apiGet<PasienDetail>(`/monitoring/pasien/${idPasien}`).catch(() => null),
+      apiGet<RiwayatPemeriksaanData>(`/monitoring/pasien/${idPasien}/riwayat-pemeriksaan`).catch(() => ({ riwayat: [] })),
+      apiGet<TumbuhKembangData>(`/monitoring/pasien/${idPasien}/tumbuh-kembang`).catch(() => ({ data: [] })),
+    ]).then(([p, r, tk]) => {
+      if (p) setPasien(p);
+      setRiwayat(r.riwayat);
+      setTumbuhKembang(tk.data);
+    }).finally(() => setLoading(false));
+  }, [idPasien]);
+
+  const namaAnak = pasien?.data_anak?.nama_anak || pasien?.nama || 'Anak';
+  const jenisKelamin = pasien?.jenis_kelamin || '';
+  const labelKelamin = jenisKelamin === 'L' || jenisKelamin === 'Laki-laki' ? 'Laki-laki' : jenisKelamin === 'P' || jenisKelamin === 'Perempuan' ? 'Perempuan' : '';
+
+  const usia = pasien?.tanggal_lahir
+    ? (() => {
+        const lahir = new Date(pasien.tanggal_lahir);
+        const now = new Date();
+        const bulan = (now.getFullYear() - lahir.getFullYear()) * 12 + (now.getMonth() - lahir.getMonth());
+        if (bulan < 24) return `${bulan} bulan`;
+        const tahun = Math.floor(bulan / 12);
+        const sisaBulan = bulan % 12;
+        return sisaBulan > 0 ? `${tahun} tahun ${sisaBulan} bulan` : `${tahun} tahun`;
+      })()
+    : null;
+
+  const bbTerbaru = riwayat.length > 0 ? String(riwayat[0].berat_badan) : '-';
+  const tbTerbaru = riwayat.length > 0 ? String(riwayat[0].tinggi_badan) : '-';
+  const statusGiziTerbaru = riwayat.length > 0 ? riwayat[0].status_gizi : '-';
+  const bbSebelum = riwayat.length > 1 ? riwayat[1].berat_badan : null;
+  const tbSebelum = riwayat.length > 1 ? riwayat[1].tinggi_badan : null;
+  const selisihBB = bbSebelum !== null ? (parseFloat(bbTerbaru) - bbSebelum).toFixed(1) : null;
+  const selisihTB = tbSebelum !== null ? (parseFloat(tbTerbaru) - tbSebelum).toFixed(1) : null;
+
+  const GROWTH_CHART_DATA = tumbuhKembang.map((item, i) => ({
+    label: item.bulan,
+    value: item.berat_badan,
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  }));
+
+  const TABLE_COLUMNS: Column<PasienRiwayatItem>[] = [
+    { header: 'TANGGAL', accessor: 'tanggal', className: 'font-medium text-neutral-500' },
+    { header: 'BB (KG)', accessor: 'berat_badan', className: 'font-semibold text-neutral-700' },
+    { header: 'TB (CM)', accessor: 'tinggi_badan', className: 'font-semibold text-neutral-700' },
+    {
+      header: 'STATUS GIZI',
+      accessor: 'status_gizi',
+      render: (row) => {
+        const variant = row.status_gizi === 'Gizi Baik' ? 'gizi-baik' : 'gizi-kurang';
+        return <StatusBadge variant={variant} label={row.status_gizi} />;
+      },
+    },
+    {
+      header: 'CATATAN',
+      accessor: 'catatan',
+      className: 'text-neutral-500',
+      render: (row) => <span>{row.catatan || '-'}</span>,
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="text-center">
+          <Loader2 size={32} className="animate-spin mx-auto mb-3 text-primary" />
+          <p className="text-sm text-neutral-500">Memuat data anak...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!pasien) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-4">
+        <AlertCircle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <h4 className="text-sm font-bold text-amber-800">Data Pasien Belum Tersedia</h4>
+          <p className="text-sm text-amber-700 mt-1">Silakan hubungi bidan atau kader posyandu untuk mendaftarkan data anak Anda.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Greeting */}
@@ -58,10 +132,10 @@ export function IbuWaliSection() {
           </div>
           <div>
             <h2 className="text-lg font-bold text-neutral-800 font-headline">
-              Data Anak: Arka Mahendra
+              Data Anak: {namaAnak}
             </h2>
             <p className="text-sm text-neutral-500 mt-0.5">
-              Laki-laki • Usia 24 Bulan • Tanggal Lahir: 12 Mei 2022
+              {jenisKelamin && `${labelKelamin} • `}Usia: {usia ?? 'Menunggu data lengkap'}
             </p>
           </div>
         </div>
@@ -71,48 +145,53 @@ export function IbuWaliSection() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Berat Badan"
-          value="13.2"
+          value={bbTerbaru}
           subtitle="kg"
           icon={<Weight size={22} />}
           variant="icon"
           color="primary"
-          trend={{ direction: 'up', value: '+0.4 kg', label: 'dari bulan lalu' }}
+          trend={selisihBB ? { direction: parseFloat(selisihBB) >= 0 ? 'up' : 'down', value: `${selisihBB} kg`, label: 'dari bulan lalu' } : undefined}
         />
         <StatCard
           title="Tinggi Badan"
-          value="82.0"
+          value={tbTerbaru}
           subtitle="cm"
           icon={<Ruler size={22} />}
           variant="icon"
           color="blue"
-          trend={{ direction: 'up', value: '+1.5 cm', label: 'dari bulan lalu' }}
+          trend={selisihTB ? { direction: parseFloat(selisihTB) >= 0 ? 'up' : 'down', value: `${selisihTB} cm`, label: 'dari bulan lalu' } : undefined}
         />
         <StatCard
           title="Status Gizi"
-          value="Baik"
+          value={statusGiziTerbaru}
           icon={<Heart size={22} />}
           variant="icon"
-          color="emerald"
-          subtitle="Z-Score: -0.8 SD"
+          color={statusGiziTerbaru === 'Gizi Baik' ? 'emerald' : 'amber'}
         />
         <StatCard
-          title="Jadwal Posyandu"
-          value="14 Jun"
+          title="Total Pemeriksaan"
+          value={String(riwayat.length)}
           icon={<Calendar size={22} />}
           variant="icon"
           color="purple"
-          subtitle="Posyandu Melati, 09:00"
+          subtitle="riwayat pengukuran"
         />
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartWidget
-          title="Grafik Berat Badan"
-          subtitle="6 bulan terakhir (kg)"
-          type="bar-vertical"
-          data={GROWTH_CHART_DATA}
-        />
+        {GROWTH_CHART_DATA.length > 0 ? (
+          <ChartWidget
+            title="Grafik Berat Badan"
+            subtitle="Riwayat pengukuran (kg)"
+            type="bar-vertical"
+            data={GROWTH_CHART_DATA}
+          />
+        ) : (
+          <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6 flex items-center justify-center text-neutral-400 text-sm">
+            Belum ada data grafik
+          </div>
+        )}
 
         {/* Nutrisi card */}
         <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6 space-y-4">
@@ -143,9 +222,9 @@ export function IbuWaliSection() {
       <DataTable
         title="Riwayat Pengukuran"
         columns={TABLE_COLUMNS}
-        data={RIWAYAT_PENGUKURAN}
+        data={riwayat}
         pageSize={5}
-        onExport={() => { }}
+        emptyMessage="Belum ada riwayat pengukuran"
       />
     </div>
   );

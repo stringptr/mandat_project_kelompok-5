@@ -3,8 +3,8 @@ import {
     Calendar, ChevronDown, Send, User, Activity, Search, MapPin, FileEdit,
     X, CheckCircle2, AlertTriangle, Stethoscope
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import { apiGet } from '../../../lib/api';
+import { useNotification } from '../../../context/NotificationContext';
+import { apiGet, apiPost } from '../../../lib/api';
 
 // ─── Types ───────────────────────────────────────────────────────────
 export interface Pasien {
@@ -22,7 +22,7 @@ export interface Pasien {
 }
 
 interface FormTindakLanjutProps {
-    onSubmit?: (data: FormData) => void;
+    onSubmit?: () => void;
     onCancel?: () => void;
 }
 
@@ -68,6 +68,7 @@ const getUrgencyIcon = (urgency: string) => {
 
 // ─── Main Component ────────────────────────────────────────────────
 export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanjutProps): JSX.Element {
+    const notify = useNotification();
     const [searchQuery, setSearchQuery] = useState('');
     const [showDropdown, setShowDropdown] = useState(false);
     const [selectedPatient, setSelectedPatient] = useState<Pasien | null>(null);
@@ -135,7 +136,7 @@ export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanju
         inputRef.current?.focus();
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         // Validation
         const newErrors: { [key: string]: string } = {};
         if (!selectedPatient) newErrors['selectedPatient'] = 'ERR-VAL-05'; // Nama pasien harus dipilih
@@ -145,25 +146,33 @@ export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanju
         if (!catatanMedis.trim() || catatanMedis.trim().length < 10) newErrors['catatanMedis'] = 'ERR-VAL-03';
         setErrors(newErrors);
         if (Object.keys(newErrors).length > 0) {
-            // Show first error via toast
-            const firstKey = Object.keys(newErrors)[0];
-            const errId = newErrors[firstKey];
-            toast.error(`Validasi gagal: ${errId}`);
+            notify.warn('Mohon lengkapi semua data form yang wajib diisi sebelum mengirim.');
             return;
         }
         setIsSubmitting(true);
-        const data: FormData = {
-            pasien: selectedPatient!, // now guaranteed
-            jenisTindakan,
-            lokasiFaskes: jenisTindakan === 'Rujukan' ? lokasiFaskes : '',
-            tanggalTarget,
-            catatanMedis,
-        };
-        setTimeout(() => {
-            onSubmit?.(data);
+        try {
+            await apiPost('/tindak-lanjut', {
+                id_hasil_pemeriksaan: 0, // placeholder - backend accepts id_pasien as fallback
+                id_pasien: parseInt(String(selectedPatient!.id).replace(/[^0-9]/g, ''), 10) || undefined,
+                jenis_tindakan: jenisTindakan === 'Tindak Lanjut' ? 'Kontrol Ulang' : jenisTindakan,
+                jadwal_kontrol: tanggalTarget,
+                catatan_medis: catatanMedis,
+                alasan_rujukan: jenisTindakan === 'Rujukan' ? catatanMedis : undefined,
+                rekomendasi: jenisTindakan !== 'Rujukan' ? catatanMedis : undefined,
+            });
+            onSubmit?.();
             setIsSubmitting(false);
-            toast.success('Data berhasil dikirim');
-        }, 800);
+            notify.success('Data tindak lanjut berhasil dikirim');
+            // Reset form
+            setSelectedPatient(null);
+            setSearchQuery('');
+            setLokasiFaskes('');
+            setTanggalTarget('');
+            setCatatanMedis('');
+        } catch {
+            setIsSubmitting(false);
+            notify.error('Gagal mengirim tindak lanjut. Silakan coba lagi.');
+        }
     };
 
     return (

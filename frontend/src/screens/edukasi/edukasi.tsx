@@ -10,10 +10,13 @@
  *   Bidan          → BidanSection    (write own, pending verification)
  *   Dinas Kesehatan→ DinkesSection   (full CRUD + verifikasi)
  */
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNotification } from '../../context/NotificationContext';
+import { apiGet, apiDelete, apiPatch } from '../../lib/api';
+import type { ArtikelListData } from '../../types/entities';
 import type { Role } from '../../App';
 import type { Artikel, KategoriArtikel } from './data/artikel.data';
-import { DUMMY_ARTIKEL } from './data/artikel.data';
+import { useAppStore } from '../../store/useAppStore';
 
 // Sections
 import { IbuWaliSection } from './sections/IbuWaliSection';
@@ -33,8 +36,42 @@ interface EdukasiProps {
 }
 
 export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
-  // ── State ──────────────────────────────────────────────────────────────
-  const [artikelList, setArtikelList] = useState<Artikel[]>(DUMMY_ARTIKEL);
+  const notify = useNotification();
+  const notifyRef = useRef(notify);
+  useEffect(() => { notifyRef.current = notify; });
+
+  const { artikelList, setArtikelList, setArtikelLoading } = useAppStore();
+
+  const fetchArtikel = useCallback((force = false) => {
+    // Skip if already loaded and not forced
+    if (artikelList.length > 0 && !force) return;
+    setArtikelLoading(true);
+    apiGet<ArtikelListData>('/artikel')
+      .then((res) => {
+        const list = res.artikel ?? [];
+        const mapped: Artikel[] = list.map((a) => ({
+          id: String(a.id_artikel ?? ''),
+          judul: String(a.judul ?? ''),
+          ringkasan: String(a.ringkasan ?? ''),
+          konten: '',
+          kategori: (a.kategori as KategoriArtikel) || 'Gizi Ibu',
+          penulis: String(a.nama_penulis ?? ''),
+          gambar: '',
+          waktuBaca: '5 Menit Baca',
+          featured: false,
+          tanggal: String(a.tanggal_publish ?? ''),
+          status: 'published',
+          rolePenulis: 'Dinas Kesehatan',
+        }));
+        setArtikelList(mapped);
+      })
+      .catch(() => notifyRef.current.error('Gagal memuat artikel. Pastikan backend terhubung.'))
+      .finally(() => setArtikelLoading(false));
+  }, [artikelList.length, setArtikelList, setArtikelLoading]);
+
+  useEffect(() => {
+    fetchArtikel();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [kategoriAktif, setKategoriAktif] = useState<KategoriArtikel>('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
@@ -83,41 +120,48 @@ export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
   const pendingCount = artikelList.filter((a) => a.status === 'pending').length;
 
   // ── Handlers ───────────────────────────────────────────────────────────
-  const handleTambah = (data: Omit<Artikel, 'id' | 'tanggal' | 'status' | 'rolePenulis'>) => {
-    const newArtikel: Artikel = {
-      ...data,
-      id: `a${Date.now()}`,
-      tanggal: new Date().toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      }),
-      status: isDinkes ? 'published' : 'pending',
-      rolePenulis: currentRole,
-    };
-    setArtikelList((prev) => [newArtikel, ...prev]);
+  const handleTambah = (_data: Omit<Artikel, 'id' | 'tanggal' | 'status' | 'rolePenulis'>) => {
     setModalTambah(false);
+    notify.success('Artikel berhasil ditambahkan');
+    fetchArtikel(true);
   };
 
-  const handleEdit = (data: Artikel) => {
-    setArtikelList((prev) => prev.map((a) => (a.id === data.id ? data : a)));
+  const handleEdit = (_data: Artikel) => {
     setModalEdit(null);
+    notify.success('Artikel berhasil diperbarui');
+    fetchArtikel(true);
   };
 
-  const handleHapus = (id: string) => {
-    setArtikelList((prev) => prev.filter((a) => a.id !== id));
-    setModalHapus(null);
+  const handleHapus = async (id: string) => {
+    const idNum = parseInt(String(id).replace(/[^0-9]/g, ''), 10) || 0;
+    if (!idNum) { notify.error('ID artikel tidak valid.'); return; }
+    try {
+      await apiDelete('/artikel/' + idNum);
+      setModalHapus(null);
+      notify.success('Artikel berhasil dihapus');
+      fetchArtikel(true);
+    } catch {
+      notify.error('Gagal menghapus artikel. Silakan coba lagi.');
+    }
   };
 
-  const handleVerifikasi = (id: string, action: 'approve' | 'reject') => {
-    setArtikelList((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? { ...a, status: action === 'approve' ? 'published' : 'rejected' }
-          : a
-      )
-    );
-    setModalVerifikasi(null);
+  const handleVerifikasi = async (id: string, action: 'approve' | 'reject') => {
+    const idNum = parseInt(String(id).replace(/[^0-9]/g, ''), 10) || 0;
+    if (!idNum) { notify.error('ID artikel tidak valid.'); return; }
+    try {
+      await apiPatch('/artikel/' + idNum + '/review', {
+        aksi: action === 'approve' ? 'setujui' : 'tolak',
+      });
+      setModalVerifikasi(null);
+      notify.success(
+        action === 'approve'
+          ? 'Artikel berhasil disetujui dan dipublikasikan'
+          : 'Artikel berhasil ditolak'
+      );
+      fetchArtikel(true);
+    } catch {
+      notify.error('Gagal memverifikasi artikel. Silakan coba lagi.');
+    }
   };
 
   // Open first pending article in verifikasi modal

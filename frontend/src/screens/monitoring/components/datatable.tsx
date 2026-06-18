@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export interface Column<T> {
   header: string;
@@ -13,18 +13,14 @@ interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
   pageSize?: number;
-  exportLabel?: string;
-  onExport?: () => void;
   emptyMessage?: string;
 }
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable<T>({
   title,
   columns,
   data,
   pageSize = 5,
-  exportLabel = 'Export ke Excel',
-  onExport,
   emptyMessage = 'Tidak ada data',
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,25 +32,18 @@ export function DataTable<T extends Record<string, unknown>>({
     const keys = (accessor as string).split('.');
     let val: unknown = row;
     for (const k of keys) {
-      val = (val as Record<string, unknown>)?.[k];
+      if (val && typeof val === 'object') {
+        val = (val as Record<string, unknown>)[k];
+      } else {
+        val = undefined;
+      }
     }
     return val as React.ReactNode;
   };
 
   return (
     <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6 space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-base font-bold text-neutral-800 font-headline">{title}</h3>
-        {onExport && (
-          <button
-            onClick={onExport}
-            className="flex items-center gap-1.5 text-xs text-primary font-bold hover:text-primary-600 transition-colors"
-          >
-            <Download size={14} />
-            {exportLabel}
-          </button>
-        )}
-      </div>
+      <h3 className="text-base font-bold text-neutral-800 font-headline">{title}</h3>
 
       <div className="overflow-x-auto border border-neutral-100 rounded-xl">
         <table className="w-full text-left border-collapse">

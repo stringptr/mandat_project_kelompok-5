@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { useNotification } from '../../../context/NotificationContext';
+import { apiGet } from '../../../lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -11,16 +13,22 @@ export interface PasienOption {
     statusGizi?: string;
 }
 
+export interface JadwalOption {
+    id_jadwal_imunisasi: number;
+    nama_vaksin: string;
+    tanggal_jadwal: string;
+    status_imunisasi: string;
+}
+
 interface ModalTambahPemeriksaanProps {
     isOpen: boolean;
     onClose: () => void;
     /** Daftar pasien/balita yang bisa dipilih */
     pasienList: PasienOption[];
-    onSubmit: (pasienId: string, namaAnak: string, data: FormDataTambah) => void;
+    onSubmit: (pasienId: string, namaAnak: string, idJadwalImunisasi: number, data: FormDataTambah) => void;
 }
 
 export interface FormDataTambah {
-    periodeBulan: string;
     beratBadan: string;
     tinggiBadan: string;
     lingkarKepala: string;
@@ -29,16 +37,10 @@ export interface FormDataTambah {
     rekomendasiGizi: string;
     jadwalKontrol: string;
     statusPasien: string;
+    idJadwalImunisasi: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const PERIODE_OPTIONS = [
-    'Bulan ke-24 (Saat ini)',
-    'Bulan ke-25',
-    'Bulan ke-26',
-    'Bulan ke-27',
-];
 
 const STATUS_OPTIONS = [
     'Dalam Pemantauan',
@@ -48,7 +50,6 @@ const STATUS_OPTIONS = [
 ];
 
 const EMPTY_FORM: FormDataTambah = {
-    periodeBulan: PERIODE_OPTIONS[0],
     beratBadan: '',
     tinggiBadan: '',
     lingkarKepala: '',
@@ -57,6 +58,7 @@ const EMPTY_FORM: FormDataTambah = {
     rekomendasiGizi: '',
     jadwalKontrol: '',
     statusPasien: STATUS_OPTIONS[0],
+    idJadwalImunisasi: '',
 };
 
 function validatePositiveDecimal(value: string): string | null {
@@ -81,10 +83,13 @@ export default function ModalTambahPemeriksaan({
     pasienList,
     onSubmit,
 }: ModalTambahPemeriksaanProps) {
+    const notify = useNotification();
     // Step 1 = pilih pasien, Step 2 = isi form
     const [step, setStep] = useState<1 | 2>(1);
     const [searchPasien, setSearchPasien] = useState('');
     const [selectedPasien, setSelectedPasien] = useState<PasienOption | null>(null);
+    const [jadwalList, setJadwalList] = useState<JadwalOption[]>([]);
+    const [loadingJadwal, setLoadingJadwal] = useState(false);
 
     const [form, setForm] = useState<FormDataTambah>(EMPTY_FORM);
     const [errors, setErrors] = useState<Partial<Record<keyof FormDataTambah, string>>>({});
@@ -107,6 +112,23 @@ export default function ModalTambahPemeriksaan({
     const handleSelectPasien = (p: PasienOption) => {
         setSelectedPasien(p);
         setStep(2);
+        setLoadingJadwal(true);
+        const idNum = parseInt(String(p.id).replace(/[^0-9]/g, ''), 10) || 0;
+        if (idNum) {
+            apiGet<{ id_pasien: number; riwayat_imunisasi: JadwalOption[] }>(`/imunisasi/pasien/${idNum}`)
+                .then((res) => {
+                    const list = (res.riwayat_imunisasi ?? []);
+                    setJadwalList(list);
+                    if (list.length > 0) {
+                        setForm(prev => ({ ...prev, idJadwalImunisasi: String(list[0].id_jadwal_imunisasi) }));
+                    }
+                })
+                .catch(() => setJadwalList([]))
+                .finally(() => setLoadingJadwal(false));
+        } else {
+            setJadwalList([]);
+            setLoadingJadwal(false);
+        }
     };
 
     // ── Step 2: form handlers ──
@@ -122,11 +144,19 @@ export default function ModalTambahPemeriksaan({
     const handleSubmit = () => {
         const bbErr = validatePositiveDecimal(form.beratBadan);
         const tbErr = validatePositiveDecimal(form.tinggiBadan);
-        setErrors({ beratBadan: bbErr ?? undefined, tinggiBadan: tbErr ?? undefined });
+        const jadwalErr = !form.idJadwalImunisasi ? 'Pilih jadwal imunisasi terlebih dahulu' : null;
+        setErrors({ beratBadan: bbErr ?? undefined, tinggiBadan: tbErr ?? undefined, idJadwalImunisasi: jadwalErr ?? undefined });
         setSubmitted(true);
-        if (!bbErr && !tbErr && selectedPasien) {
-            onSubmit(selectedPasien.id, selectedPasien.nama, form);
+        if (!selectedPasien) {
+            notify.warn('Mohon lengkapi semua data form yang wajib diisi sebelum mengirim.');
+            return;
+        }
+        if (!bbErr && !tbErr && !jadwalErr) {
+            const idJadwal = parseInt(form.idJadwalImunisasi, 10);
+            onSubmit(selectedPasien.id, selectedPasien.nama, idJadwal, form);
             handleClose();
+        } else {
+            notify.warn('Mohon lengkapi semua data form yang wajib diisi sebelum mengirim.');
         }
     };
 
@@ -292,18 +322,38 @@ export default function ModalTambahPemeriksaan({
 
                         {/* Form body */}
                         <div className="px-5 py-4 space-y-4 max-h-[55vh] overflow-y-auto">
-                            {/* Periode */}
+                            {/* Jadwal Imunisasi */}
                             <div>
                                 <label className="block text-xs text-neutral-500 mb-1.5">
-                                    Jadwal / Periode Bulan <span className="text-red-500">*</span>
+                                    Jadwal Imunisasi <span className="text-red-500">*</span>
                                 </label>
-                                <select
-                                    value={form.periodeBulan}
-                                    onChange={e => setField('periodeBulan', e.target.value)}
-                                    className="w-full px-3 py-2 text-sm rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
-                                >
-                                    {PERIODE_OPTIONS.map(opt => <option key={opt}>{opt}</option>)}
-                                </select>
+                                {loadingJadwal ? (
+                                    <div className="flex items-center gap-2 text-sm text-neutral-400 py-2">
+                                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                        </svg>
+                                        Memuat jadwal...
+                                    </div>
+                                ) : jadwalList.length === 0 ? (
+                                    <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                                        Tidak ada jadwal imunisasi tersedia untuk pasien ini.
+                                    </div>
+                                ) : (
+                                    <select
+                                        value={form.idJadwalImunisasi}
+                                        onChange={e => setField('idJadwalImunisasi', e.target.value)}
+                                        className="w-full px-3 py-2 text-sm rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                                    >
+                                        <option value="">Pilih jadwal...</option>
+                                        {jadwalList.map(j => (
+                                            <option key={j.id_jadwal_imunisasi} value={String(j.id_jadwal_imunisasi)}>
+                                                {j.nama_vaksin} — {j.tanggal_jadwal}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                                {errors.idJadwalImunisasi && <p className="text-xs text-red-500 mt-1">{errors.idJadwalImunisasi}</p>}
                             </div>
 
                             {/* Parameter Fisik */}

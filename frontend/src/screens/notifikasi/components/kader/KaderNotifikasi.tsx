@@ -2,7 +2,7 @@ import NotifTimeline from '../NotifTimeline';
 import { useNotifikasi } from '../useNotifikasi';
 
 export default function KaderNotifikasi(): JSX.Element {
-  const { loading, notifikasi, markAllRead, toNotifGroups } = useNotifikasi();
+  const { notifikasi, markAllRead, toNotifGroups } = useNotifikasi();
   const groups = toNotifGroups(notifikasi);
   const unreadCount = notifikasi.filter((n) => !n.status_baca).length;
 
@@ -30,9 +30,7 @@ export default function KaderNotifikasi(): JSX.Element {
             </button>
           )}
         </div>
-        {loading ? (
-          <div className="text-center py-12 text-neutral-400 text-sm">Memuat notifikasi...</div>
-        ) : groups.length === 0 ? (
+        {groups.length === 0 ? (
           <div className="text-center py-12 text-neutral-400 text-sm">Belum ada notifikasi</div>
         ) : (
           <NotifTimeline groups={groups} compactLastGroup />

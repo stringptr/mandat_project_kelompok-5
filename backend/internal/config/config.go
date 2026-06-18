@@ -90,7 +90,7 @@ func Load() *Config {
 	return &Config{
 		Host:        serverHost,
 		Port:        serverPort,
-		CORSOrigins: []string{fmt.Sprintf("%q:%q", frontendHost, frontendPort)},
+		CORSOrigins: []string{fmt.Sprintf("http://%s:%s", frontendHost, frontendPort)},
 		DBMasterConfig: PostgresConfig{
 			Host:     dbHost,
 			Port:     "5432",

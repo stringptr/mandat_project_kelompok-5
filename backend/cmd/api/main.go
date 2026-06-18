@@ -124,10 +124,11 @@ func main() {
 	r.Use(chimw.ClientIPFromHeader("X-Real-IP"))
 	r.Use(chimw.RequestID)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins: cfg.CORSOrigins,
-		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{"*"},
-		MaxAge:         300,
+		AllowedOrigins:   cfg.CORSOrigins,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,
+		MaxAge:           300,
 	}))
 
 	rConfig := huma.DefaultConfig("RESTful API", "1.0.0")

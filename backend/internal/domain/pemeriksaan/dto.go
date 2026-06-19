@@ -71,6 +71,29 @@ type VerifyPemeriksaanResponse struct {
 	StatusVerifikasi   string `json:"status_verifikasi"`
 }
 
+type GetAllPemeriksaanRequest struct {
+	Page    int    `query:"page" minimum:"1" default:"1"`
+	PerPage int    `query:"per_page" minimum:"1" maximum:"100" default:"20"`
+	Q       string `query:"q" maxLength:"255"`
+}
+
+type PemeriksaanListItem struct {
+	IDHasilPemeriksaan int32  `json:"id_hasil_pemeriksaan"`
+	NamaPasien         string `json:"nama_pasien"`
+	DiinputOleh        string `json:"diinput_oleh"`
+	StatusStunting     string `json:"status_stunting"`
+	StatusGizi         string `json:"status_gizi"`
+	StatusVerifikasi   string `json:"status_verifikasi"`
+	TanggalInput       string `json:"tanggal_input"`
+}
+
+type PemeriksaanListData struct {
+	Pemeriksaan []PemeriksaanListItem `json:"pemeriksaan"`
+	TotalData   int                   `json:"total_data"`
+	Page        int                   `json:"page"`
+	PerPage     int                   `json:"per_page"`
+}
+
 type PendingPemeriksaanItem struct {
 	IDHasilPemeriksaan int32  `json:"id_hasil_pemeriksaan"`
 	NamaPasien         string `json:"nama_pasien"`

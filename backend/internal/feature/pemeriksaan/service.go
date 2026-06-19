@@ -32,6 +32,51 @@ func NewService(repo pemeriksaanDomain.Repo, auditRepo auditlogDomain.Repo, noti
 	}
 }
 
+func (s *Service) GetAll(ctx context.Context, req *pemeriksaanDomain.GetAllPemeriksaanRequest) (*pemeriksaanDomain.PemeriksaanListData, *errorutils.Error) {
+	if req == nil {
+		req = &pemeriksaanDomain.GetAllPemeriksaanRequest{}
+	}
+	page := req.Page
+	if page < 1 {
+		page = 1
+	}
+	perPage := req.PerPage
+	if perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+
+	rows, total, err := s.repo.GetAllPaginated(ctx, page, perPage, req.Q)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	items := make([]pemeriksaanDomain.PemeriksaanListItem, len(rows))
+	for i, r := range rows {
+		items[i] = pemeriksaanDomain.PemeriksaanListItem{
+			IDHasilPemeriksaan: r.IDHasilPemeriksaan,
+			NamaPasien:         r.NamaPasien,
+			DiinputOleh:        r.DiinputOleh,
+			StatusStunting:     r.StatusStunting,
+			StatusGizi:         r.StatusGizi,
+			TanggalInput:       r.TanggalInput.Format(time.RFC3339),
+		}
+	}
+
+	if items == nil {
+		items = []pemeriksaanDomain.PemeriksaanListItem{}
+	}
+
+	return &pemeriksaanDomain.PemeriksaanListData{
+		Pemeriksaan: items,
+		TotalData:   total,
+		Page:        page,
+		PerPage:     perPage,
+	}, nil
+}
+
 func (s *Service) logAudit(ctx context.Context, endpoint string, tipeAktivitas model.TipeAktivitas, berhasil bool, tableName string, recordID string, detail string) {
 	tipeAktor := model.TipeAktor_User
 	s.auditRepo.Log(ctx, &model.AuditLog{

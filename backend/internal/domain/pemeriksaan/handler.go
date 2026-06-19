@@ -7,6 +7,7 @@ import (
 )
 
 type Handler interface {
+	GetAll(ctx context.Context, input *httputils.APIRequestInput[*GetAllPemeriksaanRequest]) (*httputils.APIResponseOutput[*PemeriksaanListData], error)
 	Create(ctx context.Context, input *httputils.APIRequestInput[*CreatePemeriksaanRequest]) (*httputils.APIResponseOutput[*CreatePemeriksaanResponse], error)
 	GetByID(ctx context.Context, input *struct {
 		IDHasilPemeriksaan int32 `path:"id" minimum:"1"`

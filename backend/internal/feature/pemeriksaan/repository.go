@@ -2,6 +2,7 @@ package pemeriksaan
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	pemeriksaanDomain "github.com/stringptr/SiGizi/backend/internal/domain/pemeriksaan"
@@ -135,6 +136,61 @@ func (r *Repo) Delete(ctx context.Context, idHasilPemeriksaan int32) error {
 	return err
 }
 
+func (r *Repo) GetAllPaginated(ctx context.Context, page, perPage int, q string) ([]*pemeriksaanDomain.GetAllJoinRow, int, error) {
+	offset := (page - 1) * perPage
+
+	countSQL := `
+		SELECT COUNT(*)
+		FROM hasil_pemeriksaan hp
+		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
+		JOIN pasien p ON p.id_pasien = ji.id_pasien
+		JOIN user_account ua ON ua.id_user = p.id_pasien
+		JOIN user_account petugas ON petugas.id_user = hp.id_petugas_input
+		LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
+	`
+
+	dataSQL := `
+		SELECT
+			hp.id_hasil_pemeriksaan,
+			COALESCE(a.nama_anak, ua.nama) AS nama_pasien,
+			petugas.nama AS diinput_oleh,
+			hp.status_stunting::text,
+			hp.status_gizi::text,
+			hp.created_at AS tanggal_input
+		FROM hasil_pemeriksaan hp
+		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
+		JOIN pasien p ON p.id_pasien = ji.id_pasien
+		JOIN user_account ua ON ua.id_user = p.id_pasien
+		JOIN user_account petugas ON petugas.id_user = hp.id_petugas_input
+		LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
+	`
+
+	args := map[string]any{}
+	if q != "" {
+		filter := ` WHERE (ua.nama ILIKE '%' || #q || '%' OR COALESCE(a.nama_anak, '') ILIKE '%' || #q || '%')`
+		countSQL += filter
+		dataSQL += filter
+		args["#q"] = q
+	}
+
+	var total int
+	err := pgxV5.Query(ctx, RawStatement(countSQL, RawArgs(args)), r.db, &total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	dataSQL += ` ORDER BY hp.created_at DESC`
+	dataSQL += fmt.Sprintf(` LIMIT %d OFFSET %d`, perPage, offset)
+
+	var rows []*pemeriksaanDomain.GetAllJoinRow
+	err = pgxV5.Query(ctx, RawStatement(dataSQL, RawArgs(args)), r.db, &rows)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return rows, total, nil
+}
+
 func (r *Repo) CheckPemeriksaanOwnership(ctx context.Context, idHasilPemeriksaan int32, idUser int32) (bool, error) {
 	query := `
 		SELECT EXISTS (
@@ -159,7 +215,7 @@ func (r *Repo) CheckPemeriksaanOwnership(ctx context.Context, idHasilPemeriksaan
 }
 
 func (r *Repo) GetPendingVerification(ctx context.Context, page int, perPage int) ([]*pemeriksaanDomain.PendingJoinRow, int, error) {
-	offset := int64((page - 1) * perPage)
+	offset := (page - 1) * perPage
 
 	selectFrom := `
 		FROM hasil_pemeriksaan hp
@@ -184,23 +240,13 @@ func (r *Repo) GetPendingVerification(ctx context.Context, page int, perPage int
 			hp.created_at AS tanggal_input
 	` + selectFrom + `
 		ORDER BY hp.created_at DESC
-		OFFSET $1 LIMIT $2
+		OFFSET #1 LIMIT #2
 	`
 
-	pgxRows, err := r.db.Query(ctx, dataSQL, offset, perPage)
+	var rows []*pemeriksaanDomain.PendingJoinRow
+	err = pgxV5.Query(ctx, RawStatement(dataSQL, RawArgs{"#1": offset, "#2": perPage}), r.db, &rows)
 	if err != nil {
 		return nil, 0, err
-	}
-	defer pgxRows.Close()
-
-	var rows []*pemeriksaanDomain.PendingJoinRow
-	for pgxRows.Next() {
-		var row pemeriksaanDomain.PendingJoinRow
-		err := pgxRows.Scan(&row.IDHasilPemeriksaan, &row.NamaPasien, &row.DiinputOleh, &row.TanggalInput)
-		if err != nil {
-			return nil, 0, err
-		}
-		rows = append(rows, &row)
 	}
 
 	return rows, int(countResult.Count), nil

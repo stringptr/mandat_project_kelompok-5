@@ -17,6 +17,15 @@ func NewHandler(service pemeriksaanDomain.Service) *Handler {
 	return &Handler{Service: service}
 }
 
+func (h *Handler) GetAll(ctx context.Context, input *httputils.APIRequestInput[*pemeriksaanDomain.GetAllPemeriksaanRequest]) (*httputils.APIResponseOutput[*pemeriksaanDomain.PemeriksaanListData], error) {
+	res, err := h.Service.GetAll(ctx, input.Body)
+	if err != nil {
+		return nil, errorutils.ToHumaError(err)
+	}
+
+	return httputils.NewOKOutput(res), nil
+}
+
 func (h *Handler) Create(ctx context.Context, input *httputils.APIRequestInput[*pemeriksaanDomain.CreatePemeriksaanRequest]) (*httputils.APIResponseOutput[*pemeriksaanDomain.CreatePemeriksaanResponse], error) {
 	claims := httputils.GetAccessClaim(ctx)
 	if claims == nil {

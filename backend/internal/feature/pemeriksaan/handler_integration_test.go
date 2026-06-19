@@ -45,6 +45,7 @@ func setupPemeriksaanIntegrationTest(t *testing.T) *pemeriksaanTestFixture {
 	svc := NewService(repo, auditRepo, notifRepo, notifPub)
 	h := NewHandler(svc)
 
+	huma.Get(groups.AdminGroup, "/monitoring/pemeriksaan", h.GetAll)
 	huma.Post(groups.AdminGroup, "/monitoring/pemeriksaan", h.Create)
 	huma.Get(groups.BidanGroup, "/monitoring/pemeriksaan/pending", h.GetPending)
 	huma.Get(groups.AdminGroup, "/monitoring/pemeriksaan/{id}", h.GetByID)

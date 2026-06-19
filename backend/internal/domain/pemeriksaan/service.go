@@ -7,6 +7,7 @@ import (
 )
 
 type Service interface {
+	GetAll(ctx context.Context, req *GetAllPemeriksaanRequest) (*PemeriksaanListData, *errorutils.Error)
 	Create(ctx context.Context, idPetugas int32, req *CreatePemeriksaanRequest) (*CreatePemeriksaanResponse, *errorutils.Error)
 	GetByID(ctx context.Context, idHasilPemeriksaan int32) (*DetailPemeriksaanResponse, *errorutils.Error)
 	Update(ctx context.Context, req *UpdatePemeriksaanRequest, idHasilPemeriksaan int32) (*UpdatePemeriksaanResponse, *errorutils.Error)

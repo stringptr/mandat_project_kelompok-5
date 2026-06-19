@@ -94,6 +94,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Patch(adminGroup, "/pasien/{id}", d.PasienHandler.Update)
 	huma.Delete(bidanGroup, "/pasien/{id}", d.PasienHandler.Delete)
 
+	huma.Get(adminGroup, "/monitoring/pemeriksaan", d.PemeriksaanHandler.GetAll)
 	huma.Post(adminGroup, "/monitoring/pemeriksaan", d.PemeriksaanHandler.Create)
 	huma.Get(userGroup, "/monitoring/pemeriksaan/{id}", d.PemeriksaanHandler.GetByID)
 	huma.Put(adminGroup, "/monitoring/pemeriksaan/{id}", d.PemeriksaanHandler.Update)

@@ -364,30 +364,6 @@ func (s *Service) GetByPasienID(ctx context.Context, idPasien int32, claims *jwt
 	}, nil
 }
 
-func (s *Service) GetStatistik(ctx context.Context) (*imunisasiDomain.StatistikImunisasi, *errorutils.Error) {
-	stat, err := s.repo.GetStatistik(ctx)
-	if err != nil {
-		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
-	}
-
-	vaksinTerbanyak, err := s.repo.GetVaksinTerbanyak(ctx)
-	if err != nil {
-		vaksinTerbanyak = ""
-	}
-
-	var persentase float64
-	if stat.TotalTarget > 0 {
-		persentase = float64(stat.TotalRealisasi) / float64(stat.TotalTarget) * 100
-	}
-
-	return &imunisasiDomain.StatistikImunisasi{
-		TotalTargetImunisasi:  stat.TotalTarget,
-		TotalTerealisasi:      stat.TotalRealisasi,
-		CakupanPersentase:     persentase,
-		VaksinTerbanyak:       vaksinTerbanyak,
-	}, nil
-}
-
 func (s *Service) isOwnPasien(ctx context.Context, idPasien, idUser int32) (bool, error) {
 	if idPasien == idUser {
 		return true, nil

@@ -113,10 +113,3 @@ func (h *Handler) GetByPasienID(ctx context.Context, input *struct {
 	return httputils.NewOKOutput(res), nil
 }
 
-func (h *Handler) GetStatistik(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*imunisasiDomain.StatistikImunisasi], error) {
-	res, err := h.Service.GetStatistik(ctx)
-	if err != nil {
-		return nil, errorutils.ToHumaError(err)
-	}
-	return httputils.NewOKOutput(res), nil
-}

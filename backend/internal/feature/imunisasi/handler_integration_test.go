@@ -47,7 +47,6 @@ func setupImunisasiIntegrationTest(t *testing.T) *imunisasiTestFixture {
 	huma.Get(groups.AuthAccess, "/imunisasi", h.GetAll)
 	huma.Get(groups.AuthAccess, "/imunisasi/pasien/{id_pasien}", h.GetByPasienID)
 	huma.Get(groups.AuthAccess, "/imunisasi/{id}", h.GetByID)
-	huma.Get(groups.AdminGroup, "/imunisasi/statistik", h.GetStatistik)
 	huma.Post(groups.BidanGroup, "/imunisasi", h.Create)
 	huma.Put(groups.BidanGroup, "/imunisasi/{id}", h.Update)
 	huma.Delete(groups.BidanGroup, "/imunisasi/{id}", h.Delete)
@@ -618,71 +617,6 @@ func TestImunisasiGetByPasienIDNotFound(t *testing.T) {
 		ReqType: "Cookie (access_token) + path param", Parameter: "Role: ADMIN, id=99999",
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 404, success:false",
-	}.Log(t, pass, resp, respBody)
-}
-
-// ---------------------------------------------------------------------------
-// GET /imunisasi/statistik
-// ---------------------------------------------------------------------------
-
-func TestImunisasiGetStatistikSuccess(t *testing.T) {
-	f := setupImunisasiIntegrationTest(t)
-	defer f.cleanup(t)
-	authIDs := f.seed(t)
-	f.seedImunisasi(t, authIDs, authIDs.RegularUserID)
-
-	resp := testutils.DoRequest(f.handler, http.MethodGet, "/imunisasi/statistik", nil,
-		testutils.AccessCookie(f.jwtUtil, authIDs.AdminUserID, []string{"ADMIN"}))
-	respBody := testutils.ReadBody(resp)
-	pass := resp.StatusCode == http.StatusOK
-
-	testutils.TestResult{
-		SRSRef: "SRS-3.8", FSDRef: "FSD-3.8",
-		TSDRef: "TSD-3.3 (Endpoint Index)", NoTestScript: "TC-IMUNISASI-023",
-		Functional: "Imunisasi Statistik — Success", Endpoint: "GET /imunisasi/statistik",
-		ReqType: "Cookie (access_token)", Parameter: "Role: ADMIN, 2 jadwal seeded",
-		ShouldBeSuccess: "true",
-		Expectation:     "Response 200, success:true, data contains statistik",
-	}.Log(t, pass, resp, respBody)
-}
-
-func TestImunisasiGetStatistikEmpty(t *testing.T) {
-	f := setupImunisasiIntegrationTest(t)
-	defer f.cleanup(t)
-	authIDs := f.seed(t)
-
-	resp := testutils.DoRequest(f.handler, http.MethodGet, "/imunisasi/statistik", nil,
-		testutils.AccessCookie(f.jwtUtil, authIDs.AdminUserID, []string{"ADMIN"}))
-	respBody := testutils.ReadBody(resp)
-	pass := resp.StatusCode == http.StatusOK
-
-	testutils.TestResult{
-		SRSRef: "SRS-3.8", FSDRef: "FSD-3.8",
-		TSDRef: "TSD-3.3 (Endpoint Index)", NoTestScript: "TC-IMUNISASI-024",
-		Functional: "Imunisasi Statistik — Empty", Endpoint: "GET /imunisasi/statistik",
-		ReqType: "Cookie (access_token)", Parameter: "Role: ADMIN, no jadwal",
-		ShouldBeSuccess: "true",
-		Expectation:     "Response 200, success:true, data contains statistik with zero values",
-	}.Log(t, pass, resp, respBody)
-}
-
-func TestImunisasiGetStatistikForbidden(t *testing.T) {
-	f := setupImunisasiIntegrationTest(t)
-	defer f.cleanup(t)
-	authIDs := f.seed(t)
-
-	resp := testutils.DoRequest(f.handler, http.MethodGet, "/imunisasi/statistik", nil,
-		testutils.AccessCookie(f.jwtUtil, authIDs.RegularUserID, []string{"USER"}))
-	respBody := testutils.ReadBody(resp)
-	pass := resp.StatusCode == http.StatusForbidden
-
-	testutils.TestResult{
-		SRSRef: "SRS-SC-03", FSDRef: "FSD-2.2",
-		TSDRef: "TSD-3.3 (Endpoint Index)", NoTestScript: "TC-IMUNISASI-025",
-		Functional: "Imunisasi Statistik — Forbidden (USER)", Endpoint: "GET /imunisasi/statistik",
-		ReqType: "Cookie (access_token)", Parameter: "Role: USER (requires ADMIN)",
-		ShouldBeSuccess: "false",
-		Expectation:     "Response 403, success:false",
 	}.Log(t, pass, resp, respBody)
 }
 

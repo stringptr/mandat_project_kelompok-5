@@ -60,7 +60,8 @@ func (h *Handler) UpdateStatusRujukan(ctx context.Context, input *struct {
 }
 
 func (h *Handler) GetStatusTindakLanjut(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*tindaklanjutDomain.StatusTindakLanjutData], error) {
-	res, err := h.Service.GetStatusTindakLanjut(ctx)
+	claims := httputils.GetAccessClaim(ctx)
+	res, err := h.Service.GetStatusTindakLanjut(ctx, claims)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}

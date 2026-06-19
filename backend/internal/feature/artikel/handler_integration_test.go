@@ -44,8 +44,8 @@ func setupArtikelIntegrationTest(t *testing.T) *artikelTestFixture {
 	svc := NewService(repo, auditRepo, notifRepo, notifPub)
 	h := NewHandler(svc)
 
-	huma.Get(groups.AdminGroup, "/artikel", h.GetAllPublished)
-	huma.Get(groups.AdminGroup, "/artikel/{id}", h.GetByID)
+	huma.Get(groups.PublicGroup, "/artikel", h.GetAllPublished)
+	huma.Get(groups.PublicGroup, "/artikel/{id}", h.GetByID)
 	huma.Post(groups.BidanGroup, "/artikel", h.Create)
 	huma.Patch(groups.BidanGroup, "/artikel/{id}", h.Update)
 	huma.Delete(groups.DinkesGroup, "/artikel/{id}", h.Delete)
@@ -164,7 +164,7 @@ func TestArtikelGetAllPublishedEmpty(t *testing.T) {
 	}.Log(t, pass, resp, respBody)
 }
 
-func TestArtikelGetAllPublishedForbidden(t *testing.T) {
+func TestArtikelGetAllPublishedPublicAccess(t *testing.T) {
 	f := setupArtikelIntegrationTest(t)
 	defer f.cleanup(t)
 	authIDs := f.seed(t)
@@ -172,15 +172,15 @@ func TestArtikelGetAllPublishedForbidden(t *testing.T) {
 	resp := testutils.DoRequest(f.handler, http.MethodGet, "/artikel", nil,
 		testutils.AccessCookie(f.jwtUtil, authIDs.RegularUserID, []string{"USER"}))
 	respBody := testutils.ReadBody(resp)
-	pass := resp.StatusCode == http.StatusForbidden
+	pass := resp.StatusCode == http.StatusOK
 
 	testutils.TestResult{
 		SRSRef: "SRS-SC-03", FSDRef: "FSD-2.2",
 		TSDRef: "TSD-3.3 (Endpoint Index)", NoTestScript: "TC-ARTIKEL-003",
-		Functional: "Artikel List — Forbidden (USER)", Endpoint: "GET /artikel",
-		ReqType: "Cookie (USER)", Parameter: "Role: USER (requires ADMIN)",
-		ShouldBeSuccess: "false",
-		Expectation:     "Response 403, success:false",
+		Functional: "Artikel List — Public Access (USER)", Endpoint: "GET /artikel",
+		ReqType: "Cookie (USER)", Parameter: "Role: USER, endpoint is public",
+		ShouldBeSuccess: "true",
+		Expectation:     "Response 200, success:true",
 	}.Log(t, pass, resp, respBody)
 }
 
@@ -621,20 +621,20 @@ func TestArtikelGetPendingForbidden(t *testing.T) {
 // Unauthorized
 // ---------------------------------------------------------------------------
 
-func TestArtikelUnauthorized(t *testing.T) {
+func TestArtikelGetAllPublishedNoAuth(t *testing.T) {
 	f := setupArtikelIntegrationTest(t)
 	defer f.cleanup(t)
 
 	resp := testutils.DoRequest(f.handler, http.MethodGet, "/artikel", nil)
 	respBody := testutils.ReadBody(resp)
-	pass := resp.StatusCode == http.StatusUnauthorized
+	pass := resp.StatusCode == http.StatusOK
 
 	testutils.TestResult{
 		SRSRef: "SRS-SC-03", FSDRef: "FSD-2.2",
 		TSDRef: "TSD-3.3 (Endpoint Index)", NoTestScript: "TC-ARTIKEL-022",
-		Functional: "Artikel — Unauthorized (No Token)", Endpoint: "GET /artikel",
+		Functional: "Artikel List — Public No Auth", Endpoint: "GET /artikel",
 		ReqType: "No Cookie", Parameter: "{}",
-		ShouldBeSuccess: "false",
-		Expectation:     "Response 401, success:false",
+		ShouldBeSuccess: "true",
+		Expectation:     "Response 200, success:true",
 	}.Log(t, pass, resp, respBody)
 }

@@ -42,8 +42,8 @@ func setupPasienIntegrationTest(t *testing.T) *pasienTestFixture {
 	huma.Post(groups.AdminGroup, "/pasien/ibu-hamil", h.DaftarIbuHamil)
 	huma.Post(groups.AdminGroup, "/pasien/anak", h.DaftarAnak)
 	huma.Get(groups.AdminGroup, "/monitoring/pasien", h.GetAll)
+	huma.Get(groups.AuthAccess, "/monitoring/pasien/{id}", h.GetByID)
 	huma.Get(groups.AdminGroup, "/monitoring/pasien/search", h.Search)
-	huma.Get(groups.AdminGroup, "/monitoring/pasien/{id}", h.GetByID)
 	huma.Patch(groups.AdminGroup, "/pasien/{id}", h.Update)
 	huma.Delete(groups.BidanGroup, "/pasien/{id}", h.Delete)
 
@@ -523,23 +523,24 @@ func TestPasienGetByIDNotFound(t *testing.T) {
 	}.Log(t, pass, resp, respBody)
 }
 
-func TestPasienGetByIDForbidden(t *testing.T) {
+func TestPasienGetByIDUserNotOwn(t *testing.T) {
 	f := setupPasienIntegrationTest(t)
 	defer f.cleanup(t)
 	authIDs := f.seed(t)
+	seed := f.seedPasien(t, authIDs)
 
-	resp := testutils.DoRequest(f.handler, http.MethodGet, "/monitoring/pasien/1", nil,
+	resp := testutils.DoRequest(f.handler, http.MethodGet, "/monitoring/pasien/99999", nil,
 		testutils.AccessCookie(f.jwtUtil, authIDs.RegularUserID, []string{"USER"}))
 	respBody := testutils.ReadBody(resp)
-	pass := resp.StatusCode == http.StatusForbidden
+	pass := resp.StatusCode == http.StatusNotFound
 
 	testutils.TestResult{
 		SRSRef: "SRS-SC-03", FSDRef: "FSD-2.2",
 		TSDRef: "TSD-3.3-21 (baris 606-619)", NoTestScript: "TC-PASIEN-019",
-		Functional: "Detail Pasien — Forbidden (Wrong Role)", Endpoint: "GET /monitoring/pasien/{id}",
-		ReqType: "Cookie (access_token)", Parameter: "Role: USER (requires ADMIN)",
+		Functional: "Detail Pasien — Not Found (USER not owner)", Endpoint: "GET /monitoring/pasien/{id}",
+		ReqType: "Cookie (access_token)", Parameter: "Role: USER, id=99999 (nonexistent)",
 		ShouldBeSuccess: "false",
-		Expectation:     "Response 403, success:false",
+		Expectation:     "Response 404, success:false",
 	}.Log(t, pass, resp, respBody)
 }
 

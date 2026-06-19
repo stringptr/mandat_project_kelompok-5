@@ -118,6 +118,30 @@ func (r *Repo) GetAll(ctx context.Context, page int, perPage int, q string) ([]*
 	return rows, int(countResult.Count), nil
 }
 
+func (r *Repo) GetAllByUserID(ctx context.Context, idUser int32) ([]*imunisasiDomain.ImunisasiJoinRow, error) {
+	sql := `
+		SELECT
+			ji.id_imunisasi,
+			COALESCE(a.nama_anak, ua.nama) AS nama_pasien,
+			ji.nama_vaksin,
+			ji.tanggal_jadwal::text,
+			ji.status_imunisasi::text
+		FROM jadwal_imunisasi ji
+		JOIN pasien p ON p.id_pasien = ji.id_pasien
+		JOIN user_account ua ON ua.id_user = p.id_pasien
+		LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
+		WHERE (a.id_wali = #1 OR p.id_pasien = #1)
+		ORDER BY ji.tanggal_jadwal DESC
+	`
+
+	var rows []*imunisasiDomain.ImunisasiJoinRow
+	err := pgxV5.Query(ctx, RawStatement(sql, RawArgs{"#1": idUser}), r.db, &rows)
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
 func (r *Repo) GetByID(ctx context.Context, idImunisasi int32) (*model.JadwalImunisasi, error) {
 	var results []*model.JadwalImunisasi
 	stmt := SELECT(JadwalImunisasi.AllColumns).
@@ -216,6 +240,21 @@ func (r *Repo) CheckPasienOwnership(ctx context.Context, idPasien int32, idUser 
 		return false, err
 	}
 	return result.Owned, nil
+}
+
+func (r *Repo) GetAnakByPasienID(ctx context.Context, idPasien int32) (*model.Anak, error) {
+	var results []*model.Anak
+	stmt := SELECT(Anak.AllColumns).
+		FROM(Anak).
+		WHERE(Anak.IDPasien.EQ(Int32(idPasien)).AND(Anak.IsDeleted.EQ(Bool(false))))
+	err := pgxV5.Query(ctx, stmt, r.db, &results)
+	if err != nil {
+		return nil, err
+	}
+	if len(results) == 0 {
+		return nil, nil
+	}
+	return results[0], nil
 }
 
 func (r *Repo) GetNamaPasienByID(ctx context.Context, idPasien int32) (string, error) {

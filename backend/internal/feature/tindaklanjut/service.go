@@ -12,7 +12,18 @@ import (
 	notificationDomain "github.com/stringptr/SiGizi/backend/internal/domain/notification"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
+	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 )
+
+func isPetugas(roles []string) bool {
+	for _, r := range roles {
+		switch r {
+		case "ADMIN", "BIDAN", "KADER", "DINKES", "SUPER_ADMIN":
+			return true
+		}
+	}
+	return false
+}
 
 type Service struct {
 	repo          tindaklanjutDomain.Repo
@@ -250,8 +261,15 @@ func (s *Service) UpdateStatusRujukan(ctx context.Context, idRujukan int32, req 
 	}, nil
 }
 
-func (s *Service) GetStatusTindakLanjut(ctx context.Context) (*tindaklanjutDomain.StatusTindakLanjutData, *errorutils.Error) {
-	rows, err := s.repo.GetStatusTindakLanjut(ctx)
+func (s *Service) GetStatusTindakLanjut(ctx context.Context, claims *jwtutils.Claim) (*tindaklanjutDomain.StatusTindakLanjutData, *errorutils.Error) {
+	var rows []*tindaklanjutDomain.StatusTindakLanjutJoinRow
+	var err error
+
+	if claims != nil && !isPetugas(claims.Roles) {
+		rows, err = s.repo.GetStatusTindakLanjutByUserID(ctx, claims.IDUser)
+	} else {
+		rows, err = s.repo.GetStatusTindakLanjut(ctx)
+	}
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
 	}

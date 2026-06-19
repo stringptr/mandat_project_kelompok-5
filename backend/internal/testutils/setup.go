@@ -21,6 +21,7 @@ type Groups struct {
 	KaderGroup  *huma.Group
 	DinkesGroup *huma.Group
 	NonAuth     *huma.Group
+	PublicGroup *huma.Group
 }
 
 func SetupRouter(t *testing.T) (http.Handler, huma.API, *jwtutils.JWT, *NoopBlacklistRepo) {
@@ -56,6 +57,7 @@ func CreateGroups(api huma.API, jwtUtil *jwtutils.JWT, blacklistRepo *NoopBlackl
 	bidanGroup := huma.NewGroup(authAccess, "")
 	kaderGroup := huma.NewGroup(authAccess, "")
 	dinkesGroup := huma.NewGroup(authAccess, "")
+	publicGroup := huma.NewGroup(api, "")
 	nonAuth := huma.NewGroup(api, "")
 
 	authAccess.UseMiddleware(middleware.AuthAccessMiddleware(api, jwtUtil, blacklistRepo))
@@ -76,5 +78,6 @@ func CreateGroups(api huma.API, jwtUtil *jwtutils.JWT, blacklistRepo *NoopBlackl
 		KaderGroup:  kaderGroup,
 		DinkesGroup: dinkesGroup,
 		NonAuth:     nonAuth,
+		PublicGroup: publicGroup,
 	}
 }

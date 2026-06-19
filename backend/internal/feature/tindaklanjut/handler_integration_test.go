@@ -52,7 +52,7 @@ func setupTindakLanjutIntegrationTest(t *testing.T) *tindaklanjutTestFixture {
 	huma.Get(groups.BidanGroup, "/tindak-lanjut/pasien/{id}", h.GetDetailPasienByID)
 	huma.Post(groups.BidanGroup, "/tindak-lanjut", h.CreateTindakLanjut)
 	huma.Patch(groups.BidanGroup, "/rujukan/{id}/status", h.UpdateStatusRujukan)
-	huma.Get(groups.BidanGroup, "/tindak-lanjut/status", h.GetStatusTindakLanjut)
+	huma.Get(groups.AuthAccess, "/tindak-lanjut/status", h.GetStatusTindakLanjut)
 	huma.Get(groups.DinkesGroup, "/laporan/tindak-lanjut", h.GetLaporanTindakLanjut)
 	huma.Get(groups.UserGroup, "/tindak-lanjut/{id}", h.GetDetailTindakLanjutByID)
 

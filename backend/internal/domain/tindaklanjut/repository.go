@@ -16,6 +16,7 @@ type Repo interface {
 	CreateRujukan(ctx context.Context, data *model.Rujukan) error
 	UpdateStatusRujukan(ctx context.Context, idRujukan int32, statusRujukan model.StatusRujukan) (*model.Rujukan, error)
 	GetStatusTindakLanjut(ctx context.Context) ([]*StatusTindakLanjutJoinRow, error)
+	GetStatusTindakLanjutByUserID(ctx context.Context, idUser int32) ([]*StatusTindakLanjutJoinRow, error)
 	GetLaporanTindakLanjut(ctx context.Context) ([]*LaporanTindakLanjutJoinRow, error)
 	GetDetailTindakLanjutByID(ctx context.Context, idTindakLanjut int32) (*DetailTindakLanjutJoinRow, error)
 }

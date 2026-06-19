@@ -40,11 +40,7 @@ func (h *Handler) GetByID(ctx context.Context, input *struct {
 	IDImunisasi int32 `path:"id" minimum:"1"`
 }) (*httputils.APIResponseOutput[*imunisasiDomain.ImunisasiDetail], error) {
 	claims := httputils.GetAccessClaim(ctx)
-	if claims == nil {
-		return nil, huma.Error401Unauthorized("Anda harus login untuk mengakses halaman ini.")
-	}
-
-	res, err := h.Service.GetByID(ctx, input.IDImunisasi)
+	res, err := h.Service.GetByID(ctx, input.IDImunisasi, claims)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}
@@ -110,21 +106,7 @@ func (h *Handler) GetByPasienID(ctx context.Context, input *struct {
 	IDPasien int32 `path:"id_pasien" minimum:"1"`
 }) (*httputils.APIResponseOutput[*imunisasiDomain.RiwayatImunisasiResponse], error) {
 	claims := httputils.GetAccessClaim(ctx)
-	if claims == nil {
-		return nil, huma.Error401Unauthorized("Anda harus login untuk mengakses halaman ini.")
-	}
-
-	if !httputils.IsPetugas(claims.Roles) {
-		owned, err := h.Service.IsOwnPasien(ctx, input.IDPasien, claims.IDUser)
-		if err != nil {
-			return nil, errorutils.ToHumaError(err)
-		}
-		if !owned {
-			return nil, huma.Error404NotFound("Data pasien dengan ID tersebut tidak ditemukan.")
-		}
-	}
-
-	res, err := h.Service.GetByPasienID(ctx, input.IDPasien)
+	res, err := h.Service.GetByPasienID(ctx, input.IDPasien, claims)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}

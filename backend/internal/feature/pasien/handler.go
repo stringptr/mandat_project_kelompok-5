@@ -69,21 +69,7 @@ func (h *Handler) GetByID(ctx context.Context, input *struct {
 },
 ) (*httputils.APIResponseOutput[*pasienDomain.PasienDetailResponse], error) {
 	claims := httputils.GetAccessClaim(ctx)
-	if claims == nil {
-		return nil, huma.Error401Unauthorized("Anda harus login untuk mengakses halaman ini.")
-	}
-
-	if !httputils.IsPetugas(claims.Roles) {
-		isOwner, err := h.Service.IsOwnPasien(ctx, input.IDPasien, claims.IDUser)
-		if err != nil {
-			return nil, errorutils.ToHumaError(err)
-		}
-		if !isOwner {
-			return nil, huma.Error404NotFound("Data pasien tidak ditemukan.")
-		}
-	}
-
-	res, err := h.Service.GetByID(ctx, input.IDPasien)
+	res, err := h.Service.GetByID(ctx, input.IDPasien, claims)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}

@@ -36,6 +36,7 @@ type Dependency struct {
 }
 
 func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
+	publicGroup := huma.NewGroup(api, "")
 	authAccess := huma.NewGroup(api, "")
 	authRefresh := huma.NewGroup(api, "")
 	userGroup := huma.NewGroup(authAccess, "")
@@ -119,11 +120,11 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Patch(dinkesGroup, "/artikel/{id}/review", d.ArtikelHandler.Review)
 	huma.Get(dinkesGroup, "/artikel/pending", d.ArtikelHandler.GetPending)
 
+	huma.Get(authAccess, "/tindak-lanjut/status", d.TindakLanjutHandler.GetStatusTindakLanjut)
 	huma.Get(bidanGroup, "/tindak-lanjut/pasien", d.TindakLanjutHandler.GetPasienTindakLanjut)
 	huma.Get(bidanGroup, "/tindak-lanjut/pasien/{id}", d.TindakLanjutHandler.GetDetailPasienByID)
 	huma.Post(bidanGroup, "/tindak-lanjut", d.TindakLanjutHandler.CreateTindakLanjut)
 	huma.Patch(bidanGroup, "/rujukan/{id}/status", d.TindakLanjutHandler.UpdateStatusRujukan)
-	huma.Get(adminGroup, "/tindak-lanjut/status", d.TindakLanjutHandler.GetStatusTindakLanjut)
 	huma.Get(dinkesGroup, "/laporan/tindak-lanjut", d.TindakLanjutHandler.GetLaporanTindakLanjut)
 	huma.Get(userGroup, "/tindak-lanjut/{id}", d.TindakLanjutHandler.GetDetailTindakLanjutByID)
 }

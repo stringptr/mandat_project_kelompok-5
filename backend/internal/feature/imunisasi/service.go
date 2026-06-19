@@ -12,7 +12,18 @@ import (
 	notificationDomain "github.com/stringptr/SiGizi/backend/internal/domain/notification"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
+	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 )
+
+func isPetugas(roles []string) bool {
+	for _, r := range roles {
+		switch r {
+		case "ADMIN", "BIDAN", "KADER", "DINKES", "SUPER_ADMIN":
+			return true
+		}
+	}
+	return false
+}
 
 type Service struct {
 	repo          imunisasiDomain.Repo
@@ -127,13 +138,23 @@ func (s *Service) GetAll(ctx context.Context, req *imunisasiDomain.GetAllImunisa
 	}, nil
 }
 
-func (s *Service) GetByID(ctx context.Context, idImunisasi int32) (*imunisasiDomain.ImunisasiDetail, *errorutils.Error) {
+func (s *Service) GetByID(ctx context.Context, idImunisasi int32, claims *jwtutils.Claim) (*imunisasiDomain.ImunisasiDetail, *errorutils.Error) {
 	row, err := s.repo.GetDetailJoinByID(ctx, idImunisasi)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
 	}
 	if row == nil {
 		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Data jadwal imunisasi dengan ID tersebut tidak ditemukan."}
+	}
+
+	if claims != nil && !isPetugas(claims.Roles) {
+		ok, err := s.isOwnPasien(ctx, row.IDPasien, claims.IDUser)
+		if err != nil {
+			return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+		}
+		if !ok {
+			return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Data jadwal imunisasi dengan ID tersebut tidak ditemukan."}
+		}
 	}
 
 	return &imunisasiDomain.ImunisasiDetail{
@@ -292,13 +313,23 @@ func (s *Service) IsOwnPasien(ctx context.Context, idPasien int32, idUser int32)
 	return owned, nil
 }
 
-func (s *Service) GetByPasienID(ctx context.Context, idPasien int32) (*imunisasiDomain.RiwayatImunisasiResponse, *errorutils.Error) {
+func (s *Service) GetByPasienID(ctx context.Context, idPasien int32, claims *jwtutils.Claim) (*imunisasiDomain.RiwayatImunisasiResponse, *errorutils.Error) {
 	pasien, err := s.repo.GetPasienByID(ctx, idPasien)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
 	}
 	if pasien == nil {
 		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Data pasien dengan ID tersebut tidak ditemukan."}
+	}
+
+	if claims != nil && !isPetugas(claims.Roles) {
+		ok, err := s.isOwnPasien(ctx, idPasien, claims.IDUser)
+		if err != nil {
+			return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+		}
+		if !ok {
+			return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Data pasien dengan ID tersebut tidak ditemukan."}
+		}
 	}
 
 	jadwal, err := s.repo.GetByPasienID(ctx, idPasien)
@@ -355,6 +386,20 @@ func (s *Service) GetStatistik(ctx context.Context) (*imunisasiDomain.StatistikI
 		CakupanPersentase:     persentase,
 		VaksinTerbanyak:       vaksinTerbanyak,
 	}, nil
+}
+
+func (s *Service) isOwnPasien(ctx context.Context, idPasien, idUser int32) (bool, error) {
+	if idPasien == idUser {
+		return true, nil
+	}
+	anak, err := s.repo.GetAnakByPasienID(ctx, idPasien)
+	if err != nil {
+		return false, err
+	}
+	if anak != nil && anak.IDWali == idUser {
+		return true, nil
+	}
+	return false, nil
 }
 
 func strPtr(s string) *string {

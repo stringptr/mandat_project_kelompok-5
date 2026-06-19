@@ -7,13 +7,22 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/shopspring/decimal"
-
-	auditlogDomain "github.com/stringptr/SiGizi/backend/internal/domain/auditlog"
 	pasienDomain "github.com/stringptr/SiGizi/backend/internal/domain/pasien"
+	auditlogDomain "github.com/stringptr/SiGizi/backend/internal/domain/auditlog"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
+	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
 )
+
+func isPetugas(roles []string) bool {
+	for _, r := range roles {
+		switch r {
+		case "ADMIN", "BIDAN", "KADER", "DINKES", "SUPER_ADMIN":
+			return true
+		}
+	}
+	return false
+}
 
 type Service struct {
 	repo      pasienDomain.Repo
@@ -318,13 +327,19 @@ func (s *Service) Search(ctx context.Context, req *pasienDomain.SearchPasienRequ
 	}, nil
 }
 
-func (s *Service) GetByID(ctx context.Context, idPasien int32) (*pasienDomain.PasienDetailResponse, *errorutils.Error) {
+func (s *Service) GetByID(ctx context.Context, idPasien int32, claims *jwtutils.Claim) (*pasienDomain.PasienDetailResponse, *errorutils.Error) {
 	row, err := s.repo.GetDetailByID(ctx, idPasien)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}
 	if row == nil {
 		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Pasien tidak ditemukan."}
+	}
+
+	if claims != nil && !isPetugas(claims.Roles) {
+		if !s.isOwnPasien(ctx, idPasien, claims.IDUser) {
+			return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Pasien tidak ditemukan."}
+		}
 	}
 
 	tglLahir, _ := time.Parse("2006-01-02T15:04:05Z", row.TanggalLahir)
@@ -523,6 +538,17 @@ func nullString(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+func (s *Service) isOwnPasien(ctx context.Context, idPasien, idUser int32) bool {
+	if idPasien == idUser {
+		return true
+	}
+	anak, err := s.repo.GetAnakByPasienID(ctx, idPasien)
+	if err != nil {
+		return false
+	}
+	return anak != nil && anak.IDWali == idUser
 }
 
 func nullFloat(f *float64) float64 {

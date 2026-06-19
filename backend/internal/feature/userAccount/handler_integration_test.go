@@ -42,10 +42,12 @@ func setupUserAccountIntegrationTest(t *testing.T) *userAccountTestFixture {
 	userAccountService := NewService(userAccountRepo, authRepo, auditLogRepo)
 	userAccountH := NewHandler(userAccountService)
 
+	huma.Get(groups.AdminGroup, "/users", userAccountH.GetAllUsers)
+	huma.Get(groups.UserGroup, "/users/{id}", userAccountH.GetUserByID)
+	huma.Patch(groups.UserGroup, "/users/{id}", userAccountH.UpdateUser)
 	huma.Post(superAdminGroup, "/users", userAccountH.CreateUser)
 	huma.Patch(superAdminGroup, "/users/{id}/role", userAccountH.UpdateUserRole)
 	huma.Get(superAdminGroup, "/admin/audit-logs", userAccountH.GetAuditLogs)
-	huma.Get(groups.UserGroup, "/users/{id}", userAccountH.GetUserByID)
 
 	seedIDs := testutils.SeedAuthData(t, pool)
 	posyanduID := testutils.SeedPosyandu(t, pool, 1, seedIDs.VerifiedUserID)
@@ -465,6 +467,313 @@ func TestUserAccountGetAuditLogs_Unauthorized(t *testing.T) {
 		Endpoint:        "GET /admin/audit-logs",
 		ReqType:         "No Cookie",
 		Parameter:       "?page=1&per_page=20",
+		ShouldBeSuccess: "false",
+		Expectation:     "Response 401, success:false",
+	}.Log(t, pass, resp, respBody)
+}
+
+// ---------------------------------------------------------------------------
+// GET /users
+// ---------------------------------------------------------------------------
+
+func TestUserAccountGetAllUsers_Success(t *testing.T) {
+	f := setupUserAccountIntegrationTest(t)
+	defer cleanupUserAccountTest(t, f.pool)
+
+	resp := testutils.DoRequest(f.handler, http.MethodGet, "/users?page=1&per_page=20", nil,
+		testutils.AccessCookie(f.jwtUtil, f.seedIDs.AdminUserID, []string{"USER", "ADMIN"}))
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusOK
+
+	testutils.TestResult{
+		SRSRef:          "SRS-4.3(1)",
+		FSDRef:          "FSD-2.X",
+		TSDRef:          "TSD-3.2 (baris user list)",
+		NoTestScript:    "TC-UA-014",
+		Functional:      "Daftar Pengguna — Success",
+		Endpoint:        "GET /users",
+		ReqType:         "Cookie (ADMIN)",
+		Parameter:       "?page=1&per_page=20",
+		ShouldBeSuccess: "true",
+		Expectation:     "Response 200, success:true, data.users has items, data.total_data > 0",
+	}.Log(t, pass, resp, respBody)
+}
+
+func TestUserAccountGetAllUsers_FilterByRole(t *testing.T) {
+	f := setupUserAccountIntegrationTest(t)
+	defer cleanupUserAccountTest(t, f.pool)
+
+	resp := testutils.DoRequest(f.handler, http.MethodGet, "/users?page=1&per_page=20&role=Bidan", nil,
+		testutils.AccessCookie(f.jwtUtil, f.seedIDs.AdminUserID, []string{"USER", "ADMIN"}))
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusOK
+
+	testutils.TestResult{
+		SRSRef:          "SRS-4.3(1)",
+		FSDRef:          "FSD-2.X",
+		TSDRef:          "TSD-3.2 (baris user list)",
+		NoTestScript:    "TC-UA-015",
+		Functional:      "Daftar Pengguna — Filter By Role",
+		Endpoint:        "GET /users",
+		ReqType:         "Cookie (ADMIN)",
+		Parameter:       "?page=1&per_page=20&role=Bidan",
+		ShouldBeSuccess: "true",
+		Expectation:     "Response 200, success:true, data.users filtered by role",
+	}.Log(t, pass, resp, respBody)
+}
+
+func TestUserAccountGetAllUsers_Forbidden(t *testing.T) {
+	f := setupUserAccountIntegrationTest(t)
+	defer cleanupUserAccountTest(t, f.pool)
+
+	resp := testutils.DoRequest(f.handler, http.MethodGet, "/users?page=1&per_page=20", nil,
+		testutils.AccessCookie(f.jwtUtil, f.seedIDs.RegularUserID, []string{"USER"}))
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusForbidden
+
+	testutils.TestResult{
+		SRSRef:          "SRS-SC-03",
+		FSDRef:          "FSD-2.X",
+		TSDRef:          "TSD-3.2 (baris user list)",
+		NoTestScript:    "TC-UA-016",
+		Functional:      "Daftar Pengguna — Forbidden (USER)",
+		Endpoint:        "GET /users",
+		ReqType:         "Cookie (USER)",
+		Parameter:       "Role: USER (requires ADMIN)",
+		ShouldBeSuccess: "false",
+		Expectation:     "Response 403, success:false",
+	}.Log(t, pass, resp, respBody)
+}
+
+func TestUserAccountGetAllUsers_Unauthorized(t *testing.T) {
+	f := setupUserAccountIntegrationTest(t)
+	defer cleanupUserAccountTest(t, f.pool)
+
+	resp := testutils.DoRequest(f.handler, http.MethodGet, "/users?page=1&per_page=20", nil)
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusUnauthorized
+
+	testutils.TestResult{
+		SRSRef:          "SRS-SC-03",
+		FSDRef:          "FSD-2.X",
+		TSDRef:          "TSD-3.2 (baris user list)",
+		NoTestScript:    "TC-UA-017",
+		Functional:      "Daftar Pengguna — Unauthorized",
+		Endpoint:        "GET /users",
+		ReqType:         "No Cookie",
+		Parameter:       "{}",
+		ShouldBeSuccess: "false",
+		Expectation:     "Response 401, success:false",
+	}.Log(t, pass, resp, respBody)
+}
+
+// ---------------------------------------------------------------------------
+// GET /users/{id}
+// ---------------------------------------------------------------------------
+
+func TestUserAccountGetUserByID_Success(t *testing.T) {
+	f := setupUserAccountIntegrationTest(t)
+	defer cleanupUserAccountTest(t, f.pool)
+
+	path := fmt.Sprintf("/users/%d", f.seedIDs.VerifiedUserID)
+	resp := testutils.DoRequest(f.handler, http.MethodGet, path, nil,
+		testutils.AccessCookie(f.jwtUtil, f.seedIDs.RegularUserID, []string{"USER"}))
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusOK
+
+	testutils.TestResult{
+		SRSRef:          "SRS-4.3(1)",
+		FSDRef:          "FSD-2.X",
+		TSDRef:          "TSD-3.2 (baris user detail)",
+		NoTestScript:    "TC-UA-018",
+		Functional:      "Detail Pengguna — Success",
+		Endpoint:        "GET /users/{id}",
+		ReqType:         "Cookie (USER) + path param",
+		Parameter:       "id=existing verified user",
+		ShouldBeSuccess: "true",
+		Expectation:     "Response 200, success:true, data contains id_user, email, nama, roles",
+	}.Log(t, pass, resp, respBody)
+}
+
+func TestUserAccountGetUserByID_NotFound(t *testing.T) {
+	f := setupUserAccountIntegrationTest(t)
+	defer cleanupUserAccountTest(t, f.pool)
+
+	resp := testutils.DoRequest(f.handler, http.MethodGet, "/users/99999", nil,
+		testutils.AccessCookie(f.jwtUtil, f.seedIDs.RegularUserID, []string{"USER"}))
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusNotFound
+
+	testutils.TestResult{
+		SRSRef:          "SRS-4.3(1)",
+		FSDRef:          "FSD-2.X",
+		TSDRef:          "TSD-3.2 (baris user detail)",
+		NoTestScript:    "TC-UA-019",
+		Functional:      "Detail Pengguna — Not Found",
+		Endpoint:        "GET /users/{id}",
+		ReqType:         "Cookie (USER) + path param",
+		Parameter:       "id=99999",
+		ShouldBeSuccess: "false",
+		Expectation:     "Response 404, success:false, detail: 'Pengguna tidak ditemukan.'",
+	}.Log(t, pass, resp, respBody)
+}
+
+func TestUserAccountGetUserByID_Unauthorized(t *testing.T) {
+	f := setupUserAccountIntegrationTest(t)
+	defer cleanupUserAccountTest(t, f.pool)
+
+	resp := testutils.DoRequest(f.handler, http.MethodGet, "/users/1", nil)
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusUnauthorized
+
+	testutils.TestResult{
+		SRSRef:          "SRS-SC-03",
+		FSDRef:          "FSD-2.X",
+		TSDRef:          "TSD-3.2 (baris user detail)",
+		NoTestScript:    "TC-UA-020",
+		Functional:      "Detail Pengguna — Unauthorized",
+		Endpoint:        "GET /users/{id}",
+		ReqType:         "No Cookie",
+		Parameter:       "{}",
+		ShouldBeSuccess: "false",
+		Expectation:     "Response 401, success:false",
+	}.Log(t, pass, resp, respBody)
+}
+
+// ---------------------------------------------------------------------------
+// PATCH /users/{id}
+// ---------------------------------------------------------------------------
+
+func TestUserAccountUpdateUser_Success(t *testing.T) {
+	f := setupUserAccountIntegrationTest(t)
+	defer cleanupUserAccountTest(t, f.pool)
+
+	body := map[string]any{
+		"nama":  "Updated Name",
+		"no_hp": "081234567890",
+	}
+	path := fmt.Sprintf("/users/%d", f.seedIDs.RegularUserID)
+	resp := testutils.DoRequest(f.handler, http.MethodPatch, path, body,
+		testutils.AccessCookie(f.jwtUtil, f.seedIDs.RegularUserID, []string{"USER"}))
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusOK
+
+	testutils.TestResult{
+		SRSRef:          "SRS-4.3(1)",
+		FSDRef:          "FSD-2.X",
+		TSDRef:          "TSD-3.2 (baris user update)",
+		NoTestScript:    "TC-UA-021",
+		Functional:      "Update Pengguna — Success (Own Profile)",
+		Endpoint:        "PATCH /users/{id}",
+		ReqType:         "JSON Body + Cookie (USER)",
+		Parameter:       `{"nama":"Updated Name","no_hp":"081234567890"}, update own profile`,
+		ShouldBeSuccess: "true",
+		Expectation:     "Response 200, success:true, data.nama='Updated Name', data.no_hp='081234567890'",
+	}.Log(t, pass, resp, respBody)
+}
+
+func TestUserAccountUpdateUser_ByAdminSuccess(t *testing.T) {
+	f := setupUserAccountIntegrationTest(t)
+	defer cleanupUserAccountTest(t, f.pool)
+
+	body := map[string]any{
+		"nama":  "Admin Updated Name",
+		"no_hp": "089999999999",
+	}
+	path := fmt.Sprintf("/users/%d", f.seedIDs.RegularUserID)
+	resp := testutils.DoRequest(f.handler, http.MethodPatch, path, body,
+		testutils.AccessCookie(f.jwtUtil, f.seedIDs.AdminUserID, []string{"USER", "ADMIN"}))
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusOK
+
+	testutils.TestResult{
+		SRSRef:          "SRS-4.3(1), SRS-4.3(d)",
+		FSDRef:          "FSD-2.X",
+		TSDRef:          "TSD-3.2 (baris user update)",
+		NoTestScript:    "TC-UA-022",
+		Functional:      "Update Pengguna — Success (By Admin)",
+		Endpoint:        "PATCH /users/{id}",
+		ReqType:         "JSON Body + Cookie (ADMIN)",
+		Parameter:       `{"nama":"Admin Updated Name","no_hp":"089999999999"}, admin updates other user`,
+		ShouldBeSuccess: "true",
+		Expectation:     "Response 200, success:true, data.nama='Admin Updated Name'",
+	}.Log(t, pass, resp, respBody)
+}
+
+func TestUserAccountUpdateUser_NotFound(t *testing.T) {
+	f := setupUserAccountIntegrationTest(t)
+	defer cleanupUserAccountTest(t, f.pool)
+
+	body := map[string]any{
+		"nama": "Ghost User",
+	}
+	resp := testutils.DoRequest(f.handler, http.MethodPatch, "/users/99999", body,
+		testutils.AccessCookie(f.jwtUtil, f.seedIDs.RegularUserID, []string{"USER"}))
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusNotFound
+
+	testutils.TestResult{
+		SRSRef:          "SRS-4.3(1)",
+		FSDRef:          "FSD-2.X",
+		TSDRef:          "TSD-3.2 (baris user update)",
+		NoTestScript:    "TC-UA-023",
+		Functional:      "Update Pengguna — Not Found",
+		Endpoint:        "PATCH /users/{id}",
+		ReqType:         "JSON Body + Cookie (USER)",
+		Parameter:       `{"nama":"Ghost User"}, id=99999`,
+		ShouldBeSuccess: "false",
+		Expectation:     "Response 404, success:false",
+	}.Log(t, pass, resp, respBody)
+}
+
+func TestUserAccountUpdateUser_Forbidden_NotOwner(t *testing.T) {
+	f := setupUserAccountIntegrationTest(t)
+	defer cleanupUserAccountTest(t, f.pool)
+
+	body := map[string]any{
+		"nama": "Hacked Name",
+	}
+	// RegularUserID (USER) tries to update VerifiedUserID (another user) → 403 Forbidden
+	path := fmt.Sprintf("/users/%d", f.seedIDs.VerifiedUserID)
+	resp := testutils.DoRequest(f.handler, http.MethodPatch, path, body,
+		testutils.AccessCookie(f.jwtUtil, f.seedIDs.RegularUserID, []string{"USER"}))
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusForbidden
+
+	testutils.TestResult{
+		SRSRef:          "SRS-SC-03",
+		FSDRef:          "FSD-2.X",
+		TSDRef:          "TSD-3.2 (baris user update)",
+		NoTestScript:    "TC-UA-024",
+		Functional:      "Update Pengguna — Forbidden (Not Owner)",
+		Endpoint:        "PATCH /users/{id}",
+		ReqType:         "JSON Body + Cookie (USER)",
+		Parameter:       "Role: USER tries to update another user (requires owner or ADMIN)",
+		ShouldBeSuccess: "false",
+		Expectation:     "Response 403, success:false, detail: 'Anda tidak memiliki izin untuk mengubah data pengguna lain.'",
+	}.Log(t, pass, resp, respBody)
+}
+
+func TestUserAccountUpdateUser_Unauthorized(t *testing.T) {
+	f := setupUserAccountIntegrationTest(t)
+	defer cleanupUserAccountTest(t, f.pool)
+
+	body := map[string]any{
+		"nama": "No Auth",
+	}
+	resp := testutils.DoRequest(f.handler, http.MethodPatch, "/users/1", body)
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusUnauthorized
+
+	testutils.TestResult{
+		SRSRef:          "SRS-SC-03",
+		FSDRef:          "FSD-2.X",
+		TSDRef:          "TSD-3.2 (baris user update)",
+		NoTestScript:    "TC-UA-025",
+		Functional:      "Update Pengguna — Unauthorized",
+		Endpoint:        "PATCH /users/{id}",
+		ReqType:         "No Cookie",
+		Parameter:       "{}",
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 401, success:false",
 	}.Log(t, pass, resp, respBody)

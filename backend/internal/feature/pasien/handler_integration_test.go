@@ -44,7 +44,7 @@ func setupPasienIntegrationTest(t *testing.T) *pasienTestFixture {
 	huma.Get(groups.AdminGroup, "/monitoring/pasien", h.GetAll)
 	huma.Get(groups.AdminGroup, "/monitoring/pasien/search", h.Search)
 	huma.Get(groups.AdminGroup, "/monitoring/pasien/{id}", h.GetByID)
-	huma.Patch(groups.BidanGroup, "/pasien/{id}", h.Update)
+	huma.Patch(groups.AdminGroup, "/pasien/{id}", h.Update)
 	huma.Delete(groups.BidanGroup, "/pasien/{id}", h.Delete)
 
 	return &pasienTestFixture{
@@ -558,7 +558,7 @@ func TestPasienUpdateSuccess(t *testing.T) {
 	}
 	path := fmt.Sprintf("/pasien/%d", seed.PasienIbuHamilID)
 	resp := testutils.DoRequest(f.handler, http.MethodPatch, path, body,
-		testutils.AccessCookie(f.jwtUtil, authIDs.VerifiedUserID, []string{"BIDAN"}))
+		testutils.AccessCookie(f.jwtUtil, authIDs.AdminUserID, []string{"USER", "ADMIN"}))
 	respBody := testutils.ReadBody(resp)
 	pass := resp.StatusCode == http.StatusOK
 
@@ -566,7 +566,7 @@ func TestPasienUpdateSuccess(t *testing.T) {
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",
 		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-020",
 		Functional: "Update Pasien — Success", Endpoint: "PATCH /pasien/{id}",
-		ReqType: "JSON Body + Cookie (BIDAN)", Parameter: `{"status_kehamilan":"Trimester 2"}`,
+		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: `{"status_kehamilan":"Trimester 2"}`,
 		ShouldBeSuccess: "true",
 		Expectation:     "Response 200, success:true, data.status_kehamilan updated",
 	}.Log(t, pass, resp, respBody)
@@ -579,7 +579,7 @@ func TestPasienUpdateNotFound(t *testing.T) {
 
 	body := map[string]any{"status_kehamilan": "Trimester 2"}
 	resp := testutils.DoRequest(f.handler, http.MethodPatch, "/pasien/99999", body,
-		testutils.AccessCookie(f.jwtUtil, authIDs.VerifiedUserID, []string{"BIDAN"}))
+		testutils.AccessCookie(f.jwtUtil, authIDs.AdminUserID, []string{"USER", "ADMIN"}))
 	respBody := testutils.ReadBody(resp)
 	pass := resp.StatusCode == http.StatusNotFound
 
@@ -587,7 +587,7 @@ func TestPasienUpdateNotFound(t *testing.T) {
 		SRSRef: "SRS-2.3", FSDRef: "FSD-2.3",
 		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-021",
 		Functional: "Update Pasien — Not Found", Endpoint: "PATCH /pasien/99999",
-		ReqType: "JSON Body + Cookie (BIDAN)", Parameter: `{"status_kehamilan":"Trimester 2"} (id=99999)`,
+		ReqType: "JSON Body + Cookie (ADMIN)", Parameter: `{"status_kehamilan":"Trimester 2"} (id=99999)`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 404, success:false, detail: 'Pasien tidak ditemukan.'",
 	}.Log(t, pass, resp, respBody)
@@ -609,8 +609,31 @@ func TestPasienUpdateForbidden(t *testing.T) {
 	testutils.TestResult{
 		SRSRef: "SRS-SC-03", FSDRef: "FSD-2.2",
 		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-022",
-		Functional: "Update Pasien — Forbidden (Wrong Role)", Endpoint: "PATCH /pasien/{id}",
-		ReqType: "JSON Body + Cookie (USER)", Parameter: `{"status_kehamilan":"Trimester 2"}, Role: USER (requires BIDAN)`,
+		Functional: "Update Pasien — Forbidden (USER)", Endpoint: "PATCH /pasien/{id}",
+		ReqType: "JSON Body + Cookie (USER)", Parameter: `{"status_kehamilan":"Trimester 2"}, Role: USER (requires ADMIN)`,
+		ShouldBeSuccess: "false",
+		Expectation:     "Response 403, success:false",
+	}.Log(t, pass, resp, respBody)
+}
+
+func TestPasienUpdateForbidden_Bidan(t *testing.T) {
+	f := setupPasienIntegrationTest(t)
+	defer f.cleanup(t)
+	authIDs := f.seed(t)
+	seed := f.seedPasien(t, authIDs)
+
+	body := map[string]any{"status_kehamilan": "Trimester 2"}
+	path := fmt.Sprintf("/pasien/%d", seed.PasienIbuHamilID)
+	resp := testutils.DoRequest(f.handler, http.MethodPatch, path, body,
+		testutils.AccessCookie(f.jwtUtil, authIDs.VerifiedUserID, []string{"BIDAN"}))
+	respBody := testutils.ReadBody(resp)
+	pass := resp.StatusCode == http.StatusForbidden
+
+	testutils.TestResult{
+		SRSRef: "SRS-SC-03", FSDRef: "FSD-2.2",
+		TSDRef: "TSD-3.3 (Endpoint Index — baris pasien)", NoTestScript: "TC-PASIEN-022b",
+		Functional: "Update Pasien — Forbidden (BIDAN)", Endpoint: "PATCH /pasien/{id}",
+		ReqType: "JSON Body + Cookie (BIDAN)", Parameter: `{"status_kehamilan":"Trimester 2"}, Role: BIDAN (requires ADMIN)`,
 		ShouldBeSuccess: "false",
 		Expectation:     "Response 403, success:false",
 	}.Log(t, pass, resp, respBody)

@@ -379,6 +379,28 @@ func (r *Repo) GetLaporanTindakLanjut(ctx context.Context) ([]*tindaklanjutDomai
 	return rows, nil
 }
 
+func (r *Repo) GetPasienIDByHasilPemeriksaanID(ctx context.Context, idHasilPemeriksaan int32) (*int32, error) {
+	var rows []*struct {
+		IDPasien int32
+	}
+	sql := `
+		SELECT ji.id_pasien
+		FROM hasil_pemeriksaan hp
+		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
+		WHERE hp.id_hasil_pemeriksaan = #1
+		LIMIT 1
+	`
+
+	err := pgxV5.Query(ctx, RawStatement(sql, RawArgs{"#1": idHasilPemeriksaan}), r.db, &rows)
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	return &rows[0].IDPasien, nil
+}
+
 func (r *Repo) GetDetailTindakLanjutByID(ctx context.Context, idTindakLanjut int32) (*tindaklanjutDomain.DetailTindakLanjutJoinRow, error) {
 	sql := `
 		SELECT

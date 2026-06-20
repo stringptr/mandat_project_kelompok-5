@@ -49,7 +49,14 @@ func (h *Handler) UpdateUser(ctx context.Context, input *userAccountDomain.Updat
 	}
 
 	idUser := input.IDUser
-	input.Body.IDUser = idUser
+
+	existing, err := h.Service.GetUserByID(ctx, idUser)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
+	}
+	if existing == nil {
+		return nil, huma.Error404NotFound("Pengguna tidak ditemukan.")
+	}
 
 	if idUser != claims.IDUser {
 		isAdmin := false
@@ -64,11 +71,8 @@ func (h *Handler) UpdateUser(ctx context.Context, input *userAccountDomain.Updat
 		}
 	}
 
-	err := h.Service.UpdateUser(ctx, idUser, input.Body)
+	err = h.Service.UpdateUser(ctx, idUser, input.Body)
 	if err != nil {
-		if errors.Is(err, userAccountDomain.ErrNotFound) {
-			return nil, huma.Error404NotFound("Pengguna tidak ditemukan.")
-		}
 		return nil, huma.Error500InternalServerError("Terjadi kesalahan. Silahkan dicoba kembali.", err)
 	}
 

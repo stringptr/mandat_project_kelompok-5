@@ -19,6 +19,7 @@ type Repo interface {
 	GetStatusTindakLanjutByUserID(ctx context.Context, idUser int32) ([]*StatusTindakLanjutJoinRow, error)
 	GetLaporanTindakLanjut(ctx context.Context) ([]*LaporanTindakLanjutJoinRow, error)
 	GetDetailTindakLanjutByID(ctx context.Context, idTindakLanjut int32) (*DetailTindakLanjutJoinRow, error)
+	GetPasienIDByHasilPemeriksaanID(ctx context.Context, idHasilPemeriksaan int32) (*int32, error)
 }
 
 type PasienTindakLanjutJoinRow struct {

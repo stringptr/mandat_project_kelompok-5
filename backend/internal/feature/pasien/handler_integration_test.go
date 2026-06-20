@@ -42,8 +42,8 @@ func setupPasienIntegrationTest(t *testing.T) *pasienTestFixture {
 	huma.Post(groups.AdminGroup, "/pasien/ibu-hamil", h.DaftarIbuHamil)
 	huma.Post(groups.AdminGroup, "/pasien/anak", h.DaftarAnak)
 	huma.Get(groups.AdminGroup, "/monitoring/pasien", h.GetAll)
-	huma.Get(groups.AuthAccess, "/monitoring/pasien/{id}", h.GetByID)
 	huma.Get(groups.AdminGroup, "/monitoring/pasien/search", h.Search)
+	huma.Get(groups.AuthAccess, "/monitoring/pasien/{id}", h.GetByID)
 	huma.Patch(groups.AdminGroup, "/pasien/{id}", h.Update)
 	huma.Delete(groups.BidanGroup, "/pasien/{id}", h.Delete)
 
@@ -527,7 +527,7 @@ func TestPasienGetByIDUserNotOwn(t *testing.T) {
 	f := setupPasienIntegrationTest(t)
 	defer f.cleanup(t)
 	authIDs := f.seed(t)
-	seed := f.seedPasien(t, authIDs)
+	f.seedPasien(t, authIDs)
 
 	resp := testutils.DoRequest(f.handler, http.MethodGet, "/monitoring/pasien/99999", nil,
 		testutils.AccessCookie(f.jwtUtil, authIDs.RegularUserID, []string{"USER"}))

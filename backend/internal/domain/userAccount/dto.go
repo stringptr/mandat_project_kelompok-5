@@ -72,7 +72,6 @@ type UpdateUserInput struct {
 }
 
 type UpdateUserRequest struct {
-	IDUser           int32      `path:"id" minimum:"1"`
 	Email            *string    `json:"email,omitempty"             format:"email" maxLength:"255"`
 	NoHp             *string    `json:"no_hp,omitempty"             maxLength:"20"`
 	Nama             *string    `json:"nama,omitempty"              minLength:"1" maxLength:"255"`

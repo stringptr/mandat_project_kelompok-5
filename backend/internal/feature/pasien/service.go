@@ -12,6 +12,7 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
 	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
+	"github.com/shopspring/decimal"
 )
 
 func isPetugas(roles []string) bool {
@@ -393,7 +394,7 @@ func (s *Service) GetByID(ctx context.Context, idPasien int32, claims *jwtutils.
 	return resp, nil
 }
 
-func (s *Service) Update(ctx context.Context, req *pasienDomain.UpdatePasienRequest) (*pasienDomain.PasienDetailResponse, *errorutils.Error) {
+func (s *Service) Update(ctx context.Context, req *pasienDomain.UpdatePasienRequest, claims *jwtutils.Claim) (*pasienDomain.PasienDetailResponse, *errorutils.Error) {
 	existing, err := s.repo.GetDetailByID(ctx, req.IDPasien)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
@@ -483,7 +484,7 @@ func (s *Service) Update(ctx context.Context, req *pasienDomain.UpdatePasienRequ
 
 	s.logAudit(ctx, "PATCH /pasien/"+strconv.Itoa(int(req.IDPasien)), model.TipeAktivitas_DataUpdate, true, "pasien", strconv.Itoa(int(req.IDPasien)), "Berhasil memperbarui data pasien")
 
-	return s.GetByID(ctx, req.IDPasien)
+	return s.GetByID(ctx, req.IDPasien, claims)
 }
 
 func (s *Service) Delete(ctx context.Context, idPasien int32) *errorutils.Error {

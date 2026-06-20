@@ -40,7 +40,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	authAccess := huma.NewGroup(api, "")
 	authRefresh := huma.NewGroup(api, "")
 	userGroup := huma.NewGroup(authAccess, "")
-	publicGroup := huma.NewGroup(api, "")
+	publicGroup = huma.NewGroup(api, "")
 	adminGroup := huma.NewGroup(userGroup, "")
 	bidanGroup := huma.NewGroup(adminGroup, "")
 	kaderGroup := huma.NewGroup(adminGroup, "")
@@ -80,7 +80,6 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Get(superAdminGroup, "/admin/audit-logs", d.UserAccountHandler.GetAuditLogs)
 
 	huma.Get(bidanGroup, "/notifikasi/bidan", d.NotifHandler.GetBidanDashboard)
-	huma.Get(adminGroup, "/notifikasi/statistik", d.NotifHandler.GetStatistics)
 	huma.Get(adminGroup, "/notifikasi/aktivitas", d.NotifHandler.GetActivity)
 	huma.Get(userGroup, "/notifikasi", d.NotifHandler.GetNotifikasi)
 	huma.Get(userGroup, "/notifikasi/{id}", d.NotifHandler.GetNotifikasiDetail)

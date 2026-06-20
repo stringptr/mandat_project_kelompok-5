@@ -212,13 +212,17 @@ func (s *Service) CreateTindakLanjut(ctx context.Context, idBidan int32, req *ti
 	if idRujukan != nil {
 		notifPesan = "Tindak lanjut dan rujukan telah dibuat untuk hasil pemeriksaan Anda."
 	}
-	s.notifRepo.Create(ctx, &model.Notifikasi{
-		Judul:          "Tindak Lanjut & Rujukan",
-		Pesan:          &notifPesan,
-		TipeNotifikasi: model.TipeNotifikasi_Rujukan,
-		StatusBaca:     false,
-		TanggalKirim:   time.Now(),
-	})
+	idPasien, _ := s.repo.GetPasienIDByHasilPemeriksaanID(ctx, req.IDHasilPemeriksaan)
+	if idPasien != nil {
+		s.notifRepo.Create(ctx, &model.Notifikasi{
+			IDUser:         *idPasien,
+			Judul:          "Tindak Lanjut & Rujukan",
+			Pesan:          &notifPesan,
+			TipeNotifikasi: model.TipeNotifikasi_Rujukan,
+			StatusBaca:     false,
+			TanggalKirim:   time.Now(),
+		})
+	}
 
 	return &tindaklanjutDomain.CreateTindakLanjutResponse{
 		IDTindakLanjut: tindakLanjutData.IDTindakLanjut,

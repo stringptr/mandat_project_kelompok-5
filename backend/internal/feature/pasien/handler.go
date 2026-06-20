@@ -78,8 +78,9 @@ func (h *Handler) GetByID(ctx context.Context, input *struct {
 }
 
 func (h *Handler) Update(ctx context.Context, input *pasienDomain.UpdatePasienInput) (*httputils.APIResponseOutput[*pasienDomain.PasienDetailResponse], error) {
+	claims := httputils.GetAccessClaim(ctx)
 	input.Body.IDPasien = input.IDPasien
-	res, err := h.Service.Update(ctx, input.Body)
+	res, err := h.Service.Update(ctx, input.Body, claims)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}

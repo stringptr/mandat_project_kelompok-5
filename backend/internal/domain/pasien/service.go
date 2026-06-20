@@ -14,7 +14,6 @@ type Service interface {
 	GetAllByUser(ctx context.Context, idUser int32, req *GetAllPasienRequest) (*PasienListData, *errorutils.Error)
 	Search(ctx context.Context, req *SearchPasienRequest) (*SearchPasienResponseData, *errorutils.Error)
 	GetByID(ctx context.Context, idPasien int32, claims *jwtutils.Claim) (*PasienDetailResponse, *errorutils.Error)
-	IsOwnPasien(ctx context.Context, idPasien int32, idUser int32) (bool, *errorutils.Error)
-	Update(ctx context.Context, req *UpdatePasienRequest) (*PasienDetailResponse, *errorutils.Error)
+	Update(ctx context.Context, req *UpdatePasienRequest, claims *jwtutils.Claim) (*PasienDetailResponse, *errorutils.Error)
 	Delete(ctx context.Context, idPasien int32) *errorutils.Error
 }

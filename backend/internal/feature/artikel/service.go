@@ -118,6 +118,7 @@ func (s *Service) Create(ctx context.Context, idPenulis int32, req *artikelDomai
 	notifPesan := fmt.Sprintf("Artikel '%s' oleh %s telah diajukan dan menunggu review.", req.Judul, penulis)
 
 	s.notifRepo.Create(ctx, &model.Notifikasi{
+		IDUser:         idPenulis,
 		Judul:          notifJudul,
 		Pesan:          &notifPesan,
 		TipeNotifikasi: model.TipeNotifikasi_Edukasi,

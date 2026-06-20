@@ -23,4 +23,5 @@ type Handler interface {
 	GetByPasienID(ctx context.Context, input *struct {
 		IDPasien int32 `path:"id_pasien" minimum:"1"`
 	}) (*httputils.APIResponseOutput[*RiwayatImunisasiResponse], error)
+	GetStatistik(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*StatistikImunisasi], error)
 }

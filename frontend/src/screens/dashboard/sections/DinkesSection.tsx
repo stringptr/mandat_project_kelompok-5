@@ -23,8 +23,10 @@ export function DinkesSection(): JSX.Element {
     setKehadiranBulanan,
   } = useAppStore();
 
+  const filteredWilayah = stuntingPerWilayah.filter((w) => w.nama_wilayah !== 'Tidak Diketahui');
+
   useEffect(() => {
-    if (dashboardStats !== null) return;
+    if (dashboardStats !== null && filteredWilayah.length > 0) return;
 
     Promise.allSettled([
       apiGet<DashboardStats>('/dashboard/stats'),
@@ -38,7 +40,7 @@ export function DinkesSection(): JSX.Element {
 
       if (distrib.status === 'fulfilled') setDistribusiGizi(distrib.value.distribusi ?? []);
       if (tren.status === 'fulfilled') setTrenStunting(tren.value.tren ?? []);
-      if (wilayah.status === 'fulfilled') setStuntingPerWilayah(wilayah.value.wilayah ?? []);
+      if (wilayah.status === 'fulfilled') setStuntingPerWilayah((wilayah.value.wilayah ?? []).filter((w: StuntingWilayahItem) => w.nama_wilayah !== 'Tidak Diketahui'));
       if (kehadiran.status === 'fulfilled') setKehadiranBulanan(kehadiran.value.tren ?? []);
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -117,11 +119,11 @@ export function DinkesSection(): JSX.Element {
 
       <div className="bg-white rounded-2xl p-5 border border-neutral-100">
         <h4 className="text-sm font-bold text-neutral-800 font-headline mb-4">Prevalensi Stunting Per Wilayah</h4>
-        {stuntingPerWilayah.length === 0 ? (
+        {filteredWilayah.length === 0 ? (
           <p className="text-sm text-neutral-400 text-center py-8">Belum ada data wilayah</p>
         ) : (
           <PrevalensiMap
-            data={stuntingPerWilayah.map((w) => ({
+            data={filteredWilayah.map((w) => ({
               nama: w.nama_wilayah,
               prevalensi: w.prevalensi,
               jumlahKasus: w.jumlah_kasus,
@@ -164,11 +166,11 @@ export function DinkesSection(): JSX.Element {
 
         <div className="bg-white rounded-2xl p-5 border border-neutral-100">
           <h4 className="text-sm font-bold text-neutral-800 font-headline mb-4">Stunting Per Wilayah</h4>
-          {stuntingPerWilayah.length === 0 ? (
+          {filteredWilayah.length === 0 ? (
             <p className="text-sm text-neutral-400 text-center py-8">Belum ada data wilayah</p>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-              {stuntingPerWilayah.map((w) => (
+              {filteredWilayah.map((w) => (
                 <div key={w.nama_wilayah} className="flex items-center justify-between py-2 border-b border-neutral-50 last:border-0">
                   <div>
                     <p className="text-sm font-semibold text-neutral-800">{w.nama_wilayah}</p>

@@ -2,6 +2,7 @@ package artikel
 
 import (
 	"context"
+	"slices"
 
 	"github.com/danielgtaylor/huma/v2"
 	artikelDomain "github.com/stringptr/SiGizi/backend/internal/domain/artikel"
@@ -17,8 +18,16 @@ func NewHandler(service artikelDomain.Service) *Handler {
 	return &Handler{Service: service}
 }
 
-func (h *Handler) GetAllPublished(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*artikelDomain.ArtikelListData], error) {
-	res, err := h.Service.GetAllPublished(ctx)
+func (h *Handler) GetAllPublished(ctx context.Context, input *artikelDomain.GetAllPublishedRequest) (*httputils.APIResponseOutput[*artikelDomain.ArtikelListData], error) {
+	res, err := h.Service.GetAllPublished(ctx, input)
+	if err != nil {
+		return nil, errorutils.ToHumaError(err)
+	}
+	return httputils.NewOKOutput(res), nil
+}
+
+func (h *Handler) GetAll(ctx context.Context, input *artikelDomain.GetAllPublishedRequest) (*httputils.APIResponseOutput[*artikelDomain.ArtikelListData], error) {
+	res, err := h.Service.GetAll(ctx, input)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}
@@ -41,7 +50,7 @@ func (h *Handler) Create(ctx context.Context, input *httputils.APIRequestInput[*
 		return nil, huma.Error401Unauthorized("Anda harus login untuk mengakses halaman ini.")
 	}
 
-	res, err := h.Service.Create(ctx, claims.IDUser, input.Body)
+	res, err := h.Service.Create(ctx, claims.IDUser, slices.Contains(claims.Roles, "DINKES"), input.Body)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}
@@ -54,7 +63,7 @@ func (h *Handler) Update(ctx context.Context, input *artikelDomain.UpdateArtikel
 		return nil, huma.Error401Unauthorized("Anda harus login untuk mengakses halaman ini.")
 	}
 
-	res, err := h.Service.Update(ctx, claims.IDUser, input.Body, input.IDArtikel)
+	res, err := h.Service.Update(ctx, claims.IDUser, slices.Contains(claims.Roles, "DINKES"), input.Body, input.IDArtikel)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}
@@ -87,8 +96,8 @@ func (h *Handler) Review(ctx context.Context, input *struct {
 	return httputils.NewOKOutput(res), nil
 }
 
-func (h *Handler) GetPending(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*artikelDomain.ArtikelPendingData], error) {
-	res, err := h.Service.GetPending(ctx)
+func (h *Handler) GetPending(ctx context.Context, input *artikelDomain.GetPendingRequest) (*httputils.APIResponseOutput[*artikelDomain.ArtikelPendingData], error) {
+	res, err := h.Service.GetPending(ctx, input)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}

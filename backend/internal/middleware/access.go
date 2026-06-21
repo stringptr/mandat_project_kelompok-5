@@ -71,13 +71,7 @@ func AuthAccessMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo jwtblac
 
 func NonAuthenticatedOnlyMiddleware(api huma.API, jwt *jwtutils.JWT, blacklistRepo jwtblacklist.Repo) func(ctx huma.Context, next func(huma.Context)) {
 	return func(ctx huma.Context, next func(huma.Context)) {
-		claims := httputils.GetAccessClaim(ctx.Context())
-
-		if claims != nil {
-			huma.WriteErr(api, ctx, http.StatusUnauthorized, "Anda sudah login. Silahkan logout terlebih dahulu.", nil)
-			return
-		}
-
+		// Allow re-login — old session will be replaced
 		next(ctx)
 	}
 }

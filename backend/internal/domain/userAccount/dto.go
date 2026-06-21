@@ -2,6 +2,8 @@ package userAccount
 
 import (
 	"time"
+
+	"github.com/stringptr/SiGizi/backend/internal/pagination"
 )
 
 type AdminGetAllResponseDTO struct {
@@ -36,15 +38,14 @@ type UserListItem struct {
 	StatusVerifikasi string   `json:"status_verifikasi"`
 	Roles            []string `json:"roles"`
 	IDLokasi         int32    `json:"id_lokasi"`
+	NamaLokasi       string   `json:"nama_lokasi"`
 	CreatedAt        string   `json:"created_at"`
 	UpdatedAt        string   `json:"updated_at"`
 }
 
 type UserListData struct {
-	Users     []UserListItem `json:"users"`
-	TotalData int            `json:"total_data"`
-	Page      int            `json:"page"`
-	PerPage   int            `json:"per_page"`
+	Users []UserListItem  `json:"users"`
+	Meta  pagination.Meta `json:"meta"`
 }
 
 type UserDetailResponse struct {
@@ -72,7 +73,6 @@ type UpdateUserInput struct {
 }
 
 type UpdateUserRequest struct {
-	IDUser           int32      `path:"id" minimum:"1"`
 	Email            *string    `json:"email,omitempty"             format:"email" maxLength:"255"`
 	NoHp             *string    `json:"no_hp,omitempty"             maxLength:"20"`
 	Nama             *string    `json:"nama,omitempty"              minLength:"1" maxLength:"255"`
@@ -148,8 +148,6 @@ type AuditLogItem struct {
 }
 
 type AuditLogListData struct {
-	AuditLogs []AuditLogItem `json:"audit_logs"`
-	TotalData int            `json:"total_data"`
-	Page      int            `json:"page"`
-	PerPage   int            `json:"per_page"`
+	AuditLogs []AuditLogItem  `json:"audit_logs"`
+	Meta      pagination.Meta `json:"meta"`
 }

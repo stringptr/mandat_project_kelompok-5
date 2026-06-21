@@ -16,7 +16,7 @@ type Handler interface {
 		IDRujukan int32 `path:"id" minimum:"1"`
 		Body      *UpdateStatusRujukanRequest
 	}) (*httputils.APIResponseOutput[*UpdateStatusRujukanResponse], error)
-	GetStatusTindakLanjut(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*StatusTindakLanjutData], error)
+	GetStatusTindakLanjut(ctx context.Context, input *GetStatusTindakLanjutRequest) (*httputils.APIResponseOutput[*StatusTindakLanjutData], error)
 	GetLaporanTindakLanjut(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*LaporanTindakLanjutData], error)
 	GetDetailTindakLanjutByID(ctx context.Context, input *struct {
 		IDTindakLanjut int32 `path:"id" minimum:"1"`

@@ -14,6 +14,7 @@ import (
 	pemeriksaanDomain "github.com/stringptr/SiGizi/backend/internal/domain/pemeriksaan"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
+	"github.com/stringptr/SiGizi/backend/internal/pagination"
 )
 
 type Service struct {
@@ -266,6 +267,9 @@ func (s *Service) IsOwnPemeriksaan(ctx context.Context, idHasilPemeriksaan int32
 }
 
 func (s *Service) GetPending(ctx context.Context, page int, perPage int) (*pemeriksaanDomain.PendingPemeriksaanData, *errorutils.Error) {
+	page = pagination.ValidatePage(page)
+	perPage = pagination.ValidatePerPage(perPage)
+
 	rows, total, err := s.repo.GetPendingVerification(ctx, page, perPage)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
@@ -287,7 +291,7 @@ func (s *Service) GetPending(ctx context.Context, page int, perPage int) (*pemer
 
 	return &pemeriksaanDomain.PendingPemeriksaanData{
 		PemeriksaanPending: items,
-		TotalPending:       total,
+		Meta:               pagination.NewMeta(int32(page), int32(perPage), int32(total)),
 	}, nil
 }
 

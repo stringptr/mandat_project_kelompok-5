@@ -1,17 +1,11 @@
-/**
- * Global app store using Zustand
- *
- * Persists fetched data so navigating away and back doesn't trigger
- * a full reload — data is served from store instantly while a background
- * refresh keeps it up-to-date.
- */
 import { create } from 'zustand';
-import type { DashboardStats, DistribusiGiziItem, TrenStuntingItem, StuntingWilayahItem } from '../types/api';
+import { persist } from 'zustand/middleware';
+import type {
+  DashboardStats, DistribusiGiziItem, TrenStuntingItem, StuntingWilayahItem,
+} from '../types/api';
 import type { Artikel } from '../screens/edukasi/data/artikel.data';
 import type { JadwalImunisasi } from '../screens/jadwal-imunisasi/data/imunisasi.data';
 import type { Rujukan } from '../screens/tindak-lanjut/components/RujukanAktif';
-
-// ── Types ──────────────────────────────────────────────────────────────────
 
 interface DashboardSlice {
   dashboardStats: DashboardStats | null;
@@ -55,46 +49,67 @@ interface TindakLanjutSlice {
   setRujukanLoading: (v: boolean) => void;
 }
 
-type AppStore = DashboardSlice & ArtikelSlice & ImunisasiSlice & TindakLanjutSlice;
+interface GlobalSlice {
+  appInitialized: boolean;
+}
 
-// ── Store ──────────────────────────────────────────────────────────────────
+type AppStore = DashboardSlice & ArtikelSlice & ImunisasiSlice & TindakLanjutSlice & GlobalSlice;
 
-export const useAppStore = create<AppStore>((set) => ({
-  // ── Dashboard ──────────────────────────────────────────────────────────
-  dashboardStats: null,
-  dashboardLoading: false,
-  distribusiGizi: [],
-  trenStunting: [],
-  stuntingPerWilayah: [],
-  kehadiranBulanan: [],
-  jadwalTerdekat: [],
-  aktivitas: [],
-  imunisasiPersen: 0,
-  setDashboardStats: (s) => set({ dashboardStats: s }),
-  setDashboardLoading: (v) => set({ dashboardLoading: v }),
-  setDistribusiGizi: (d) => set({ distribusiGizi: d }),
-  setTrenStunting: (t) => set({ trenStunting: t }),
-  setStuntingPerWilayah: (w) => set({ stuntingPerWilayah: w }),
-  setKehadiranBulanan: (t) => set({ kehadiranBulanan: t }),
-  setJadwalTerdekat: (j) => set({ jadwalTerdekat: j }),
-  setAktivitas: (a) => set({ aktivitas: a }),
-  setImunisasiPersen: (n) => set({ imunisasiPersen: n }),
+type PersistedState = Omit<
+  AppStore,
+  'dashboardLoading' | 'artikelLoading' | 'imunisasiLoading' | 'rujukanLoading'
+>;
 
-  // ── Artikel ────────────────────────────────────────────────────────────
-  artikelList: [],
-  artikelLoading: false,
-  setArtikelList: (list) => set({ artikelList: list }),
-  setArtikelLoading: (v) => set({ artikelLoading: v }),
+export const useAppStore = create<AppStore>()(
+  persist(
+    (set) => ({
+      // ── Dashboard ──
+      dashboardStats: null,
+      dashboardLoading: false,
+      distribusiGizi: [],
+      trenStunting: [],
+      stuntingPerWilayah: [],
+      kehadiranBulanan: [],
+      jadwalTerdekat: [],
+      aktivitas: [],
+      imunisasiPersen: 0,
+      setDashboardStats: (s) => set({ dashboardStats: s }),
+      setDashboardLoading: (v) => set({ dashboardLoading: v }),
+      setDistribusiGizi: (d) => set({ distribusiGizi: d }),
+      setTrenStunting: (t) => set({ trenStunting: t }),
+      setStuntingPerWilayah: (w) => set({ stuntingPerWilayah: w }),
+      setKehadiranBulanan: (t) => set({ kehadiranBulanan: t }),
+      setJadwalTerdekat: (j) => set({ jadwalTerdekat: j }),
+      setAktivitas: (a) => set({ aktivitas: a }),
+      setImunisasiPersen: (n) => set({ imunisasiPersen: n }),
 
-  // ── Imunisasi ──────────────────────────────────────────────────────────
-  imunisasiList: [],
-  imunisasiLoading: false,
-  setImunisasiList: (list) => set({ imunisasiList: list }),
-  setImunisasiLoading: (v) => set({ imunisasiLoading: v }),
+      // ── Artikel ──
+      artikelList: [],
+      artikelLoading: false,
+      setArtikelList: (list) => set({ artikelList: list }),
+      setArtikelLoading: (v) => set({ artikelLoading: v }),
 
-  // ── Tindak Lanjut ──────────────────────────────────────────────────────
-  rujukanList: [],
-  rujukanLoading: false,
-  setRujukanList: (list) => set({ rujukanList: list }),
-  setRujukanLoading: (v) => set({ rujukanLoading: v }),
-}));
+      // ── Imunisasi ──
+      imunisasiList: [],
+      imunisasiLoading: false,
+      setImunisasiList: (list) => set({ imunisasiList: list }),
+      setImunisasiLoading: (v) => set({ imunisasiLoading: v }),
+
+      // ── Tindak Lanjut ──
+      rujukanList: [],
+      rujukanLoading: false,
+      setRujukanList: (list) => set({ rujukanList: list }),
+      setRujukanLoading: (v) => set({ rujukanLoading: v }),
+
+      // ── Global Init ──
+      appInitialized: false,
+    }),
+    {
+      name: 'sigizi-store',
+      partialize: (state): PersistedState => {
+        const { dashboardLoading, artikelLoading, imunisasiLoading, rujukanLoading, ...persisted } = state;
+        return persisted;
+      },
+    }
+  )
+);

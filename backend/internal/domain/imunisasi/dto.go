@@ -1,5 +1,7 @@
 package imunisasi
 
+import "github.com/stringptr/SiGizi/backend/internal/pagination"
+
 type GetAllImunisasiRequest struct {
 	Page    int    `query:"page" minimum:"1" default:"1"`
 	PerPage int    `query:"per_page" minimum:"1" maximum:"100" default:"20"`
@@ -26,8 +28,8 @@ type ImunisasiListItem struct {
 }
 
 type ImunisasiListData struct {
-	Jadwal    []ImunisasiListItem `json:"jadwal"`
-	TotalData int                  `json:"total_data"`
+	Jadwal []ImunisasiListItem `json:"jadwal"`
+	Meta   pagination.Meta     `json:"meta"`
 }
 
 type ImunisasiDetail struct {

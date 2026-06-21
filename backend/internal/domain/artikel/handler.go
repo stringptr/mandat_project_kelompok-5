@@ -7,7 +7,8 @@ import (
 )
 
 type Handler interface {
-	GetAllPublished(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*ArtikelListData], error)
+	GetAllPublished(ctx context.Context, input *GetAllPublishedRequest) (*httputils.APIResponseOutput[*ArtikelListData], error)
+	GetAll(ctx context.Context, input *GetAllPublishedRequest) (*httputils.APIResponseOutput[*ArtikelListData], error)
 	GetByID(ctx context.Context, input *struct {
 		IDArtikel int32 `path:"id" minimum:"1"`
 	}) (*httputils.APIResponseOutput[*ArtikelDetail], error)
@@ -20,5 +21,5 @@ type Handler interface {
 		IDArtikel int32 `path:"id" minimum:"1"`
 		Body      *ReviewArtikelRequest
 	}) (*httputils.APIResponseOutput[*ReviewArtikelResponse], error)
-	GetPending(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*ArtikelPendingData], error)
+	GetPending(ctx context.Context, input *GetPendingRequest) (*httputils.APIResponseOutput[*ArtikelPendingData], error)
 }

@@ -57,7 +57,7 @@ export interface RegisterFormData {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function mapRolesToFrontendRole(roles: string[]): Role {
-  if (roles.includes('DINKES')) return 'Dinas Kesehatan';
+  if (roles.includes('DINKES') || roles.includes('SUPER_ADMIN')) return 'Dinas Kesehatan';
   if (roles.includes('BIDAN')) return 'Bidan';
   if (roles.includes('KADER')) return 'Kader Posyandu';
   return 'Ibu/Wali';
@@ -69,8 +69,18 @@ function getAvatarUrl(name: string): string {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }): JSX.Element {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    const stored = localStorage.getItem('sigizi_user');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        localStorage.removeItem('sigizi_user');
+      }
+    }
+    return null;
+  });
+  const [loading] = useState(false);
 
   const clearAuth = useCallback(() => {
     setUser(null);
@@ -81,44 +91,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
     setOnUnauthorized(clearAuth);
   }, [clearAuth]);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const me = await apiGet<{
-          id_user: number;
-          nama: string;
-          roles: string[];
-          email: string;
-          nik: string;
-        }>('/auth/me');
+	useEffect(() => {
+		const stored = localStorage.getItem('sigizi_user');
+		if (!stored) return;
 
-        const profile: UserProfile = {
-          idUser: me.id_user,
-          name: me.nama,
-          email: me.email,
-          nik: me.nik,
-          role: mapRolesToFrontendRole(me.roles),
-          roles: me.roles,
-          avatarUrl: getAvatarUrl(me.nama),
-        };
+		const checkSession = async () => {
+			try {
+				const me = await apiGet<{
+					id_user: number;
+					nama: string;
+					roles: string[];
+					email: string;
+					nik: string;
+				}>('/auth/me');
 
-        localStorage.setItem('sigizi_user', JSON.stringify(profile));
-        setUser(profile);
-      } catch {
-        const stored = localStorage.getItem('sigizi_user');
-        if (stored) {
-          try {
-            setUser(JSON.parse(stored));
-          } catch {
-            localStorage.removeItem('sigizi_user');
-          }
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    checkSession();
-  }, []);
+				const profile: UserProfile = {
+					idUser: me.id_user,
+					name: me.nama,
+					email: me.email,
+					nik: me.nik,
+					role: mapRolesToFrontendRole(me.roles),
+					roles: me.roles,
+					avatarUrl: getAvatarUrl(me.nama),
+				};
+
+				localStorage.setItem('sigizi_user', JSON.stringify(profile));
+				setUser(profile);
+			} catch {
+				// session invalid — clear stale localStorage if any
+				localStorage.removeItem('sigizi_user');
+				setUser(null);
+			}
+		};
+		checkSession();
+	}, []);
 
   const login = useCallback(async (payload: LoginPayload) => {
     await apiPost<AuthResponse>('/auth/login', {

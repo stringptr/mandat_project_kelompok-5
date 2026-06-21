@@ -7,6 +7,7 @@ import (
 	pemeriksaanDomain "github.com/stringptr/SiGizi/backend/internal/domain/pemeriksaan"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
+	"github.com/stringptr/SiGizi/backend/internal/pagination"
 )
 
 type Handler struct {
@@ -97,17 +98,8 @@ func (h *Handler) GetPending(ctx context.Context, input *pemeriksaanDomain.GetPe
 	if input == nil {
 		input = &pemeriksaanDomain.GetPendingPemeriksaanRequest{}
 	}
-	page := input.Page
-	if page < 1 {
-		page = 1
-	}
-	perPage := input.PerPage
-	if perPage < 1 {
-		perPage = 20
-	}
-	if perPage > 100 {
-		perPage = 100
-	}
+	page := pagination.ValidatePage(input.Page)
+	perPage := pagination.ValidatePerPage(input.PerPage)
 
 	res, err := h.Service.GetPending(ctx, page, perPage)
 	if err != nil {

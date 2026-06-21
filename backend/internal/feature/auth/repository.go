@@ -77,18 +77,24 @@ func (r *Repo) GetRoles(ctx context.Context, idUser int32) ([]string, error) {
 func (r *Repo) GetByEmailNIK(ctx context.Context, email string, nik string) (*model.UserAccount, error) {
 	var users []*model.UserAccount
 
+	cond := UserAccount.IsDeleted.EQ(Bool(false))
+	if email != "" {
+		cond = cond.AND(UserAccount.Email.EQ(String(email)))
+	}
+	if nik != "" {
+		cond = cond.AND(UserAccount.Nik.EQ(String(nik)))
+	}
+
 	stmt := SELECT(UserAccount.AllColumns).
 		FROM(UserAccount).
-		WHERE(UserAccount.Email.EQ(String(email)).
-			AND(UserAccount.Nik.EQ(String(nik)).
-				AND(UserAccount.IsDeleted.EQ(Bool(false))))).
-		LIMIT(1)
+		WHERE(cond).
+		LIMIT(2)
 
 	err := pgxV5.Query(ctx, stmt, r.db, &users)
 	if err != nil {
 		return nil, err
 	}
-	if len(users) == 0 {
+	if len(users) == 0 || len(users) > 1 {
 		return nil, nil
 	}
 	return users[0], nil

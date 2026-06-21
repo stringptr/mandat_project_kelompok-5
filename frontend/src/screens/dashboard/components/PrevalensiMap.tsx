@@ -1,3 +1,7 @@
+import { useEffect, useRef } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
 interface MapItem {
   nama: string;
   prevalensi: number;
@@ -9,144 +13,184 @@ interface PrevalensiMapProps {
   data: MapItem[];
 }
 
-// Simplified geographic positions for 35 kab/kota in Jawa Tengah
-// Each: [row (0-2), col (0-14), nama]
-const KABUPATEN_POS: [number, number, string][] = [
-  // North coast (row 0)
-  [0, 0, 'Kab. Brebes'],
-  [0, 1, 'Kota Tegal'],
-  [0, 2, 'Kab. Tegal'],
-  [0, 3, 'Kab. Pemalang'],
-  [0, 4, 'Kab. Pekalongan'],
-  [0, 5, 'Kota Pekalongan'],
-  [0, 6, 'Kab. Batang'],
-  [0, 7, 'Kab. Kendal'],
-  [0, 8, 'Kota Semarang'],
-  [0, 9, 'Kab. Demak'],
-  [0, 10, 'Kab. Jepara'],
-  [0, 11, 'Kab. Kudus'],
-  [0, 12, 'Kab. Pati'],
-  [0, 13, 'Kab. Rembang'],
-  [0, 14, 'Kab. Blora'],
-  // Central (row 1)
-  [1, 0, 'Kab. Cilacap'],
-  [1, 1, 'Kab. Banyumas'],
-  [1, 2, 'Kab. Purbalingga'],
-  [1, 3, 'Kab. Banjarnegara'],
-  [1, 4, 'Kab. Wonosobo'],
-  [1, 5, 'Kab. Temanggung'],
-  [1, 6, 'Kota Salatiga'],
-  [1, 7, 'Kab. Semarang'],
-  [1, 8, 'Kab. Grobogan'],
-  [1, 9, 'Kab. Sragen'],
-  // South coast (row 2)
-  [2, 1, 'Kab. Kebumen'],
-  [2, 2, 'Kab. Purworejo'],
-  [2, 3, 'Kab. Magelang'],
-  [2, 4, 'Kota Magelang'],
-  [2, 5, 'Kab. Boyolali'],
-  [2, 6, 'Kab. Klaten'],
-  [2, 7, 'Kab. Sukoharjo'],
-  [2, 8, 'Kota Surakarta'],
-  [2, 9, 'Kab. Karanganyar'],
-  [2, 10, 'Kab. Wonogiri'],
-];
+const CENTROIDS: Record<string, [number, number]> = {
+  'Kab. Cilacap': [-7.73, 109.01],
+  'Kab. Banyumas': [-7.48, 109.29],
+  'Kab. Purbalingga': [-7.39, 109.36],
+  'Kab. Banjarnegara': [-7.40, 109.70],
+  'Kab. Kebumen': [-7.67, 109.66],
+  'Kab. Purworejo': [-7.71, 110.01],
+  'Kab. Wonosobo': [-7.36, 109.90],
+  'Kab. Magelang': [-7.48, 110.22],
+  'Kota Magelang': [-7.48, 110.22],
+  'Kab. Boyolali': [-7.52, 110.60],
+  'Kab. Klaten': [-7.68, 110.63],
+  'Kab. Sukoharjo': [-7.68, 110.83],
+  'Kota Surakarta': [-7.56, 110.83],
+  'Kab. Wonogiri': [-7.82, 110.93],
+  'Kab. Karanganyar': [-7.62, 111.04],
+  'Kab. Sragen': [-7.43, 111.02],
+  'Kab. Grobogan': [-7.02, 110.93],
+  'Kab. Blora': [-6.97, 111.42],
+  'Kab. Rembang': [-6.71, 111.34],
+  'Kab. Pati': [-6.75, 111.04],
+  'Kab. Kudus': [-6.80, 110.84],
+  'Kab. Jepara': [-6.58, 110.67],
+  'Kab. Demak': [-6.89, 110.64],
+  'Kota Semarang': [-6.99, 110.42],
+  'Kab. Semarang': [-7.20, 110.44],
+  'Kota Salatiga': [-7.33, 110.50],
+  'Kab. Temanggung': [-7.32, 110.17],
+  'Kab. Kendal': [-6.92, 110.20],
+  'Kab. Batang': [-6.91, 109.73],
+  'Kab. Pekalongan': [-7.05, 109.53],
+  'Kota Pekalongan': [-6.88, 109.67],
+  'Kab. Pemalang': [-6.90, 109.38],
+  'Kab. Tegal': [-6.87, 109.14],
+  'Kota Tegal': [-6.87, 109.14],
+  'Kab. Brebes': [-6.87, 108.89],
+};
 
-function findData(name: string, data: MapItem[]): MapItem | undefined {
+function getColor(level: string | undefined): string {
+  if (!level) return '#9ca3af';
+  if (level === 'tinggi') return '#dc2626';
+  if (level === 'sedang') return '#f97316';
+  return '#22c55e';
+}
+
+function matchDistrict(centroidName: string, data: MapItem[]): MapItem | undefined {
+  const clean = (s: string) =>
+    s.toLowerCase().replace(/kab\.?\s*/g, '').replace(/kota\s*/g, '').replace(/\s+/g, ' ').trim();
+  const cn = clean(centroidName);
   return data.find(
-    (d) =>
-      d.nama.toLowerCase().includes(name.replace('Kab. ', '').replace('Kota ', '').toLowerCase()) ||
-      name.toLowerCase().includes(d.nama.toLowerCase().replace('kab. ', '').replace('kota ', ''))
+    (d) => clean(d.nama).includes(cn) || cn.includes(clean(d.nama))
   );
 }
 
-function shortName(name: string): string {
-  return name.replace('Kab. ', '').replace('Kota ', '');
-}
-
 export function PrevalensiMap({ data }: PrevalensiMapProps): JSX.Element {
-  const cellW = 78;
-  const cellH = 52;
-  const gap = 4;
-  const svgW = 15 * (cellW + gap);
-  const svgH = 4 * (cellH + gap);
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<L.Map | null>(null);
+  const circlesLayer = useRef<L.LayerGroup | null>(null);
 
-  function getFill(kab: MapItem | undefined) {
-    if (!kab) return { bg: 'fill-neutral-100', border: 'stroke-neutral-200', text: 'fill-neutral-400', val: 'fill-neutral-400' };
-    if (kab.level === 'tinggi') return { bg: 'fill-red-100', border: 'stroke-red-400', text: 'fill-red-700', val: 'fill-red-700' };
-    if (kab.level === 'sedang') return { bg: 'fill-orange-100', border: 'stroke-orange-400', text: 'fill-orange-700', val: 'fill-orange-700' };
-    return { bg: 'fill-green-100', border: 'stroke-green-400', text: 'fill-green-700', val: 'fill-green-700' };
-  }
+  useEffect(() => {
+    if (!mapContainer.current || mapInstance.current) return;
+
+    const map = L.map(mapContainer.current, {
+      center: [-7.30, 110.0],
+      zoom: 9,
+      zoomControl: true,
+      scrollWheelZoom: true,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18,
+    }).addTo(map);
+
+    const group = L.layerGroup().addTo(map);
+
+    Object.entries(CENTROIDS).forEach(([name, [lat, lng]]) => {
+      const match = matchDistrict(name, data);
+
+      const circle = L.circleMarker([lat, lng], {
+        radius: match ? 10 + (match.prevalensi / 10) : 6,
+        fillColor: getColor(match?.level),
+        color: '#ffffff',
+        weight: 1.5,
+        fillOpacity: 0.85,
+      });
+
+      let tooltipContent = `<strong>${name.replace('Kab. ', '').replace('Kota ', '')}</strong>`;
+      if (match) {
+        tooltipContent += `<br/>Prevalensi: ${match.prevalensi.toFixed(1)}%`;
+        tooltipContent += `<br/>Kasus: ${match.jumlahKasus}`;
+      } else {
+        tooltipContent += '<br/>Tidak ada data';
+      }
+
+      circle.bindTooltip(tooltipContent, {
+        sticky: true,
+        direction: 'top',
+        offset: [0, -8],
+      });
+
+      circle.addTo(group);
+    });
+
+    circlesLayer.current = group;
+    mapInstance.current = map;
+
+    return () => {
+      map.remove();
+      mapInstance.current = null;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!circlesLayer.current) return;
+
+    circlesLayer.current.eachLayer((l) => {
+      const circle = l as L.CircleMarker;
+      const latlng = circle.getLatLng();
+      const name = Object.entries(CENTROIDS).find(
+        ([, [lat, lng]]) => lat === latlng.lat && lng === latlng.lng
+      )?.[0];
+      if (!name) return;
+
+      const match = matchDistrict(name, data);
+      circle.setStyle({ fillColor: getColor(match?.level) });
+      circle.setRadius(match ? 10 + (match.prevalensi / 10) : 6);
+
+      let content = `<strong>${name.replace('Kab. ', '').replace('Kota ', '')}</strong>`;
+      if (match) {
+        content += `<br/>Prevalensi: ${match.prevalensi.toFixed(1)}%`;
+        content += `<br/>Kasus: ${match.jumlahKasus}`;
+      } else {
+        content += '<br/>Tidak ada data';
+      }
+      circle.setTooltipContent(content);
+    });
+  }, [data]);
+
+  const dataCount = data.length;
+  const rataRata =
+    dataCount > 0
+      ? (data.reduce((s, d) => s + d.prevalensi, 0) / dataCount).toFixed(1)
+      : '0';
 
   return (
     <div className="relative">
-      {/* Legend */}
       <div className="flex items-center gap-4 mb-4 flex-wrap">
         {[
           { label: 'Tinggi (>20%)', color: '#dc2626' },
           { label: 'Sedang (10-20%)', color: '#f97316' },
           { label: 'Rendah (<10%)', color: '#22c55e' },
-          { label: 'Tidak Ada Data', color: '#e5e7eb' },
+          { label: 'Tidak Ada Data', color: '#9ca3af' },
         ].map((l) => (
           <div key={l.label} className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: l.color }} />
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: l.color }} />
             <span className="text-[10px] text-neutral-600 font-body">{l.label}</span>
           </div>
         ))}
       </div>
 
-      {/* SVG Map */}
-      <div className="bg-neutral-50 rounded-2xl border border-neutral-100 p-4 relative overflow-x-auto">
-        <svg viewBox={`0 0 ${svgW} ${svgH + 20}`} className="w-full" style={{ maxWidth: svgW, minWidth: 700 }}>
-          {/* Title */}
-          <text x={svgW / 2} y={16} textAnchor="middle" className="fill-neutral-700" style={{ fontSize: 14, fontWeight: 700, fontFamily: 'system-ui' }}>
-            PETA PREVALENSI STUNTING JAWA TENGAH
-          </text>
+      <div className="relative bg-neutral-50 rounded-2xl border border-neutral-100 overflow-hidden">
+        <div ref={mapContainer} className="w-full" style={{ height: 500 }} />
 
-          {KABUPATEN_POS.map(([row, col, name]) => {
-            const kab = findData(name, data);
-            const x = col * (cellW + gap);
-            const y = (row + 0.7) * (cellH + gap);
-            const s = getFill(kab);
-
-            return (
-              <g key={name}>
-                <title>{name}{kab ? `\nPrevalensi: ${kab.prevalensi.toFixed(1)}%\nKasus: ${kab.jumlahKasus}\nLevel: ${kab.level}` : '\nTidak ada data'}</title>
-                <rect x={x} y={y} width={cellW} height={cellH} rx={6} className={`${s.bg} ${s.border} transition-all hover:opacity-80`} strokeWidth={1.5} />
-                <text x={x + cellW / 2} y={y + cellH / 2 - 5} textAnchor="middle" className={s.text} style={{ fontSize: 8, fontWeight: 700, fontFamily: 'system-ui' }}>
-                  {shortName(name)}
-                </text>
-                {kab ? (
-                  <text x={x + cellW / 2} y={y + cellH / 2 + 10} textAnchor="middle" className={s.val} style={{ fontSize: 10, fontWeight: 800, fontFamily: 'system-ui' }}>
-                    {kab.prevalensi.toFixed(1)}%
-                  </text>
-                ) : (
-                  <text x={x + cellW / 2} y={y + cellH / 2 + 9} textAnchor="middle" className={s.val} style={{ fontSize: 8, fontFamily: 'system-ui' }}>
-                    N/A
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* Floating tooltip */}
-        {data.length > 0 && (
-          <div className="absolute top-4 right-4 bg-white rounded-xl shadow-lg border border-neutral-100 p-3 min-w-44 z-10">
-            <p className="text-xs font-bold text-neutral-800 font-body mb-1">Ringkasan</p>
-            <p className="text-xs text-neutral-500 font-body">
-              Wilayah dengan data: <span className="font-semibold text-neutral-700">{Math.min(data.length, KABUPATEN_POS.length)}/{KABUPATEN_POS.length}</span>
-            </p>
-            <p className="text-xs text-neutral-500 font-body">
-              Rata-rata: <span className="font-semibold text-neutral-700">
-                {data.length > 0
-                  ? (data.reduce((s, d) => s + d.prevalensi, 0) / data.length).toFixed(1)
-                  : 0}%
-              </span>
-            </p>
-          </div>
-        )}
+        <div className="absolute bottom-4 right-4 z-[1000] bg-white rounded-xl shadow-lg border border-neutral-100 p-3 min-w-44">
+          <p className="text-xs font-bold text-neutral-800 font-body mb-1">Ringkasan</p>
+          <p className="text-xs text-neutral-500 font-body">
+            Wilayah: <span className="font-semibold text-neutral-700">{dataCount}/35</span>
+          </p>
+          <p className="text-xs text-neutral-500 font-body">
+            Rata-rata: <span className="font-semibold text-neutral-700">{rataRata}%</span>
+          </p>
+        </div>
       </div>
+
+      <p className="text-[10px] text-neutral-400 mt-2 text-center">
+        Sumber peta: OpenStreetMap. Data: SiGizi.
+      </p>
     </div>
   );
 }

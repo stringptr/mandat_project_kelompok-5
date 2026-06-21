@@ -12,6 +12,7 @@ import (
 	notificationDomain "github.com/stringptr/SiGizi/backend/internal/domain/notification"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
+	"github.com/stringptr/SiGizi/backend/internal/pagination"
 )
 
 type Service struct {
@@ -43,8 +44,14 @@ func (s *Service) logAudit(ctx context.Context, endpoint string, tipeAktivitas m
 	})
 }
 
-func (s *Service) GetAllPublished(ctx context.Context) (*artikelDomain.ArtikelListData, *errorutils.Error) {
-	rows, err := s.repo.GetAllPublished(ctx)
+func (s *Service) GetAllPublished(ctx context.Context, req *artikelDomain.GetAllPublishedRequest) (*artikelDomain.ArtikelListData, *errorutils.Error) {
+	if req == nil {
+		req = &artikelDomain.GetAllPublishedRequest{}
+	}
+	page := pagination.ValidatePage(req.Page)
+	perPage := pagination.ValidatePerPage(req.PerPage)
+
+	rows, total, err := s.repo.GetAllPublished(ctx, page, perPage)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
 	}
@@ -58,6 +65,7 @@ func (s *Service) GetAllPublished(ctx context.Context) (*artikelDomain.ArtikelLi
 			Ringkasan:      r.Ringkasan,
 			NamaPenulis:    r.NamaPenulis,
 			TanggalPublish: r.TanggalPublish,
+			StatusArtikel:  r.StatusArtikel,
 		}
 	}
 
@@ -66,8 +74,43 @@ func (s *Service) GetAllPublished(ctx context.Context) (*artikelDomain.ArtikelLi
 	}
 
 	return &artikelDomain.ArtikelListData{
-		Artikel:   items,
-		TotalData: len(items),
+		Artikel: items,
+		Meta:    pagination.NewMeta(int32(page), int32(perPage), int32(total)),
+	}, nil
+}
+
+func (s *Service) GetAll(ctx context.Context, req *artikelDomain.GetAllPublishedRequest) (*artikelDomain.ArtikelListData, *errorutils.Error) {
+	if req == nil {
+		req = &artikelDomain.GetAllPublishedRequest{}
+	}
+	page := pagination.ValidatePage(req.Page)
+	perPage := pagination.ValidatePerPage(req.PerPage)
+
+	rows, total, err := s.repo.GetAll(ctx, page, perPage)
+	if err != nil {
+		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
+	}
+
+	items := make([]artikelDomain.ArtikelListItem, len(rows))
+	for i, r := range rows {
+		items[i] = artikelDomain.ArtikelListItem{
+			IDArtikel:      r.IDArtikel,
+			Judul:          r.Judul,
+			Kategori:       r.Kategori,
+			Ringkasan:      r.Ringkasan,
+			NamaPenulis:    r.NamaPenulis,
+			TanggalPublish: r.TanggalPublish,
+			StatusArtikel:  r.StatusArtikel,
+		}
+	}
+
+	if items == nil {
+		items = []artikelDomain.ArtikelListItem{}
+	}
+
+	return &artikelDomain.ArtikelListData{
+		Artikel: items,
+		Meta:    pagination.NewMeta(int32(page), int32(perPage), int32(total)),
 	}, nil
 }
 
@@ -93,13 +136,17 @@ func (s *Service) GetByID(ctx context.Context, idArtikel int32) (*artikelDomain.
 	}, nil
 }
 
-func (s *Service) Create(ctx context.Context, idPenulis int32, req *artikelDomain.CreateArtikelRequest) (*artikelDomain.CreateArtikelResponse, *errorutils.Error) {
+func (s *Service) Create(ctx context.Context, idPenulis int32, isDinkes bool, req *artikelDomain.CreateArtikelRequest) (*artikelDomain.CreateArtikelResponse, *errorutils.Error) {
 	now := time.Now()
+	status := model.StatusArtikel_MenungguVerifikasi
+	if isDinkes {
+		status = model.StatusArtikel_Dipublikasikan
+	}
 	modelData := &model.Artikel{
 		Judul:         req.Judul,
 		IsiArtikel:    req.IsiArtikel,
 		Kategori:      strPtr(req.Kategori),
-		StatusArtikel: model.StatusArtikel_MenungguVerifikasi,
+		StatusArtikel: status,
 		IDPenulis:     idPenulis,
 		CreatedAt:     now,
 		UpdatedAt:     now,
@@ -127,11 +174,11 @@ func (s *Service) Create(ctx context.Context, idPenulis int32, req *artikelDomai
 
 	return &artikelDomain.CreateArtikelResponse{
 		IDArtikel:     modelData.IDArtikel,
-		StatusArtikel: string(model.StatusArtikel_MenungguVerifikasi),
+		StatusArtikel: string(status),
 	}, nil
 }
 
-func (s *Service) Update(ctx context.Context, idPenulis int32, req *artikelDomain.UpdateArtikelRequest, idArtikel int32) (*artikelDomain.ArtikelDetail, *errorutils.Error) {
+func (s *Service) Update(ctx context.Context, idPenulis int32, isDinkes bool, req *artikelDomain.UpdateArtikelRequest, idArtikel int32) (*artikelDomain.ArtikelDetail, *errorutils.Error) {
 	existing, err := s.repo.GetByID(ctx, idArtikel)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
@@ -140,12 +187,13 @@ func (s *Service) Update(ctx context.Context, idPenulis int32, req *artikelDomai
 		return nil, &errorutils.Error{Status: http.StatusNotFound, Message: "Artikel tidak ditemukan."}
 	}
 
-	if existing.IDPenulis != idPenulis {
-		return nil, &errorutils.Error{Status: http.StatusForbidden, Message: "Anda tidak memiliki izin untuk mengakses ini."}
-	}
-
-	if existing.StatusArtikel != model.StatusArtikel_MenungguVerifikasi {
-		return nil, &errorutils.Error{Status: http.StatusForbidden, Message: "Artikel sudah diproses dan tidak dapat diedit lagi."}
+	if !isDinkes {
+		if existing.IDPenulis != idPenulis {
+			return nil, &errorutils.Error{Status: http.StatusForbidden, Message: "Anda tidak memiliki izin untuk mengakses ini."}
+		}
+		if existing.StatusArtikel != model.StatusArtikel_MenungguVerifikasi {
+			return nil, &errorutils.Error{Status: http.StatusForbidden, Message: "Artikel sudah diproses dan tidak dapat diedit lagi."}
+		}
 	}
 
 	if req.Judul != nil {
@@ -241,8 +289,14 @@ func (s *Service) Review(ctx context.Context, idVerifikator int32, idArtikel int
 	}, nil
 }
 
-func (s *Service) GetPending(ctx context.Context) (*artikelDomain.ArtikelPendingData, *errorutils.Error) {
-	rows, err := s.repo.GetPending(ctx)
+func (s *Service) GetPending(ctx context.Context, req *artikelDomain.GetPendingRequest) (*artikelDomain.ArtikelPendingData, *errorutils.Error) {
+	if req == nil {
+		req = &artikelDomain.GetPendingRequest{}
+	}
+	page := pagination.ValidatePage(req.Page)
+	perPage := pagination.ValidatePerPage(req.PerPage)
+
+	rows, total, err := s.repo.GetPending(ctx, page, perPage)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
 	}
@@ -263,8 +317,8 @@ func (s *Service) GetPending(ctx context.Context) (*artikelDomain.ArtikelPending
 	}
 
 	return &artikelDomain.ArtikelPendingData{
-		Artikel:   items,
-		TotalData: len(items),
+		Artikel: items,
+		Meta:    pagination.NewMeta(int32(page), int32(perPage), int32(total)),
 	}, nil
 }
 

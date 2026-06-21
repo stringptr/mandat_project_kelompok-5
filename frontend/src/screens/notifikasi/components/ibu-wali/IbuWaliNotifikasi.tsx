@@ -1,10 +1,15 @@
 import { CalendarDays, CheckCircle2 } from 'lucide-react';
+import type { BackendNotifikasi } from '../useNotifikasi';
+import type { NotifGroup } from '../types';
 import NotifTimeline from '../NotifTimeline';
-import { useNotifikasi } from '../useNotifikasi';
 
-export default function IbuWaliNotifikasi(): JSX.Element {
-  const { notifikasi, markAllRead, toNotifGroups } = useNotifikasi();
+interface IbuWaliNotifikasiProps {
+  notifikasi: BackendNotifikasi[];
+  markAllRead: () => Promise<void>;
+  toNotifGroups: (list: BackendNotifikasi[]) => NotifGroup[];
+}
 
+export default function IbuWaliNotifikasi({ notifikasi, markAllRead, toNotifGroups }: IbuWaliNotifikasiProps): JSX.Element {
   const groups = toNotifGroups(notifikasi);
   const unreadCount = notifikasi.filter((n) => !n.status_baca).length;
 
@@ -71,7 +76,7 @@ export default function IbuWaliNotifikasi(): JSX.Element {
         {groups.length === 0 ? (
           <div className="text-center py-12 text-neutral-400 text-sm">Belum ada notifikasi</div>
         ) : (
-          <NotifTimeline groups={groups} compactLastGroup />
+          <NotifTimeline groups={groups} />
         )}
       </div>
     </div>

@@ -64,7 +64,7 @@ func (h *Handler) Login(ctx context.Context, input *httputils.APIRequestInput[*a
 			Value:    res.RefreshToken.String(),
 			Expires:  time.Now().Add(time.Duration(res.RefreshTokenExpiresIn) * time.Second),
 			MaxAge:   int(res.RefreshTokenExpiresIn),
-			Path:     "api/v1/auth/refresh",
+			Path:     "/api/v1/auth/refresh",
 			Secure:   false,
 			HttpOnly: true,
 			SameSite: http.SameSiteStrictMode,

@@ -49,7 +49,6 @@ func (h *Handler) UpdateUser(ctx context.Context, input *userAccountDomain.Updat
 	}
 
 	idUser := input.IDUser
-	input.Body.IDUser = idUser
 
 	if idUser != claims.IDUser {
 		isAdmin := false
@@ -111,4 +110,13 @@ func (h *Handler) GetAuditLogs(ctx context.Context, input *httputils.APIRequestI
 	}
 
 	return httputils.NewSuccessOutput(http.StatusOK, result, "Daftar audit log berhasil diambil."), nil
+}
+
+func (h *Handler) DeleteUser(ctx context.Context, input *struct{ IDUser int32 `path:"id" minimum:"1"` }) (*httputils.APIResponseOutput[any], error) {
+	err := h.Service.DeleteUser(ctx, input.IDUser)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("Gagal menghapus user.", err)
+	}
+
+	return httputils.NewOKOutput[any](nil), nil
 }

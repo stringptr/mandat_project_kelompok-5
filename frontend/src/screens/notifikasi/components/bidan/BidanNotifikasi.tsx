@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { CalendarClock, AlertTriangle, Bell } from 'lucide-react';
+import type { BackendNotifikasi } from '../useNotifikasi';
+import type { NotifGroup } from '../types';
 import NotifTimeline from '../NotifTimeline';
-import { useNotifikasi } from '../useNotifikasi';
 import { apiGet } from '../../../../lib/api';
 
 interface BidanDashboard {
@@ -36,8 +37,13 @@ interface BidanDashboard {
   } | null;
 }
 
-export default function BidanNotifikasi(): JSX.Element {
-  const { notifikasi, markAllRead, toNotifGroups } = useNotifikasi();
+interface BidanNotifikasiProps {
+  notifikasi: BackendNotifikasi[];
+  markAllRead: () => Promise<void>;
+  toNotifGroups: (list: BackendNotifikasi[]) => NotifGroup[];
+}
+
+export default function BidanNotifikasi({ notifikasi, markAllRead, toNotifGroups }: BidanNotifikasiProps): JSX.Element {
   const [dashboard, setDashboard] = useState<BidanDashboard | null>(null);
 
   useEffect(() => {
@@ -49,7 +55,7 @@ export default function BidanNotifikasi(): JSX.Element {
   const groups = toNotifGroups(notifikasi);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl p-5 border border-neutral-100 shadow-sm">
@@ -100,7 +106,7 @@ export default function BidanNotifikasi(): JSX.Element {
         {groups.length === 0 ? (
           <div className="text-center py-12 text-neutral-400 text-sm">Belum ada notifikasi</div>
         ) : (
-          <NotifTimeline groups={groups} compactLastGroup />
+          <NotifTimeline groups={groups} />
         )}
       </div>
     </div>

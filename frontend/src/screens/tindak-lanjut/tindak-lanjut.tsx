@@ -2,12 +2,16 @@ import { useState, useEffect } from 'react';
 import { useNotification } from '../../context/NotificationContext';
 import { apiGet } from '../../lib/api';
 import { useAppStore } from '../../store/useAppStore';
+import { usePaginator } from '../../hooks/usePaginator';
+import { Paginator } from '../../components/Paginator';
 import FormTindakLanjut from './components/FormTindakLanjut';
 import RujukanAktif from './components/RujukanAktif';
 import DetailRujukanModal from './components/DetailRujukanModal';
 import UpdateRujukanModal from './components/UpdateRujukanModal';
 import type { Rujukan } from './components/RujukanAktif';
 import type { Role } from '../../App';
+
+const PAGE_SIZE = 10;
 
 interface TindakLanjutProps {
   currentRole: Role;
@@ -25,6 +29,8 @@ export default function TindakLanjut({ currentRole }: TindakLanjutProps): JSX.El
   const [modalOpen, setModalOpen] = useState(false);
   const [updatePatient, setUpdatePatient] = useState<Rujukan | null>(null);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [totalData, setTotalData] = useState(0);
+  const paginator = usePaginator({ totalItems: totalData, pageSize: PAGE_SIZE });
 
   const filteredData = filter === 'Semua'
     ? rujukanList
@@ -32,12 +38,15 @@ export default function TindakLanjut({ currentRole }: TindakLanjutProps): JSX.El
         filter === 'Rujukan' ? item.jenisTindakan === 'Rujukan' : item.jenisTindakan === 'Tindak Lanjut',
       );
 
-  const fetchRujukan = (force = false) => {
-    if (rujukanList.length > 0 && !force) return;
+  const fetchRujukan = (targetPage?: number) => {
+    const p = targetPage ?? paginator.page;
     setRujukanLoading(true);
-    apiGet<{ pasien?: Record<string, unknown>[] }>('/tindak-lanjut/status')
+    apiGet<{ pasien?: Record<string, unknown>[]; meta?: { total: number } }>(
+      `/tindak-lanjut/status?page=${p}&per_page=${PAGE_SIZE}`,
+    )
       .then((res) => {
         const list = (res.pasien ?? []) as Record<string, unknown>[];
+        setTotalData(res.meta?.total ?? 0);
         const mapped: Rujukan[] = list.map((r) => ({
           id: String(r.id_pasien ?? ''),
           patientName: String(r.nama_pasien ?? ''),
@@ -58,7 +67,7 @@ export default function TindakLanjut({ currentRole }: TindakLanjutProps): JSX.El
 
   useEffect(() => {
     fetchRujukan();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [paginator.page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUpdate = (updated: Rujukan) => {
     setRujukanList(rujukanList.map((item) => (item.id === updated.id ? updated : item)));
@@ -66,8 +75,11 @@ export default function TindakLanjut({ currentRole }: TindakLanjutProps): JSX.El
   };
 
   const handleFormSubmit = () => {
-    // Re-fetch after new tindak lanjut created
-    fetchRujukan(true);
+    if (paginator.page !== 1) {
+      paginator.setPage(1);
+    } else {
+      fetchRujukan(1);
+    }
   };
 
   const closeModal = () => { setModalOpen(false); setSelectedPatient(null); };
@@ -120,6 +132,14 @@ export default function TindakLanjut({ currentRole }: TindakLanjutProps): JSX.El
               />
             </div>
           )}
+
+          <Paginator
+            page={paginator.page}
+            totalPages={paginator.totalPages}
+            totalItems={totalData}
+            pageSize={PAGE_SIZE}
+            onPageChange={paginator.setPage}
+          />
         </div>
       </div>
 

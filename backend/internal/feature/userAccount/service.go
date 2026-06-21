@@ -13,6 +13,7 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/hash"
 	"github.com/stringptr/SiGizi/backend/internal/httputils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
+	"github.com/stringptr/SiGizi/backend/internal/pagination"
 )
 
 type Service struct {
@@ -43,12 +44,16 @@ func (s *Service) logAudit(ctx context.Context, endpoint string, tipeAktivitas m
 }
 
 func (s *Service) GetAllUsers(ctx context.Context, req *userAccountDomain.GetAllUsersRequest) (*userAccountDomain.UserListData, error) {
-	users, total, err := s.userAccountRepo.GetAllPaginated(ctx, req.Page, req.PerPage, req.Q, req.Role, req.StatusVerifikasi)
+	page := pagination.ValidatePage(req.Page)
+	perPage := pagination.ValidatePerPage(req.PerPage)
+
+	users, total, err := s.userAccountRepo.GetAllPaginated(ctx, page, perPage, req.Q, req.Role, req.StatusVerifikasi)
 	if err != nil {
 		return nil, fmt.Errorf("gagal mengambil daftar pengguna: %w", err)
 	}
 
 	items := make([]userAccountDomain.UserListItem, len(users))
+	lokasiIDs := make(map[int32]bool)
 	for i, u := range users {
 		roles, _ := s.authRepo.GetRoles(ctx, u.IDUser)
 		items[i] = userAccountDomain.UserListItem{
@@ -64,13 +69,17 @@ func (s *Service) GetAllUsers(ctx context.Context, req *userAccountDomain.GetAll
 			CreatedAt:        u.CreatedAt.Format(time.RFC3339),
 			UpdatedAt:        u.UpdatedAt.Format(time.RFC3339),
 		}
+		lokasiIDs[u.IDLokasi] = true
+	}
+
+	lokasiNames, _ := s.userAccountRepo.GetLokasiNames(ctx, lokasiIDs)
+	for i := range items {
+		items[i].NamaLokasi = lokasiNames[items[i].IDLokasi]
 	}
 
 	return &userAccountDomain.UserListData{
-		Users:     items,
-		TotalData: total,
-		Page:      req.Page,
-		PerPage:   req.PerPage,
+		Users: items,
+		Meta:  pagination.NewMeta(int32(page), int32(perPage), int32(total)),
 	}, nil
 }
 
@@ -278,8 +287,10 @@ func (s *Service) GetAuditLogs(ctx context.Context, filter *userAccountDomain.Au
 
 	return &userAccountDomain.AuditLogListData{
 		AuditLogs: items,
-		TotalData: total,
-		Page:      filter.Page,
-		PerPage:   filter.PerPage,
+		Meta:      pagination.NewMeta(int32(filter.Page), int32(filter.PerPage), int32(total)),
 	}, nil
+}
+
+func (s *Service) DeleteUser(ctx context.Context, idUser int32) error {
+	return s.userAccountRepo.DeleteByID(ctx, idUser)
 }

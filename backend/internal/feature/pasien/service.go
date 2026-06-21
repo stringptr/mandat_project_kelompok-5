@@ -13,6 +13,7 @@ import (
 	pasienDomain "github.com/stringptr/SiGizi/backend/internal/domain/pasien"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
+	"github.com/stringptr/SiGizi/backend/internal/pagination"
 )
 
 type Service struct {
@@ -177,17 +178,8 @@ func (s *Service) GetAllByUser(ctx context.Context, idUser int32, req *pasienDom
 	if req == nil {
 		req = &pasienDomain.GetAllPasienRequest{}
 	}
-	page := req.Page
-	if page < 1 {
-		page = 1
-	}
-	perPage := req.PerPage
-	if perPage < 1 {
-		perPage = 20
-	}
-	if perPage > 100 {
-		perPage = 100
-	}
+	page := pagination.ValidatePage(req.Page)
+	perPage := pagination.ValidatePerPage(req.PerPage)
 
 	rows, total, err := s.repo.GetAllPaginatedByUser(ctx, page, perPage, req.Q, idUser)
 	if err != nil {
@@ -209,10 +201,8 @@ func (s *Service) GetAllByUser(ctx context.Context, idUser int32, req *pasienDom
 	}
 
 	return &pasienDomain.PasienListData{
-		Pasien:    items,
-		TotalData: total,
-		Page:      page,
-		PerPage:   perPage,
+		Pasien: items,
+		Meta:   pagination.NewMeta(int32(page), int32(perPage), int32(total)),
 	}, nil
 }
 
@@ -228,17 +218,8 @@ func (s *Service) GetAll(ctx context.Context, req *pasienDomain.GetAllPasienRequ
 	if req == nil {
 		req = &pasienDomain.GetAllPasienRequest{}
 	}
-	page := req.Page
-	if page < 1 {
-		page = 1
-	}
-	perPage := req.PerPage
-	if perPage < 1 {
-		perPage = 20
-	}
-	if perPage > 100 {
-		perPage = 100
-	}
+	page := pagination.ValidatePage(req.Page)
+	perPage := pagination.ValidatePerPage(req.PerPage)
 
 	rows, total, err := s.repo.GetAllPaginated(ctx, page, perPage, req.Q)
 	if err != nil {
@@ -260,10 +241,8 @@ func (s *Service) GetAll(ctx context.Context, req *pasienDomain.GetAllPasienRequ
 	}
 
 	return &pasienDomain.PasienListData{
-		Pasien:    items,
-		TotalData: total,
-		Page:      page,
-		PerPage:   perPage,
+		Pasien: items,
+		Meta:   pagination.NewMeta(int32(page), int32(perPage), int32(total)),
 	}, nil
 }
 
@@ -275,17 +254,8 @@ func (s *Service) Search(ctx context.Context, req *pasienDomain.SearchPasienRequ
 		return nil, &errorutils.Error{Status: http.StatusBadRequest, Message: "Parameter pencarian (q) wajib diisi."}
 	}
 
-	page := req.Page
-	if page < 1 {
-		page = 1
-	}
-	perPage := req.PerPage
-	if perPage < 1 {
-		perPage = 20
-	}
-	if perPage > 100 {
-		perPage = 100
-	}
+	page := pagination.ValidatePage(req.Page)
+	perPage := pagination.ValidatePerPage(req.PerPage)
 
 	rows, total, err := s.repo.Search(ctx, req.Q, page, perPage)
 	if err != nil {
@@ -311,10 +281,8 @@ func (s *Service) Search(ctx context.Context, req *pasienDomain.SearchPasienRequ
 	}
 
 	return &pasienDomain.SearchPasienResponseData{
-		Pasien:    items,
-		TotalData: total,
-		Page:      page,
-		PerPage:   perPage,
+		Pasien: items,
+		Meta:   pagination.NewMeta(int32(page), int32(perPage), int32(total)),
 	}, nil
 }
 

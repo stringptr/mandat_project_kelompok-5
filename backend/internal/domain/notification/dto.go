@@ -2,6 +2,8 @@ package notification
 
 import (
 	"time"
+
+	"github.com/stringptr/SiGizi/backend/internal/pagination"
 )
 
 type NotifikasiItem struct {
@@ -15,14 +17,7 @@ type NotifikasiItem struct {
 
 type NotifikasiListData struct {
 	Notifikasi []NotifikasiItem `json:"notifikasi"`
-	Meta       Meta             `json:"meta"`
-}
-
-type Meta struct {
-	CurrentPage int32 `json:"current_page"`
-	PerPage     int32 `json:"per_page"`
-	Total       int32 `json:"total"`
-	LastPage    int32 `json:"last_page"`
+	Meta       pagination.Meta  `json:"meta"`
 }
 
 type AksiItem struct {

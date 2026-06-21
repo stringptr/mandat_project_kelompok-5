@@ -17,4 +17,5 @@ type Repo interface {
 	Update(ctx context.Context, dataModel *model.UserAccount) error
 	UpdateStatusVerifikasi(ctx context.Context, IDUser int32, status model.StatusVerifikasi) error
 	DeleteByID(ctx context.Context, IDUser int32) error
+	GetLokasiNames(ctx context.Context, ids map[int32]bool) (map[int32]string, error)
 }

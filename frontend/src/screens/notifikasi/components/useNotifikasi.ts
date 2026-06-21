@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { apiGet, apiPatch } from '../../../lib/api';
 import type { NotifGroup, NotifItem, NotifCategory } from './types';
 
-interface BackendNotifikasi {
+export interface BackendNotifikasi {
   id_notifikasi: number;
   judul: string;
   pesan: string | null;
@@ -19,6 +19,16 @@ interface NotifikasiResponse {
     total: number;
     last_page: number;
   };
+}
+
+function mapActionUrl(tipe: string): string | undefined {
+  switch (tipe) {
+    case 'Pemeriksaan': return `/monitoring`;
+    case 'Imunisasi':   return `/jadwal-imunisasi`;
+    case 'Rujukan':     return `/tindak-lanjut`;
+    case 'Edukasi':     return `/edukasi`;
+    default:            return undefined;
+  }
 }
 
 function mapCategory(tipe: string): NotifCategory {
@@ -93,6 +103,7 @@ export function useNotifikasi() {
       description: n.pesan || '',
       time: mapTime(n.tanggal_kirim),
       category: mapCategory(n.tipe_notifikasi),
+      actionUrl: mapActionUrl(n.tipe_notifikasi),
       tags: [
         { label: n.tipe_notifikasi, color: '#4b5563', bg: '#f1f5f9' },
         ...(n.status_baca ? [] : [{ label: 'Baru', color: '#3b82f6', bg: '#eff6ff' }]),

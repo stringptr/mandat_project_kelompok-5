@@ -12,11 +12,19 @@ export function GuestDashboard({ onLoginClick }: GuestDashboardProps): JSX.Eleme
   const [artikel, setArtikel] = useState<PublicArtikelItem[]>([]);
 
   useEffect(() => {
-    apiGet<PublicStatsResponse>('/public/stats')
+    apiGet<PublicStatsResponse>('/stats')
       .then((res) => setStats(res))
-      .catch(() => console.error('Gagal memuat statistik publik'));
-    apiGet<PublicArtikelResponse>('/public/artikel')
-      .then((res) => setArtikel((res.artikel ?? []).filter((a) => a.status_artikel === 'Dipublikasikan').slice(0, 3)))
+      .catch(() => {
+        console.error('Gagal memuat statistik publik');
+        setStats({
+          total_pasien: 0,
+          balita_dipantau: 0,
+          kasus_stunting: 0,
+          total_artikel: 0,
+        });
+      });
+    apiGet<PublicArtikelResponse>('/artikel')
+      .then((res) => setArtikel((res.artikel ?? []).slice(0, 3)))
       .catch(() => console.error('Gagal memuat artikel publik'));
   }, []);
 
@@ -94,8 +102,8 @@ export function GuestDashboard({ onLoginClick }: GuestDashboardProps): JSX.Eleme
         </div>
       </div>
 
-      {/* ── Capaian program + Tren ──────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* ── Capaian program ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4">
         {/* Capaian program wilayah */}
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">
           <div className="flex items-center gap-2 mb-5">
@@ -137,38 +145,6 @@ export function GuestDashboard({ onLoginClick }: GuestDashboardProps): JSX.Eleme
               <div className="flex items-center gap-2 text-xs text-neutral-500 mt-3 pt-3 border-t border-neutral-100">
                 <AlertTriangle size={12} />
                 <span>Data diperbarui secara berkala. Login untuk melihat detail per wilayah.</span>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-neutral-400 text-center py-4">Memuat data...</p>
-          )}
-        </div>
-
-        {/* Distribusi */}
-        <div className="bg-gradient-to-br from-blue-50 to-primary-50 rounded-2xl p-6 border border-blue-100">
-          <h4 className="text-sm font-bold text-neutral-800 font-headline mb-4 flex items-center gap-2">
-            <Users size={18} className="text-primary" />
-            Komposisi Data Kesehatan
-          </h4>
-          {stats ? (
-            <div className="flex flex-col justify-center h-[calc(100%-3rem)]">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/80 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-primary font-headline">{stats.total_pasien.toLocaleString('id-ID')}</p>
-                  <p className="text-[10px] text-neutral-500 mt-1 font-semibold uppercase tracking-wide">Total Pasien</p>
-                </div>
-                <div className="bg-white/80 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-blue-600 font-headline">{stats.balita_dipantau.toLocaleString('id-ID')}</p>
-                  <p className="text-[10px] text-neutral-500 mt-1 font-semibold uppercase tracking-wide">Balita Dipantau</p>
-                </div>
-                <div className="bg-white/80 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-red-500 font-headline">{stats.kasus_stunting.toLocaleString('id-ID')}</p>
-                  <p className="text-[10px] text-neutral-500 mt-1 font-semibold uppercase tracking-wide">Kasus Stunting</p>
-                </div>
-                <div className="bg-white/80 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-emerald-600 font-headline">{stats.total_artikel}</p>
-                  <p className="text-[10px] text-neutral-500 mt-1 font-semibold uppercase tracking-wide">Artikel Edukasi</p>
-                </div>
               </div>
             </div>
           ) : (

@@ -1,4 +1,3 @@
-import type { KategoriArtikel } from '../data/artikel.data';
 
 const KATEGORI_COLORS: Record<string, { solid: string; outline: string }> = {
   'Gizi Ibu': {
@@ -24,7 +23,7 @@ const KATEGORI_COLORS: Record<string, { solid: string; outline: string }> = {
 };
 
 interface KategoriBadgeProps {
-  kategori: KategoriArtikel;
+  kategori: string;
   variant?: 'solid' | 'outline';
 }
 

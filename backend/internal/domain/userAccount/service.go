@@ -11,4 +11,5 @@ type Service interface {
 	CreateUser(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error)
 	UpdateUserRole(ctx context.Context, idUser int32, req *UpdateUserRoleRequest) error
 	GetAuditLogs(ctx context.Context, filter *AuditLogFilter) (*AuditLogListData, error)
+	DeleteUser(ctx context.Context, idUser int32) error
 }

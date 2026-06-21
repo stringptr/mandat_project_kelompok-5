@@ -38,7 +38,8 @@ const TIPE_DOT: Record<string, string> = {
   Pengingat: 'bg-yellow-500',
 };
 
-function getInitials(name: string): string {
+function getInitials(name?: string): string {
+  if (!name) return '?';
   return name
     .split(' ')
     .map((w) => w[0])
@@ -219,10 +220,10 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
                 className="flex items-center gap-2 p-1 hover:bg-neutral-50 rounded-xl transition-colors"
               >
                 <div className="w-8 h-8 rounded-full overflow-hidden bg-primary-100 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">
-                  {getInitials(user!.name)}
+                  {getInitials(user?.name)}
                 </div>
                 <span className="text-sm font-semibold text-neutral-700 font-body hidden sm:inline">
-                  {user!.name}
+                  {user?.name ?? ''}
                 </span>
               </button>
 
@@ -230,9 +231,9 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
                 <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-neutral-100 py-2 z-50">
                   {/* User info */}
                   <div className="px-4 py-3 border-b border-neutral-100">
-                    <p className="text-sm font-semibold text-neutral-800 font-body">{user!.name}</p>
-                    <p className="text-xs text-neutral-500 font-body mt-0.5">{user!.email}</p>
-                    <p className="text-xs text-neutral-400 font-body mt-0.5">{user!.role}</p>
+                    <p className="text-sm font-semibold text-neutral-800 font-body">{user?.name}</p>
+                    <p className="text-xs text-neutral-500 font-body mt-0.5">{user?.email}</p>
+                    <p className="text-xs text-neutral-400 font-body mt-0.5">{user?.role}</p>
                   </div>
                   {/* Logout */}
                   <button

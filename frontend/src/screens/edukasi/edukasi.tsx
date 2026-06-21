@@ -10,13 +10,15 @@
  *   Bidan          → BidanSection    (write own, pending verification)
  *   Dinas Kesehatan→ DinkesSection   (full CRUD + verifikasi)
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNotification } from '../../context/NotificationContext';
 import { apiGet, apiDelete, apiPatch } from '../../lib/api';
 import type { ArtikelListData } from '../../types/entities';
 import type { Role } from '../../App';
 import type { Artikel, KategoriArtikel } from './data/artikel.data';
+import { KATEGORI_LIST } from './data/artikel.data';
 import { useAppStore } from '../../store/useAppStore';
+import { Paginator } from '../../components/Paginator';
 
 // Sections
 import { IbuWaliSection } from './sections/IbuWaliSection';
@@ -35,6 +37,8 @@ interface EdukasiProps {
   currentRole: Role;
 }
 
+const PAGE_SIZE = 12;
+
 export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
   const notify = useNotification();
   const notifyRef = useRef(notify);
@@ -42,11 +46,15 @@ export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
 
   const { artikelList, setArtikelList, setArtikelLoading } = useAppStore();
 
-  const fetchArtikel = useCallback((force = false) => {
-    // Skip if already loaded and not forced
-    if (artikelList.length > 0 && !force) return;
+  const [page, setPage] = useState(1);
+  const isDinkes = currentRole === 'Dinas Kesehatan';
+  const isBidan = currentRole === 'Bidan';
+
+  const fetchArtikel = useCallback(() => {
     setArtikelLoading(true);
-    apiGet<ArtikelListData>('/artikel')
+    const endpoint = isDinkes ? '/artikel/semua' : '/artikel';
+
+    apiGet<ArtikelListData>(endpoint, { page: '1', per_page: '100' })
       .then((res) => {
         const list = res.artikel ?? [];
         const mapped: Artikel[] = list.map((a) => ({
@@ -54,27 +62,29 @@ export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
           judul: String(a.judul ?? ''),
           ringkasan: String(a.ringkasan ?? ''),
           konten: '',
-          kategori: (a.kategori as KategoriArtikel) || 'Gizi Ibu',
+          kategori: (KATEGORI_LIST.includes(a.kategori as KategoriArtikel) ? a.kategori : 'Gizi') as KategoriArtikel,
           penulis: String(a.nama_penulis ?? ''),
           gambar: '',
           waktuBaca: '5 Menit Baca',
           featured: false,
           tanggal: String(a.tanggal_publish ?? ''),
-          status: 'published',
+          status: (a as { status_artikel?: string }).status_artikel === 'Menunggu Verifikasi' ? 'pending' : 'published',
           rolePenulis: 'Dinas Kesehatan',
         }));
         setArtikelList(mapped);
       })
       .catch(() => notifyRef.current.error('Gagal memuat artikel. Pastikan backend terhubung.'))
       .finally(() => setArtikelLoading(false));
-  }, [artikelList.length, setArtikelList, setArtikelLoading]);
+  }, [isDinkes, setArtikelList, setArtikelLoading]);
 
   useEffect(() => {
     fetchArtikel();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchArtikel]);
+
   const [kategoriAktif, setKategoriAktif] = useState<KategoriArtikel>('Semua');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAll, setShowAll] = useState(false);
+
+  useEffect(() => { setPage(1); }, [kategoriAktif, searchQuery]);
 
   // Modal targets
   const [modalTambah, setModalTambah] = useState(false);
@@ -84,8 +94,6 @@ export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
   const [modalVerifikasi, setModalVerifikasi] = useState<Artikel | null>(null);
 
   // ── Derived role flags ─────────────────────────────────────────────────
-  const isDinkes = currentRole === 'Dinas Kesehatan';
-  const isBidan = currentRole === 'Bidan';
 
   // ── Permission helpers ─────────────────────────────────────────────────
   const canEditArtikel = (a: Artikel): boolean => {
@@ -95,41 +103,39 @@ export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
   };
 
   // ── Derived data ───────────────────────────────────────────────────────
-  // Dinkes sees all statuses; everyone else only sees published
-  const visibleArtikel = artikelList.filter((a) =>
-    isDinkes ? true : a.status === 'published'
-  );
+  const filteredArtikel = useMemo(() => {
+    const visible = isDinkes ? artikelList : artikelList.filter((a) => a.status === 'published');
+    return visible.filter((a) => {
+      const matchKat = kategoriAktif === 'Semua' || a.kategori === kategoriAktif;
+      const matchQ = searchQuery === '' || a.judul.toLowerCase().includes(searchQuery.toLowerCase()) || a.ringkasan.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchKat && matchQ;
+    });
+  }, [artikelList, isDinkes, kategoriAktif, searchQuery]);
 
-  const filteredArtikel = visibleArtikel.filter((a) => {
-    const matchKat = kategoriAktif === 'Semua' || a.kategori === kategoriAktif;
-    const matchQ =
-      searchQuery === '' ||
-      a.judul.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.ringkasan.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchKat && matchQ;
-  });
+  const totalFiltered = filteredArtikel.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+  const paginatedArtikel = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredArtikel.slice(start, start + PAGE_SIZE);
+  }, [filteredArtikel, page]);
 
-  const featuredArtikel = filteredArtikel.filter(
-    (a) => a.featured && a.status === 'published'
-  );
-  const allGridArtikel = filteredArtikel.filter(
-    (a) => !a.featured || a.status !== 'published'
-  );
-  const gridArtikel = showAll ? allGridArtikel : allGridArtikel.slice(0, 6);
+  const featuredArtikel = paginatedArtikel.filter((a) => a.featured && a.status === 'published');
+  const gridArtikel = paginatedArtikel.filter((a) => !a.featured || a.status !== 'published');
 
   const pendingCount = artikelList.filter((a) => a.status === 'pending').length;
 
   // ── Handlers ───────────────────────────────────────────────────────────
-  const handleTambah = (_data: Omit<Artikel, 'id' | 'tanggal' | 'status' | 'rolePenulis'>) => {
+  const handleTambah = () => {
     setModalTambah(false);
     notify.success('Artikel berhasil ditambahkan');
-    fetchArtikel(true);
+    setPage(1);
+    fetchArtikel();
   };
 
-  const handleEdit = (_data: Artikel) => {
+  const handleEdit = () => {
     setModalEdit(null);
     notify.success('Artikel berhasil diperbarui');
-    fetchArtikel(true);
+    fetchArtikel();
   };
 
   const handleHapus = async (id: string) => {
@@ -139,7 +145,7 @@ export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
       await apiDelete('/artikel/' + idNum);
       setModalHapus(null);
       notify.success('Artikel berhasil dihapus');
-      fetchArtikel(true);
+      fetchArtikel();
     } catch {
       notify.error('Gagal menghapus artikel. Silakan coba lagi.');
     }
@@ -153,12 +159,8 @@ export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
         aksi: action === 'approve' ? 'setujui' : 'tolak',
       });
       setModalVerifikasi(null);
-      notify.success(
-        action === 'approve'
-          ? 'Artikel berhasil disetujui dan dipublikasikan'
-          : 'Artikel berhasil ditolak'
-      );
-      fetchArtikel(true);
+      notify.success(action === 'approve' ? 'Artikel berhasil disetujui' : 'Artikel berhasil ditolak');
+      fetchArtikel();
     } catch {
       notify.error('Gagal memverifikasi artikel. Silakan coba lagi.');
     }
@@ -174,14 +176,14 @@ export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
   const commonProps = {
     featuredArtikel,
     gridArtikel,
-    showAll,
-    totalGrid: allGridArtikel.length,
+    showAll: true,
+    totalGrid: 0,
     kategoriAktif,
     searchQuery,
     onChangeKategori: setKategoriAktif,
     onChangeSearch: setSearchQuery,
     onRead: setModalDetail,
-    onToggleShowAll: () => setShowAll((v) => !v),
+    onToggleShowAll: () => {},
   };
 
   // ── Page header (shared across all roles) ─────────────────────────────
@@ -239,6 +241,15 @@ export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
           <p className="text-sm mt-1">Coba ubah filter atau kata kunci pencarian</p>
         </div>
       )}
+
+      {/* Paginator */}
+      <Paginator
+        page={page}
+        totalPages={totalPages}
+        totalItems={totalFiltered}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
 
       {/* ── Shared modals ─────────────────────────────────────────────── */}
       {modalDetail && (

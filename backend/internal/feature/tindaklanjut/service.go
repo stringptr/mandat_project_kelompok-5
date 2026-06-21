@@ -12,7 +12,7 @@ import (
 	notificationDomain "github.com/stringptr/SiGizi/backend/internal/domain/notification"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
-	"github.com/stringptr/SiGizi/backend/internal/jwtutils"
+	"github.com/stringptr/SiGizi/backend/internal/pagination"
 )
 
 func isPetugas(roles []string) bool {
@@ -58,17 +58,8 @@ func (s *Service) GetPasienTindakLanjut(ctx context.Context, req *tindaklanjutDo
 	if req == nil {
 		req = &tindaklanjutDomain.GetPasienTindakLanjutRequest{}
 	}
-	page := req.Page
-	if page < 1 {
-		page = 1
-	}
-	perPage := req.PerPage
-	if perPage < 1 {
-		perPage = 20
-	}
-	if perPage > 100 {
-		perPage = 100
-	}
+	page := pagination.ValidatePage(req.Page)
+	perPage := pagination.ValidatePerPage(req.PerPage)
 
 	rows, total, err := s.repo.GetPasienTindakLanjut(ctx, page, perPage)
 	if err != nil {
@@ -91,8 +82,8 @@ func (s *Service) GetPasienTindakLanjut(ctx context.Context, req *tindaklanjutDo
 	}
 
 	return &tindaklanjutDomain.PasienTindakLanjutData{
-		Pasien:    items,
-		TotalData: total,
+		Pasien: items,
+		Meta:   pagination.NewMeta(int32(page), int32(perPage), int32(total)),
 	}, nil
 }
 
@@ -265,15 +256,14 @@ func (s *Service) UpdateStatusRujukan(ctx context.Context, idRujukan int32, req 
 	}, nil
 }
 
-func (s *Service) GetStatusTindakLanjut(ctx context.Context, claims *jwtutils.Claim) (*tindaklanjutDomain.StatusTindakLanjutData, *errorutils.Error) {
-	var rows []*tindaklanjutDomain.StatusTindakLanjutJoinRow
-	var err error
-
-	if claims != nil && !isPetugas(claims.Roles) {
-		rows, err = s.repo.GetStatusTindakLanjutByUserID(ctx, claims.IDUser)
-	} else {
-		rows, err = s.repo.GetStatusTindakLanjut(ctx)
+func (s *Service) GetStatusTindakLanjut(ctx context.Context, req *tindaklanjutDomain.GetStatusTindakLanjutRequest) (*tindaklanjutDomain.StatusTindakLanjutData, *errorutils.Error) {
+	if req == nil {
+		req = &tindaklanjutDomain.GetStatusTindakLanjutRequest{}
 	}
+	page := pagination.ValidatePage(req.Page)
+	perPage := pagination.ValidatePerPage(req.PerPage)
+
+	rows, total, err := s.repo.GetStatusTindakLanjut(ctx, page, perPage)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
 	}
@@ -294,8 +284,8 @@ func (s *Service) GetStatusTindakLanjut(ctx context.Context, claims *jwtutils.Cl
 	}
 
 	return &tindaklanjutDomain.StatusTindakLanjutData{
-		Pasien:    items,
-		TotalData: len(items),
+		Pasien: items,
+		Meta:   pagination.NewMeta(int32(page), int32(perPage), int32(total)),
 	}, nil
 }
 

@@ -8,6 +8,7 @@ import (
 	notificationDomain "github.com/stringptr/SiGizi/backend/internal/domain/notification"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
+	"github.com/stringptr/SiGizi/backend/internal/pagination"
 )
 
 type Service struct {
@@ -32,11 +33,6 @@ func (s *Service) GetNotifikasi(ctx context.Context, idUser int32, input *notifi
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Mohon dicoba kembali."}
 	}
 
-	lastPage := total / input.PerPage
-	if total%input.PerPage != 0 {
-		lastPage++
-	}
-
 	items := make([]notificationDomain.NotifikasiItem, 0, len(notif))
 	for _, n := range notif {
 		items = append(items, toNotifikasiItem(n))
@@ -44,12 +40,7 @@ func (s *Service) GetNotifikasi(ctx context.Context, idUser int32, input *notifi
 
 	return &notificationDomain.NotifikasiListData{
 		Notifikasi: items,
-		Meta: notificationDomain.Meta{
-			CurrentPage: input.Page,
-			PerPage:     input.PerPage,
-			Total:       total,
-			LastPage:    lastPage,
-		},
+		Meta:       pagination.NewMeta(input.Page, input.PerPage, total),
 	}, nil
 }
 

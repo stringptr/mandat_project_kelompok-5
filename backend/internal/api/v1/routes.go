@@ -5,6 +5,7 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/config"
 	artikelDomain "github.com/stringptr/SiGizi/backend/internal/domain/artikel"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
+	dashboardDomain "github.com/stringptr/SiGizi/backend/internal/domain/dashboard"
 	imunisasiDomain "github.com/stringptr/SiGizi/backend/internal/domain/imunisasi"
 	tindaklanjutDomain "github.com/stringptr/SiGizi/backend/internal/domain/tindaklanjut"
 	jwtblacklistDomain "github.com/stringptr/SiGizi/backend/internal/domain/jwtblacklist"
@@ -33,6 +34,7 @@ type Dependency struct {
 	ImunisasiHandler    imunisasiDomain.Handler
 	ArtikelHandler      artikelDomain.Handler
 	TindakLanjutHandler tindaklanjutDomain.Handler
+	DashboardHandler    dashboardDomain.Handler
 }
 
 func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
@@ -65,7 +67,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Get(publicGroup, "/lokasi", d.LokasiHandler.GetLokasi)
 
 	huma.Post(authRefresh, "/auth/refresh", d.AuthHandler.Refresh)
-	huma.Post(authRefresh, "/auth/logout", d.AuthHandler.Logout)
+	huma.Post(publicGroup, "/auth/logout", d.AuthHandler.Logout)
 
 	huma.Get(userGroup, "/auth/me", d.AuthHandler.Me)
 
@@ -78,6 +80,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Post(superAdminGroup, "/users", d.UserAccountHandler.CreateUser)
 	huma.Patch(superAdminGroup, "/users/{id}/role", d.UserAccountHandler.UpdateUserRole)
 	huma.Get(superAdminGroup, "/admin/audit-logs", d.UserAccountHandler.GetAuditLogs)
+	huma.Delete(superAdminGroup, "/users/{id}", d.UserAccountHandler.DeleteUser)
 
 	huma.Get(bidanGroup, "/notifikasi/bidan", d.NotifHandler.GetBidanDashboard)
 	huma.Get(adminGroup, "/notifikasi/aktivitas", d.NotifHandler.GetActivity)
@@ -113,8 +116,9 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 
 	huma.Get(publicGroup, "/artikel", d.ArtikelHandler.GetAllPublished)
 	huma.Get(publicGroup, "/artikel/{id}", d.ArtikelHandler.GetByID)
-	huma.Post(bidanGroup, "/artikel", d.ArtikelHandler.Create)
-	huma.Patch(bidanGroup, "/artikel/{id}", d.ArtikelHandler.Update)
+	huma.Get(adminGroup, "/artikel/semua", d.ArtikelHandler.GetAll)
+	huma.Post(adminGroup, "/artikel", d.ArtikelHandler.Create)
+	huma.Patch(adminGroup, "/artikel/{id}", d.ArtikelHandler.Update)
 	huma.Delete(dinkesGroup, "/artikel/{id}", d.ArtikelHandler.Delete)
 	huma.Patch(dinkesGroup, "/artikel/{id}/review", d.ArtikelHandler.Review)
 	huma.Get(dinkesGroup, "/artikel/pending", d.ArtikelHandler.GetPending)
@@ -126,4 +130,20 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Patch(bidanGroup, "/rujukan/{id}/status", d.TindakLanjutHandler.UpdateStatusRujukan)
 	huma.Get(dinkesGroup, "/laporan/tindak-lanjut", d.TindakLanjutHandler.GetLaporanTindakLanjut)
 	huma.Get(userGroup, "/tindak-lanjut/{id}", d.TindakLanjutHandler.GetDetailTindakLanjutByID)
+
+	// Dashboard
+	huma.Get(userGroup, "/dashboard/stats", d.DashboardHandler.GetDashboardStats)
+	huma.Get(userGroup, "/dashboard/distribusi-gizi", d.DashboardHandler.GetDistribusiGizi)
+	huma.Get(userGroup, "/dashboard/tren-stunting", d.DashboardHandler.GetTrenStunting)
+	huma.Get(userGroup, "/dashboard/stunting-per-wilayah", d.DashboardHandler.GetStuntingPerWilayah)
+	huma.Get(userGroup, "/dashboard/kehadiran-bulanan", d.DashboardHandler.GetKehadiranBulanan)
+	huma.Get(userGroup, "/dashboard/jadwal-terdekat", d.DashboardHandler.GetJadwalTerdekat)
+	huma.Get(publicGroup, "/stats", d.DashboardHandler.GetPublicStats)
+	huma.Get(userGroup, "/monitoring/pasien/{id}/riwayat-pemeriksaan", d.DashboardHandler.GetRiwayat)
+	huma.Get(userGroup, "/monitoring/pasien/{id}/tumbuh-kembang", d.DashboardHandler.GetTumbuhKembang)
+
+	// Ibu Hamil
+	huma.Get(userGroup, "/dashboard/ibu-hamil-stats", d.DashboardHandler.GetIbuHamilStats)
+	huma.Get(userGroup, "/dashboard/ibu-hamil-per-wilayah", d.DashboardHandler.GetIbuHamilPerWilayah)
+	huma.Get(adminGroup, "/monitoring/semua-pemeriksaan", d.DashboardHandler.GetSemuaPemeriksaan)
 }

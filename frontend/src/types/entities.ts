@@ -11,11 +11,16 @@ export interface PasienListItem {
   status_kehamilan?: string | null;
 }
 
+export interface PaginationMeta {
+  current_page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
+}
+
 export interface PasienListData {
   pasien: PasienListItem[];
-  total_data: number;
-  page: number;
-  per_page: number;
+  meta: PaginationMeta;
 }
 
 export interface IbuHamilData {
@@ -138,7 +143,7 @@ export interface PemeriksaanPendingItem {
 
 export interface PendingPemeriksaanData {
   pemeriksaan_pending: PemeriksaanPendingItem[];
-  total_pending: number;
+  meta: PaginationMeta;
 }
 
 export interface VerifyPemeriksaanResponse {
@@ -159,7 +164,7 @@ export interface ImunisasiListItem {
 
 export interface ImunisasiListData {
   jadwal: ImunisasiListItem[];
-  total_data: number;
+  meta: PaginationMeta;
 }
 
 export interface CreateImunisasiRequest {
@@ -237,7 +242,7 @@ export interface ArtikelListItem {
 
 export interface ArtikelListData {
   artikel: ArtikelListItem[];
-  total_data: number;
+  meta: PaginationMeta;
 }
 
 export interface CreateArtikelRequest {
@@ -290,7 +295,7 @@ export interface ArtikelPendingItem {
 
 export interface ArtikelPendingData {
   artikel: ArtikelPendingItem[];
-  total_data: number;
+  meta: PaginationMeta;
 }
 
 // ── Tindak Lanjut ──────────────────────────────────────────────────────────────
@@ -305,7 +310,7 @@ export interface PasienTindakLanjutItem {
 
 export interface PasienTindakLanjutData {
   pasien: PasienTindakLanjutItem[];
-  total_data: number;
+  meta: PaginationMeta;
 }
 
 export interface CreateTindakLanjutRequest {
@@ -343,7 +348,7 @@ export interface StatusTindakLanjutItem {
 
 export interface StatusTindakLanjutData {
   pasien: StatusTindakLanjutItem[];
-  total_data: number;
+  meta: PaginationMeta;
 }
 
 export interface MonitoringTerakhir {
@@ -410,12 +415,7 @@ export interface BackendNotifikasi {
 
 export interface NotifikasiResponse {
   notifikasi: BackendNotifikasi[];
-  meta: {
-    current_page: number;
-    per_page: number;
-    total: number;
-    last_page: number;
-  };
+  meta: PaginationMeta;
 }
 
 export interface BidanDashboard {

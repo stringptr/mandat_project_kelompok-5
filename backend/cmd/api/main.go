@@ -15,6 +15,7 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/feature/auditlog"
 	"github.com/stringptr/SiGizi/backend/internal/feature/auth"
 	"github.com/stringptr/SiGizi/backend/internal/feature/bannedip"
+	dashboardFeature "github.com/stringptr/SiGizi/backend/internal/feature/dashboard"
 	imunisasiFeature "github.com/stringptr/SiGizi/backend/internal/feature/imunisasi"
 	"github.com/stringptr/SiGizi/backend/internal/feature/jwtblacklist"
 	lokasiFeature "github.com/stringptr/SiGizi/backend/internal/feature/lokasi"
@@ -114,6 +115,10 @@ func main() {
 	tindaklanjutService := tindaklanjutFeature.NewService(tindaklanjutRepo, auditLogRepo, notifRepo, notifPublisher)
 	tindaklanjutHandler := tindaklanjutFeature.NewHandler(tindaklanjutService)
 
+	dashboardRepo := dashboardFeature.NewRepo(pool)
+	dashboardService := dashboardFeature.NewService(dashboardRepo)
+	dashboardHandler := dashboardFeature.NewHandler(dashboardService)
+
 	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo, auditLogRepo, mail.New(cfg.MailConfig))
 	authHandler := auth.NewHandler(authService, &jwtUtil)
 
@@ -187,6 +192,7 @@ func main() {
 		ImunisasiHandler:    imunisasiHandler,
 		ArtikelHandler:      artikelHandler,
 		TindakLanjutHandler: tindaklanjutHandler,
+		DashboardHandler:    dashboardHandler,
 	})
 
 	log.Printf("server starting on %s:%s", cfg.Host, cfg.Port)

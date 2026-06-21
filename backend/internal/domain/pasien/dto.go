@@ -1,6 +1,10 @@
 package pasien
 
-import "time"
+import (
+	"time"
+
+	"github.com/stringptr/SiGizi/backend/internal/pagination"
+)
 
 type DaftarIbuHamilRequest struct {
 	IDUser           int32  `json:"id_user" minimum:"1"`
@@ -36,10 +40,8 @@ type SearchPasienRequest struct {
 }
 
 type SearchPasienResponseData struct {
-	Pasien    []PasienListItem `json:"pasien"`
-	TotalData int              `json:"total_data"`
-	Page      int              `json:"page"`
-	PerPage   int              `json:"per_page"`
+	Pasien []PasienListItem `json:"pasien"`
+	Meta   pagination.Meta  `json:"meta"`
 }
 
 type PasienListItem struct {
@@ -54,10 +56,8 @@ type PasienListItem struct {
 }
 
 type PasienListData struct {
-	Pasien    []PasienListItem `json:"pasien"`
-	TotalData int              `json:"total_data"`
-	Page      int              `json:"page"`
-	PerPage   int              `json:"per_page"`
+	Pasien []PasienListItem `json:"pasien"`
+	Meta   pagination.Meta  `json:"meta"`
 }
 
 type PasienDetailResponse struct {

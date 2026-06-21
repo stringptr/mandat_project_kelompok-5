@@ -4,7 +4,7 @@ let onUnauthorized: (() => void) | null = null;
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
-const CACHE_TTL = 30000;
+const CACHE_TTL = 600000; // 10 minutes
 const cache = new Map<string, { data: unknown; timestamp: number }>();
 
 function getCached<T>(key: string): T | null {
@@ -44,11 +44,15 @@ export interface ApiErrorItem {
   value?: unknown;
 }
 
-export interface PaginatedData<T> {
-  [key: string]: T[] | number;
-  total_data: number;
-  page: number;
+export interface PaginatedMeta {
+  current_page: number;
   per_page: number;
+  total: number;
+  last_page: number;
+}
+
+export interface PaginatedData {
+  meta: PaginatedMeta;
 }
 
 export class ApiError extends Error {

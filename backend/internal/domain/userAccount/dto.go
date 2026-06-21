@@ -2,6 +2,8 @@ package userAccount
 
 import (
 	"time"
+
+	"github.com/stringptr/SiGizi/backend/internal/pagination"
 )
 
 type AdminGetAllResponseDTO struct {
@@ -36,15 +38,14 @@ type UserListItem struct {
 	StatusVerifikasi string   `json:"status_verifikasi"`
 	Roles            []string `json:"roles"`
 	IDLokasi         int32    `json:"id_lokasi"`
+	NamaLokasi       string   `json:"nama_lokasi"`
 	CreatedAt        string   `json:"created_at"`
 	UpdatedAt        string   `json:"updated_at"`
 }
 
 type UserListData struct {
-	Users     []UserListItem `json:"users"`
-	TotalData int            `json:"total_data"`
-	Page      int            `json:"page"`
-	PerPage   int            `json:"per_page"`
+	Users []UserListItem  `json:"users"`
+	Meta  pagination.Meta `json:"meta"`
 }
 
 type UserDetailResponse struct {
@@ -147,8 +148,6 @@ type AuditLogItem struct {
 }
 
 type AuditLogListData struct {
-	AuditLogs []AuditLogItem `json:"audit_logs"`
-	TotalData int            `json:"total_data"`
-	Page      int            `json:"page"`
-	PerPage   int            `json:"per_page"`
+	AuditLogs []AuditLogItem  `json:"audit_logs"`
+	Meta      pagination.Meta `json:"meta"`
 }

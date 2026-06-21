@@ -1,51 +1,51 @@
 id_faskes,nama_faskes,tipe_faskes,id_lokasi,created_at,updated_at
-1,Puskesmas Jambi,Faskes Penunjang,130,2022-01-20 22:48:52,2022-01-20 22:48:52
-2,RS Yolanda,Faskes Rujukan Tingkat Lanjutan,185,2022-02-16 21:59:34,2022-02-16 21:59:34
-3,Puskesmas Kota Administrasi Jakarta Barat,Faskes Tingkat Pertama,127,2022-01-30 10:13:59,2022-01-30 10:13:59
-4,Puskesmas Denpasar,Faskes Rujukan Tingkat Lanjutan,23,2023-01-24 01:29:35,2023-01-24 01:29:35
-5,Puskesmas Sukabumi,Faskes Penunjang,18,2025-02-02 12:22:52,2025-02-02 12:22:52
-6,RS Permata,Faskes Rujukan Tingkat Lanjutan,159,2022-05-25 22:12:39,2022-05-25 22:12:39
-7,Puskesmas Bitung,Faskes Rujukan Tingkat Lanjutan,147,2023-05-22 01:05:56,2023-05-22 01:05:56
-8,RS Riyanti,Faskes Rujukan Tingkat Lanjutan,139,2024-11-23 01:53:14,2024-11-23 01:53:14
-9,Puskesmas Pasuruan,Faskes Tingkat Pertama,130,2025-03-24 21:58:53,2025-03-24 21:58:53
-10,Puskesmas Padang Sidempuan,Faskes Tingkat Pertama,119,2022-08-11 22:10:07,2022-08-11 22:10:07
-11,RS Marpaung,Faskes Penunjang,76,2025-10-19 18:48:09,2025-10-19 18:48:09
-12,Puskesmas Probolinggo,Faskes Rujukan Tingkat Lanjutan,57,2023-06-09 16:45:37,2023-06-09 16:45:37
-13,Puskesmas Padangpanjang,Faskes Rujukan Tingkat Lanjutan,183,2025-02-24 09:38:42,2025-02-24 09:38:42
-14,Puskesmas Bandar Lampung,Faskes Tingkat Pertama,177,2021-06-02 15:01:53,2021-06-02 15:01:53
-15,Puskesmas Surakarta,Faskes Penunjang,147,2024-09-12 17:52:13,2024-09-12 17:52:13
-16,Puskesmas Ternate,Faskes Tingkat Pertama,153,2022-12-05 08:49:19,2022-12-05 08:49:19
-17,Puskesmas Palopo,Faskes Penunjang,52,2022-06-27 11:16:20,2022-06-27 11:16:20
-18,RS Nashiruddin,Faskes Tingkat Pertama,226,2025-12-14 11:46:49,2025-12-14 11:46:49
-19,Puskesmas Surabaya,Faskes Tingkat Pertama,36,2022-09-03 13:25:44,2022-09-03 13:25:44
-20,Puskesmas Bekasi,Faskes Rujukan Tingkat Lanjutan,101,2022-02-10 21:43:40,2022-02-10 21:43:40
-21,Puskesmas Kota Administrasi Jakarta Utara,Faskes Rujukan Tingkat Lanjutan,11,2022-02-25 02:48:46,2022-02-25 02:48:46
-22,RS Megantara,Faskes Rujukan Tingkat Lanjutan,19,2024-12-22 11:13:58,2024-12-22 11:13:58
-23,Puskesmas Metro,Faskes Penunjang,210,2024-12-12 20:31:01,2024-12-12 20:31:01
-24,RS Latupono,Faskes Penunjang,106,2023-09-07 09:05:56,2023-09-07 09:05:56
-25,RS Suwarno,Faskes Rujukan Tingkat Lanjutan,133,2024-06-25 09:35:38,2024-06-25 09:35:38
-26,Puskesmas Tidore Kepulauan,Faskes Tingkat Pertama,93,2025-05-25 11:57:03,2025-05-25 11:57:03
-27,RS Prabowo,Faskes Rujukan Tingkat Lanjutan,109,2025-02-10 12:25:28,2025-02-10 12:25:28
-28,Puskesmas Batam,Faskes Tingkat Pertama,228,2026-02-24 00:24:17,2026-02-24 00:24:17
-29,RS Thamrin,Faskes Rujukan Tingkat Lanjutan,48,2026-03-07 16:13:17,2026-03-07 16:13:17
-30,RS Yolanda,Faskes Rujukan Tingkat Lanjutan,196,2024-06-27 05:52:21,2024-06-27 05:52:21
-31,Puskesmas Serang,Faskes Tingkat Pertama,51,2023-10-14 01:38:56,2023-10-14 01:38:56
-32,RS Maheswara,Faskes Rujukan Tingkat Lanjutan,217,2025-09-16 22:58:25,2025-09-16 22:58:25
-33,Puskesmas Palopo,Faskes Tingkat Pertama,55,2025-11-13 04:19:00,2025-11-13 04:19:00
-34,Puskesmas Yogyakarta,Faskes Rujukan Tingkat Lanjutan,130,2026-04-25 23:50:09,2026-04-25 23:50:09
-35,Puskesmas Tomohon,Faskes Rujukan Tingkat Lanjutan,8,2024-06-22 05:18:57,2024-06-22 05:18:57
-36,Puskesmas Bengkulu,Faskes Penunjang,157,2023-11-07 22:29:07,2023-11-07 22:29:07
-37,Puskesmas Lhokseumawe,Faskes Penunjang,57,2022-09-25 11:35:37,2022-09-25 11:35:37
-38,RS Farida,Faskes Rujukan Tingkat Lanjutan,152,2022-11-03 12:19:01,2022-11-03 12:19:01
-39,Puskesmas Meulaboh,Faskes Rujukan Tingkat Lanjutan,38,2021-12-13 12:33:25,2021-12-13 12:33:25
-40,RS Astuti,Faskes Tingkat Pertama,202,2023-03-23 08:49:39,2023-03-23 08:49:39
-41,RS Wastuti,Faskes Tingkat Pertama,151,2023-09-09 07:17:58,2023-09-09 07:17:58
-42,RS Pratama,Faskes Penunjang,11,2024-02-24 17:53:13,2024-02-24 17:53:13
-43,RS Mangunsong,Faskes Tingkat Pertama,162,2024-03-15 16:27:53,2024-03-15 16:27:53
-44,RS Salahudin,Faskes Tingkat Pertama,191,2025-01-14 01:32:08,2025-01-14 01:32:08
-45,RS Kuswandari,Faskes Penunjang,141,2022-08-27 18:34:12,2022-08-27 18:34:12
-46,RS Hutapea,Faskes Tingkat Pertama,163,2025-01-03 11:15:33,2025-01-03 11:15:33
-47,RS Saragih,Faskes Penunjang,4,2023-11-03 23:06:18,2023-11-03 23:06:18
-48,RS Farida,Faskes Penunjang,157,2021-05-31 08:00:10,2021-05-31 08:00:10
-49,RS Habibi,Faskes Rujukan Tingkat Lanjutan,14,2023-05-31 21:06:45,2023-05-31 21:06:45
-50,Puskesmas Kediri,Faskes Penunjang,134,2021-12-23 07:11:01,2021-12-23 07:11:01
+1,RS Yulianti,Faskes Rujukan Tingkat Lanjutan,46,2025-04-14 13:51:17,2025-04-14 13:51:17
+2,Puskesmas Jambi,Faskes Penunjang,207,2021-07-05 04:29:17,2021-07-05 04:29:17
+3,RS Nurdiyanti,Faskes Penunjang,81,2026-04-13 02:31:26,2026-04-13 02:31:26
+4,RS Mardhiyah,Faskes Penunjang,29,2024-01-09 04:25:05,2024-01-09 04:25:05
+5,RS Narpati,Faskes Penunjang,133,2023-06-19 22:50:38,2023-06-19 22:50:38
+6,RS Sitorus,Faskes Rujukan Tingkat Lanjutan,169,2025-01-07 04:41:06,2025-01-07 04:41:06
+7,RS Hutasoit,Faskes Penunjang,100,2021-11-24 03:29:03,2021-11-24 03:29:03
+8,RS Siregar,Faskes Tingkat Pertama,64,2022-10-05 01:29:42,2022-10-05 01:29:42
+9,Puskesmas Bogor,Faskes Rujukan Tingkat Lanjutan,150,2022-05-17 05:26:46,2022-05-17 05:26:46
+10,RS Fujiati,Faskes Tingkat Pertama,214,2022-08-05 14:27:56,2022-08-05 14:27:56
+11,RS Wahyudin,Faskes Tingkat Pertama,151,2023-01-04 05:59:22,2023-01-04 05:59:22
+12,RS Farida,Faskes Tingkat Pertama,94,2025-02-21 20:02:24,2025-02-21 20:02:24
+13,Puskesmas Sungai Penuh,Faskes Penunjang,219,2025-01-26 16:50:36,2025-01-26 16:50:36
+14,RS Pranowo,Faskes Tingkat Pertama,221,2022-08-31 05:34:33,2022-08-31 05:34:33
+15,RS Uwais,Faskes Penunjang,61,2025-02-15 20:21:53,2025-02-15 20:21:53
+16,RS Wulandari,Faskes Rujukan Tingkat Lanjutan,140,2021-10-20 08:52:42,2021-10-20 08:52:42
+17,RS Hartati,Faskes Rujukan Tingkat Lanjutan,38,2025-04-12 09:32:39,2025-04-12 09:32:39
+18,Puskesmas Bima,Faskes Tingkat Pertama,150,2021-10-09 20:59:48,2021-10-09 20:59:48
+19,RS Kusumo,Faskes Tingkat Pertama,181,2022-04-20 12:11:45,2022-04-20 12:11:45
+20,RS Pradana,Faskes Penunjang,81,2024-11-24 02:30:04,2024-11-24 02:30:04
+21,RS Prasetya,Faskes Penunjang,151,2023-06-23 05:16:32,2023-06-23 05:16:32
+22,RS Handayani,Faskes Rujukan Tingkat Lanjutan,102,2024-08-04 19:20:31,2024-08-04 19:20:31
+23,RS Suryono,Faskes Tingkat Pertama,181,2026-05-10 02:08:21,2026-05-10 02:08:21
+24,Puskesmas Metro,Faskes Tingkat Pertama,111,2023-07-30 06:04:31,2023-07-30 06:04:31
+25,RS Hidayat,Faskes Rujukan Tingkat Lanjutan,82,2023-06-22 10:55:15,2023-06-22 10:55:15
+26,Puskesmas Yogyakarta,Faskes Rujukan Tingkat Lanjutan,213,2023-05-26 04:06:06,2023-05-26 04:06:06
+27,RS Mayasari,Faskes Penunjang,156,2023-04-10 15:55:34,2023-04-10 15:55:34
+28,Puskesmas Depok,Faskes Tingkat Pertama,80,2022-08-20 18:17:39,2022-08-20 18:17:39
+29,RS Permata,Faskes Rujukan Tingkat Lanjutan,73,2026-01-20 09:09:59,2026-01-20 09:09:59
+30,Puskesmas Sibolga,Faskes Rujukan Tingkat Lanjutan,109,2025-08-09 09:57:39,2025-08-09 09:57:39
+31,Puskesmas Manado,Faskes Penunjang,196,2024-07-17 16:17:18,2024-07-17 16:17:18
+32,RS Hardiansyah,Faskes Rujukan Tingkat Lanjutan,149,2022-06-11 01:59:26,2022-06-11 01:59:26
+33,RS Wacana,Faskes Tingkat Pertama,113,2026-02-08 06:47:26,2026-02-08 06:47:26
+34,RS Safitri,Faskes Tingkat Pertama,162,2023-07-25 22:50:54,2023-07-25 22:50:54
+35,Puskesmas Bima,Faskes Rujukan Tingkat Lanjutan,49,2026-01-05 11:51:37,2026-01-05 11:51:37
+36,Puskesmas Kota Administrasi Jakarta Pusat,Faskes Rujukan Tingkat Lanjutan,125,2023-11-13 04:22:31,2023-11-13 04:22:31
+37,RS Mandala,Faskes Tingkat Pertama,68,2025-08-11 14:10:29,2025-08-11 14:10:29
+38,Puskesmas Pekalongan,Faskes Rujukan Tingkat Lanjutan,160,2026-05-28 23:17:27,2026-05-28 23:17:27
+39,Puskesmas Probolinggo,Faskes Rujukan Tingkat Lanjutan,143,2023-12-22 18:09:28,2023-12-22 18:09:28
+40,Puskesmas Semarang,Faskes Tingkat Pertama,183,2023-01-11 13:45:49,2023-01-11 13:45:49
+41,Puskesmas Tasikmalaya,Faskes Penunjang,162,2025-05-22 08:29:43,2025-05-22 08:29:43
+42,RS Yolanda,Faskes Rujukan Tingkat Lanjutan,150,2024-04-14 04:07:07,2024-04-14 04:07:07
+43,Puskesmas Tasikmalaya,Faskes Tingkat Pertama,94,2024-02-09 03:50:26,2024-02-09 03:50:26
+44,RS Yuliarti,Faskes Penunjang,10,2023-08-19 05:20:05,2023-08-19 05:20:05
+45,RS Hasanah,Faskes Penunjang,226,2022-06-17 14:33:43,2022-06-17 14:33:43
+46,Puskesmas Banjar,Faskes Penunjang,20,2022-05-22 07:15:13,2022-05-22 07:15:13
+47,RS Budiman,Faskes Tingkat Pertama,92,2022-03-14 18:17:05,2022-03-14 18:17:05
+48,Puskesmas Prabumulih,Faskes Penunjang,76,2025-07-31 11:09:59,2025-07-31 11:09:59
+49,RS Tarihoran,Faskes Tingkat Pertama,225,2025-05-23 20:11:08,2025-05-23 20:11:08
+50,RS Tampubolon,Faskes Penunjang,114,2025-07-19 22:10:56,2025-07-19 22:10:56

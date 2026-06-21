@@ -1,5 +1,12 @@
 package tindaklanjut
 
+import "github.com/stringptr/SiGizi/backend/internal/pagination"
+
+type GetStatusTindakLanjutRequest struct {
+	Page    int `query:"page" minimum:"1" default:"1"`
+	PerPage int `query:"per_page" minimum:"1" maximum:"100" default:"20"`
+}
+
 type GetPasienTindakLanjutRequest struct {
 	Page    int    `query:"page" minimum:"1" default:"1"`
 	PerPage int    `query:"per_page" minimum:"1" maximum:"100" default:"20"`
@@ -14,8 +21,8 @@ type PasienTindakLanjutItem struct {
 }
 
 type PasienTindakLanjutData struct {
-	Pasien    []PasienTindakLanjutItem `json:"pasien"`
-	TotalData int                      `json:"total_data"`
+	Pasien []PasienTindakLanjutItem `json:"pasien"`
+	Meta   pagination.Meta          `json:"meta"`
 }
 
 type MonitoringTerakhir struct {
@@ -72,8 +79,8 @@ type StatusTindakLanjutItem struct {
 }
 
 type StatusTindakLanjutData struct {
-	Pasien    []StatusTindakLanjutItem `json:"pasien"`
-	TotalData int                       `json:"total_data"`
+	Pasien []StatusTindakLanjutItem `json:"pasien"`
+	Meta   pagination.Meta          `json:"meta"`
 }
 
 type LaporanTindakLanjutItem struct {

@@ -1,5 +1,7 @@
 package pemeriksaan
 
+import "github.com/stringptr/SiGizi/backend/internal/pagination"
+
 type GetPendingPemeriksaanRequest struct {
 	Page    int `query:"page" minimum:"1" default:"1"`
 	PerPage int `query:"per_page" minimum:"1" maximum:"100" default:"20"`
@@ -103,5 +105,5 @@ type PendingPemeriksaanItem struct {
 
 type PendingPemeriksaanData struct {
 	PemeriksaanPending []PendingPemeriksaanItem `json:"pemeriksaan_pending"`
-	TotalPending       int                       `json:"total_pending"`
+	Meta               pagination.Meta          `json:"meta"`
 }

@@ -217,3 +217,29 @@ func (r *Repo) DeleteByID(ctx context.Context, IDUser int32) error {
 	_, err := pgxV5.Exec(ctx, stmt, r.db)
 	return err
 }
+
+func (r *Repo) GetLokasiNames(ctx context.Context, ids map[int32]bool) (map[int32]string, error) {
+	if len(ids) == 0 {
+		return map[int32]string{}, nil
+	}
+	idList := make([]int32, 0, len(ids))
+	for id := range ids {
+		idList = append(idList, id)
+	}
+	rows, err := r.db.Query(ctx, `SELECT id_lokasi, nama_lokasi FROM lokasi WHERE id_lokasi = ANY($1)`, idList)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int32]string, len(idList))
+	for rows.Next() {
+		var id int32
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, err
+		}
+		result[id] = name
+	}
+	return result, rows.Err()
+}

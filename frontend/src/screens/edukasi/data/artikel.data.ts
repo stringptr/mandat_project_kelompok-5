@@ -5,7 +5,7 @@ export interface Artikel {
   judul: string;
   ringkasan: string;
   konten: string;
-  kategori: KategoriArtikel;
+  kategori: string;
   penulis: string;
   rolePenulis: Role;
   tanggal: string;
@@ -17,17 +17,19 @@ export interface Artikel {
 
 export type KategoriArtikel =
   | 'Semua'
-  | 'Gizi Ibu'
-  | 'Nutrisi Anak'
-  | 'Parenting'
-  | 'Sanitasi & Lingkungan';
+  | 'Gizi'
+  | 'Imunisasi'
+  | 'Kehamilan'
+  | 'Penyakit'
+  | 'Tumbuh Kembang';
 
 export const KATEGORI_LIST: KategoriArtikel[] = [
   'Semua',
-  'Gizi Ibu',
-  'Nutrisi Anak',
-  'Parenting',
-  'Sanitasi & Lingkungan',
+  'Gizi',
+  'Imunisasi',
+  'Kehamilan',
+  'Penyakit',
+  'Tumbuh Kembang',
 ];
 
 export const WAKTU_BACA_OPTIONS = [

@@ -53,7 +53,12 @@ export interface PemeriksaanPendingItem {
 
 export interface PemeriksaanPendingResponse {
   pemeriksaan_pending: PemeriksaanPendingItem[];
-  total_pending: number;
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
 }
 
 export interface BelumUkurItem {

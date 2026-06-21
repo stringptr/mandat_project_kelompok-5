@@ -279,26 +279,39 @@ func (r *Repo) UpdateStatusRujukan(ctx context.Context, idRujukan int32, statusR
 	return results[0], nil
 }
 
-func (r *Repo) GetStatusTindakLanjut(ctx context.Context) ([]*tindaklanjutDomain.StatusTindakLanjutJoinRow, error) {
-	sql := `
-		SELECT
-			COALESCE(p.id_pasien, 0) AS id_pasien,
-			COALESCE(ua.nama, '') AS nama_pasien,
-			tl.status_pasien::text AS status_pasien,
-			COALESCE(r.status_rujukan::text, '') AS status_rujukan,
-			COALESCE(r.tanggal_rujukan::text, '') AS tanggal_rujukan
+func (r *Repo) GetStatusTindakLanjut(ctx context.Context, page int, perPage int) ([]*tindaklanjutDomain.StatusTindakLanjutJoinRow, int, error) {
+	offset := int64((page - 1) * perPage)
+
+	fromWhere := `
 		FROM tindak_lanjut tl
 		LEFT JOIN hasil_pemeriksaan hp ON hp.id_hasil_pemeriksaan = tl.id_hasil_pemeriksaan
 		LEFT JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
 		LEFT JOIN pasien p ON p.id_pasien = ji.id_pasien AND p.is_deleted = false
 		LEFT JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
 		LEFT JOIN rujukan r ON r.id_tindak_lanjut = tl.id_tindak_lanjut
-		ORDER BY tl.created_at DESC
 	`
 
-	pgxRows, err := r.db.Query(ctx, sql)
+	var countResult struct{ Count int64 }
+	err := pgxV5.Query(ctx, RawStatement("SELECT COUNT(*)"+fromWhere), r.db, &countResult)
 	if err != nil {
-		return nil, fmt.Errorf("GetStatusTindakLanjut query failed: %w", err)
+		return nil, 0, fmt.Errorf("GetStatusTindakLanjut count failed: %w", err)
+	}
+
+	dataSQL := `
+		SELECT
+			COALESCE(p.id_pasien, 0) AS id_pasien,
+			COALESCE(ua.nama, '') AS nama_pasien,
+			tl.status_pasien::text AS status_pasien,
+			COALESCE(r.status_rujukan::text, '') AS status_rujukan,
+			COALESCE(r.tanggal_rujukan::text, '') AS tanggal_rujukan
+	` + fromWhere + `
+		ORDER BY tl.created_at DESC
+		OFFSET $1 LIMIT $2
+	`
+
+	pgxRows, err := r.db.Query(ctx, dataSQL, offset, perPage)
+	if err != nil {
+		return nil, 0, fmt.Errorf("GetStatusTindakLanjut query failed: %w", err)
 	}
 	defer pgxRows.Close()
 
@@ -307,12 +320,12 @@ func (r *Repo) GetStatusTindakLanjut(ctx context.Context) ([]*tindaklanjutDomain
 		var row tindaklanjutDomain.StatusTindakLanjutJoinRow
 		err := pgxRows.Scan(&row.IDPasien, &row.NamaPasien, &row.StatusPasien, &row.StatusRujukan, &row.TanggalRujukan)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		rows = append(rows, &row)
 	}
 
-	return rows, nil
+	return rows, int(countResult.Count), nil
 }
 
 func (r *Repo) GetStatusTindakLanjutByUserID(ctx context.Context, idUser int32) ([]*tindaklanjutDomain.StatusTindakLanjutJoinRow, error) {

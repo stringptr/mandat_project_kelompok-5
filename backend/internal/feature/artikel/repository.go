@@ -30,38 +30,99 @@ func NewRepo(db *pgxpool.Pool) *Repo {
 	return &Repo{db: db}
 }
 
-func (r *Repo) GetAllPublished(ctx context.Context) ([]*artikelDomain.ArtikelJoinRow, error) {
-	sql := `
+func (r *Repo) GetAllPublished(ctx context.Context, page int, perPage int) ([]*artikelDomain.ArtikelJoinRow, int, error) {
+	offset := int64((page - 1) * perPage)
+
+	fromWhere := `
+		FROM artikel a
+		JOIN user_account penulis ON penulis.id_user = a.id_penulis
+		WHERE a.status_artikel = 'Dipublikasikan'
+	`
+
+	var countResult struct{ Count int64 }
+	err := pgxV5.Query(ctx, RawStatement("SELECT COUNT(*)"+fromWhere), r.db, &countResult)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	dataSQL := `
 		SELECT
 			a.id_artikel,
 			a.judul,
 			COALESCE(a.kategori, '') AS kategori,
 			LEFT(a.isi_artikel, 200) AS ringkasan,
 			penulis.nama AS nama_penulis,
-			COALESCE(a.tanggal_publish::text, '') AS tanggal_publish
-		FROM artikel a
-		JOIN user_account penulis ON penulis.id_user = a.id_penulis
-		WHERE a.status_artikel = 'Dipublikasikan'
+			COALESCE(a.tanggal_publish::text, '') AS tanggal_publish,
+			a.status_artikel::text AS status_artikel
+	` + fromWhere + `
 		ORDER BY a.tanggal_publish DESC
+		OFFSET $1 LIMIT $2
 	`
 
-	pgxRows, err := r.db.Query(ctx, sql)
+	pgxRows, err := r.db.Query(ctx, dataSQL, offset, perPage)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer pgxRows.Close()
 
 	var rows []*artikelDomain.ArtikelJoinRow
 	for pgxRows.Next() {
 		var row artikelDomain.ArtikelJoinRow
-		err := pgxRows.Scan(&row.IDArtikel, &row.Judul, &row.Kategori, &row.Ringkasan, &row.NamaPenulis, &row.TanggalPublish)
+		err := pgxRows.Scan(&row.IDArtikel, &row.Judul, &row.Kategori, &row.Ringkasan, &row.NamaPenulis, &row.TanggalPublish, &row.StatusArtikel)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		rows = append(rows, &row)
 	}
 
-	return rows, nil
+	return rows, int(countResult.Count), nil
+}
+
+func (r *Repo) GetAll(ctx context.Context, page int, perPage int) ([]*artikelDomain.ArtikelJoinRow, int, error) {
+	offset := int64((page - 1) * perPage)
+
+	fromWhere := `
+		FROM artikel a
+		JOIN user_account penulis ON penulis.id_user = a.id_penulis
+	`
+
+	var countResult struct{ Count int64 }
+	err := pgxV5.Query(ctx, RawStatement("SELECT COUNT(*)"+fromWhere), r.db, &countResult)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	dataSQL := `
+		SELECT
+			a.id_artikel,
+			a.judul,
+			COALESCE(a.kategori, '') AS kategori,
+			LEFT(a.isi_artikel, 200) AS ringkasan,
+			penulis.nama AS nama_penulis,
+			COALESCE(a.tanggal_publish::text, '') AS tanggal_publish,
+			a.status_artikel::text AS status_artikel
+	` + fromWhere + `
+		ORDER BY a.created_at DESC
+		OFFSET $1 LIMIT $2
+	`
+
+	pgxRows, err := r.db.Query(ctx, dataSQL, offset, perPage)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer pgxRows.Close()
+
+	var rows []*artikelDomain.ArtikelJoinRow
+	for pgxRows.Next() {
+		var row artikelDomain.ArtikelJoinRow
+		err := pgxRows.Scan(&row.IDArtikel, &row.Judul, &row.Kategori, &row.Ringkasan, &row.NamaPenulis, &row.TanggalPublish, &row.StatusArtikel)
+		if err != nil {
+			return nil, 0, err
+		}
+		rows = append(rows, &row)
+	}
+
+	return rows, int(countResult.Count), nil
 }
 
 func (r *Repo) GetByID(ctx context.Context, idArtikel int32) (*model.Artikel, error) {
@@ -116,23 +177,36 @@ func (r *Repo) GetDetailJoinByID(ctx context.Context, idArtikel int32) (*artikel
 	return &row, nil
 }
 
-func (r *Repo) GetPending(ctx context.Context) ([]*artikelDomain.PendingJoinRow, error) {
-	sql := `
+func (r *Repo) GetPending(ctx context.Context, page int, perPage int) ([]*artikelDomain.PendingJoinRow, int, error) {
+	offset := int64((page - 1) * perPage)
+
+	fromWhere := `
+		FROM artikel a
+		JOIN user_account penulis ON penulis.id_user = a.id_penulis
+		WHERE a.status_artikel = 'Menunggu Verifikasi'
+	`
+
+	var countResult struct{ Count int64 }
+	err := pgxV5.Query(ctx, RawStatement("SELECT COUNT(*)"+fromWhere), r.db, &countResult)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	dataSQL := `
 		SELECT
 			a.id_artikel,
 			a.judul,
 			penulis.nama AS nama_penulis,
 			a.created_at::text,
 			a.status_artikel::text
-		FROM artikel a
-		JOIN user_account penulis ON penulis.id_user = a.id_penulis
-		WHERE a.status_artikel = 'Menunggu Verifikasi'
+	` + fromWhere + `
 		ORDER BY a.created_at DESC
+		OFFSET $1 LIMIT $2
 	`
 
-	pgxRows, err := r.db.Query(ctx, sql)
+	pgxRows, err := r.db.Query(ctx, dataSQL, offset, perPage)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer pgxRows.Close()
 
@@ -141,12 +215,12 @@ func (r *Repo) GetPending(ctx context.Context) ([]*artikelDomain.PendingJoinRow,
 		var row artikelDomain.PendingJoinRow
 		err := pgxRows.Scan(&row.IDArtikel, &row.Judul, &row.NamaPenulis, &row.CreatedAt, &row.StatusArtikel)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		rows = append(rows, &row)
 	}
 
-	return rows, nil
+	return rows, int(countResult.Count), nil
 }
 
 func (r *Repo) GetPenulisByID(ctx context.Context, idUser int32) (string, error) {

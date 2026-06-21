@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Search, Plus, Pencil, Trash2, Eye } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { apiGet, apiDelete } from '../../lib/api';
@@ -11,8 +11,10 @@ import { ModalTambahJadwal } from './components/ModalTambahJadwal';
 import { ModalUpdateJadwal } from './components/ModalUpdateJadwal';
 import { ModalHapusJadwal } from './components/ModalHapusJadwal';
 import { ModalDetailJadwal } from './components/ModalDetailJadwal';
+import { Paginator } from '../../components/Paginator';
+import { usePaginator } from '../../hooks/usePaginator';
 
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 10;
 
 interface JadwalImunisasiProps {
   currentRole: Role;
@@ -21,11 +23,16 @@ interface JadwalImunisasiProps {
 export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): JSX.Element {
   const notify = useNotification();
   const { user } = useAuth();
-  const { imunisasiList, setImunisasiList, setImunisasiLoading } = useAppStore();
+  const { setImunisasiLoading } = useAppStore();
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'SEMUA' | 'SUDAH' | 'BELUM'>('SEMUA');
-  const [page, setPage] = useState(1);
+
+  // Server-side paginated data (local state, not zustand)
+  const [items, setItems] = useState<JadwalImunisasi[]>([]);
+  const [totalData, setTotalData] = useState(0);
+
+  const { page, setPage, totalPages } = usePaginator({ totalItems: totalData, pageSize: PAGE_SIZE });
 
   const [modalTambah, setModalTambah] = useState(false);
   const [modalUpdate, setModalUpdate] = useState<JadwalImunisasi | null>(null);
@@ -37,9 +44,7 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
   const isIbuWali = currentRole === 'Ibu/Wali';
 
   // ── Fetch data from backend ────────────────────────────────────────────────
-  const fetchData = useCallback(async (force = false) => {
-    // Skip if already loaded unless forced
-    if (imunisasiList.length > 0 && !force) return;
+  const fetchData = useCallback(async (targetPage: number, perPage: number = PAGE_SIZE) => {
     setImunisasiLoading(true);
     try {
       if (isIbuWali && user) {
@@ -55,9 +60,10 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
           tanggalRealisasi: item.tanggal_realisasi ?? null,
           status: item.status_imunisasi === 'Sudah' ? 'SUDAH' : 'BELUM',
         }));
-        setImunisasiList(mapped);
+        setItems(mapped);
+        setTotalData(mapped.length);
       } else {
-        const res = await apiGet<ImunisasiListData>('/imunisasi', { page: '1', per_page: '100' });
+        const res = await apiGet<ImunisasiListData>('/imunisasi', { page: String(targetPage), per_page: String(perPage) });
         const list = res.jadwal ?? [];
         const mapped: JadwalImunisasi[] = list.map((item) => ({
           id: String(item.id_imunisasi),
@@ -69,25 +75,23 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
           tanggalRealisasi: null,
           status: item.status_imunisasi === 'Sudah' ? 'SUDAH' : 'BELUM',
         }));
-        setImunisasiList(mapped);
+        setItems(mapped);
+        setTotalData(res.meta?.total ?? mapped.length);
       }
     } catch (err) {
       console.error('Gagal memuat jadwal imunisasi:', err);
     } finally {
       setImunisasiLoading(false);
     }
-  }, [currentRole, user, isIbuWali, imunisasiList.length, setImunisasiList, setImunisasiLoading]);
+  }, [currentRole, user, isIbuWali, setImunisasiLoading]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // Use store list as data
-  const data = imunisasiList;
+    fetchData(page, PAGE_SIZE);
+  }, [page, fetchData]);
 
   // ── Derived data ───────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    return data.filter((j) => {
+    return items.filter((j) => {
       const matchSearch =
         search === '' ||
         j.idPasien.toLowerCase().includes(search.toLowerCase()) ||
@@ -96,26 +100,22 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
       const matchStatus = statusFilter === 'SEMUA' || j.status === statusFilter;
       return matchSearch && matchStatus;
     });
-  }, [data, search, statusFilter]);
+  }, [items, search, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const totalSudah = data.filter((j) => j.status === 'SUDAH').length;
-  const totalBelum = data.filter((j) => j.status === 'BELUM').length;
+  const totalSudah = items.filter((j) => j.status === 'SUDAH').length;
+  const totalBelum = items.filter((j) => j.status === 'BELUM').length;
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleTambah = () => {
     setModalTambah(false);
     setPage(1);
     notify.success('Jadwal imunisasi baru berhasil ditambahkan.');
-    fetchData(true); // Force re-fetch from backend
   };
 
   const handleUpdate = () => {
     setModalUpdate(null);
+    setPage(1);
     notify.success('Data jadwal imunisasi berhasil diperbarui.');
-    fetchData(true); // Force re-fetch from backend
   };
 
   const handleHapus = async () => {
@@ -129,9 +129,12 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
     setDeleting(true);
     try {
       await apiDelete(`/imunisasi/${idNum}`);
-      setImunisasiList(imunisasiList.filter((j) => j.id !== modalHapus.id));
       setModalHapus(null);
-      if (page > Math.ceil((filtered.length - 1) / PAGE_SIZE)) setPage((p) => Math.max(1, p - 1));
+      if (items.length <= 1 && page > 1) {
+        setPage(page - 1);
+      } else {
+        fetchData(page, PAGE_SIZE);
+      }
       notify.success('Jadwal imunisasi berhasil dihapus.');
     } catch {
       notify.error('Gagal menghapus jadwal imunisasi. Silakan coba lagi.');
@@ -140,10 +143,8 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
     }
   };
 
-  const changePage = (n: number) => setPage(Math.max(1, Math.min(totalPages, n)));
-
   // ── Page heading info per role ─────────────────────────────────────────────
-  const firstChildName = data.length > 0 ? data[0].namaAnak : 'Anak Anda';
+  const firstChildName = items.length > 0 ? items[0].namaAnak : 'Anak Anda';
   const pageDesc = isIbuWali
     ? `Jadwal imunisasi untuk ${firstChildName}. Pantau status dan tanggal pelaksanaan vaksin anak Anda.`
     : canCRUD
@@ -160,12 +161,12 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
           <p className="text-xs text-neutral-500 mt-1 max-w-xl">{pageDesc}</p>
         </div>
         {/* Ibu/Wali: banner pasien */}
-        {isIbuWali && data.length > 0 && (
+        {isIbuWali && items.length > 0 && (
           <div className="bg-primary-50 border border-primary-100 rounded-xl px-4 py-2.5 flex items-center gap-2 flex-shrink-0">
             <span className="text-primary text-base">👶</span>
             <div>
               <p className="text-xs font-bold text-primary font-body">{firstChildName}</p>
-              <p className="text-[10px] text-neutral-500 font-body">ID: {data[0].idPasien}</p>
+              <p className="text-[10px] text-neutral-500 font-body">ID: {items[0].idPasien}</p>
             </div>
           </div>
         )}
@@ -179,13 +180,13 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
             <span className="text-primary text-lg">📅</span>
           </div>
           <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">Total Jadwal Imunisasi</p>
-          <p className="text-4xl font-bold text-neutral-900 font-headline mt-1">{data.length}</p>
+          <p className="text-4xl font-bold text-neutral-900 font-headline mt-1">{totalData}</p>
           <div className="h-0.5 bg-primary mt-3 rounded-full" />
         </div>
 
         <div className="bg-white rounded-2xl border border-neutral-100 p-5 relative">
           <span className="absolute top-4 right-4 text-[10px] font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full">
-            {data.length > 0 ? `${Math.round((totalSudah / data.length) * 100)}%` : '0%'}
+            {items.length > 0 ? `${Math.round((totalSudah / items.length) * 100)}%` : '0%'}
           </span>
           <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center mb-3">
             <span className="text-emerald-500 text-xl">✓</span>
@@ -252,14 +253,14 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
           ))}
         </div>
 
-        {paged.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="py-16 text-center text-neutral-400">
             <p className="text-4xl mb-3">📅</p>
             <p className="text-sm font-semibold text-neutral-500">Tidak ada jadwal ditemukan</p>
             <p className="text-xs mt-1">Coba ubah filter atau kata kunci pencarian</p>
           </div>
         ) : (
-          paged.map((j) => (
+          filtered.map((j) => (
             <div
               key={j.id}
               className={`grid px-5 py-4 border-b border-neutral-50 last:border-0 hover:bg-neutral-50/60 transition-colors items-start ${isIbuWali ? 'grid-cols-5' : 'grid-cols-6'}`}
@@ -336,34 +337,13 @@ export default function JadwalImunisasi({ currentRole }: JadwalImunisasiProps): 
         )}
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-t border-neutral-50">
-          <p className="text-xs text-neutral-500">
-            Menampilkan {Math.min(PAGE_SIZE, filtered.length)} dari {filtered.length} entri
-          </p>
-          <div className="flex items-center gap-1">
-            <button onClick={() => changePage(page - 1)} disabled={page === 1}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 disabled:opacity-30 transition-colors">
-              <ChevronLeft size={14} />
-            </button>
-            {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => i + 1).map((n) => (
-              <button key={n} onClick={() => changePage(n)}
-                className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-semibold transition-colors ${page === n ? 'bg-primary text-white' : 'border border-neutral-200 text-neutral-600 hover:bg-neutral-50'}`}>
-                {n}
-              </button>
-            ))}
-            {totalPages > 3 && <span className="text-neutral-400 text-sm px-1">…</span>}
-            {totalPages > 3 && (
-              <button onClick={() => changePage(totalPages)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
-                {totalPages}
-              </button>
-            )}
-            <button onClick={() => changePage(page + 1)} disabled={page === totalPages}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-200 text-neutral-500 hover:bg-neutral-50 disabled:opacity-30 transition-colors">
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
+        <Paginator
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalData}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* ── Bottom info cards — hidden for Ibu/Wali ───────────────────────── */}

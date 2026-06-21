@@ -1,5 +1,17 @@
 package artikel
 
+import "github.com/stringptr/SiGizi/backend/internal/pagination"
+
+type GetAllPublishedRequest struct {
+	Page    int `query:"page" minimum:"1" default:"1"`
+	PerPage int `query:"per_page" minimum:"1" maximum:"100" default:"20"`
+}
+
+type GetPendingRequest struct {
+	Page    int `query:"page" minimum:"1" default:"1"`
+	PerPage int `query:"per_page" minimum:"1" maximum:"100" default:"20"`
+}
+
 type CreateArtikelRequest struct {
 	Judul      string `json:"judul" minLength:"1" maxLength:"255"`
 	IsiArtikel string `json:"isi_artikel" minLength:"1"`
@@ -18,11 +30,12 @@ type ArtikelListItem struct {
 	Ringkasan      string `json:"ringkasan"`
 	NamaPenulis    string `json:"nama_penulis"`
 	TanggalPublish string `json:"tanggal_publish"`
+	StatusArtikel  string `json:"status_artikel"`
 }
 
 type ArtikelListData struct {
-	Artikel   []ArtikelListItem `json:"artikel"`
-	TotalData int               `json:"total_data"`
+	Artikel []ArtikelListItem `json:"artikel"`
+	Meta    pagination.Meta   `json:"meta"`
 }
 
 type ArtikelDetail struct {
@@ -52,8 +65,8 @@ type ArtikelPendingItem struct {
 }
 
 type ArtikelPendingData struct {
-	Artikel   []ArtikelPendingItem `json:"artikel"`
-	TotalData int                  `json:"total_data"`
+	Artikel []ArtikelPendingItem `json:"artikel"`
+	Meta    pagination.Meta      `json:"meta"`
 }
 
 type ReviewArtikelRequest struct {

@@ -59,9 +59,8 @@ func (h *Handler) UpdateStatusRujukan(ctx context.Context, input *struct {
 	return httputils.NewOKOutput(res), nil
 }
 
-func (h *Handler) GetStatusTindakLanjut(ctx context.Context, input *struct{}) (*httputils.APIResponseOutput[*tindaklanjutDomain.StatusTindakLanjutData], error) {
-	claims := httputils.GetAccessClaim(ctx)
-	res, err := h.Service.GetStatusTindakLanjut(ctx, claims)
+func (h *Handler) GetStatusTindakLanjut(ctx context.Context, input *tindaklanjutDomain.GetStatusTindakLanjutRequest) (*httputils.APIResponseOutput[*tindaklanjutDomain.StatusTindakLanjutData], error) {
+	res, err := h.Service.GetStatusTindakLanjut(ctx, input)
 	if err != nil {
 		return nil, errorutils.ToHumaError(err)
 	}

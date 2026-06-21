@@ -14,6 +14,7 @@ export interface NotifItem {
   category: NotifCategory;
   tags: NotifTag[];
   actionLabel?: string;
+  actionUrl?: string;
   read?: boolean;
 }
 

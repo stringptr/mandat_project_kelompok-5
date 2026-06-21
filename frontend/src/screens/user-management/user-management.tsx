@@ -46,9 +46,12 @@ interface BackendUser {
 
 interface UsersResponse {
   users: BackendUser[];
-  total_data: number;
-  page: number;
-  per_page: number;
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
 }
 
 const AVATAR_COLORS = [
@@ -208,7 +211,7 @@ export default function UserManagement(): JSX.Element {
       try {
         const res = await apiGet<UsersResponse>(`/users?page=${page}&per_page=${PAGE_SIZE}`);
         setUsers(res.users.map((u, i) => mapUser(u, i)));
-        setTotalData(res.total_data);
+        setTotalData(res.meta.total);
       } catch {
         setUsers([]);
       } finally {

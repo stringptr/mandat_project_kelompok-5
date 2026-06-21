@@ -35,9 +35,9 @@ type LoginResponse struct {
 }
 
 type LoginRequest struct {
-	Email    string `json:"email"    format:"email"`
-	NIK      string `json:"nik"      minLength:"16" maxLength:"16" pattern:"^[0-9]{16}$"`
-	Password string `json:"password" minLength:"8" maxLength:"255"`
+	Email    string `json:"email,omitempty" format:"email" required:"false"`
+	NIK      string `json:"nik,omitempty"   minLength:"16" maxLength:"16" pattern:"^[0-9]{16}$" required:"false"`
+	Password string `json:"password"        minLength:"8" maxLength:"255"`
 }
 
 type AuthResponse struct {

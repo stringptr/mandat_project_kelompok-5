@@ -183,13 +183,20 @@ func (s *Service) Create(ctx context.Context, req *imunisasiDomain.CreateImunisa
 	idStr := strconv.Itoa(int(modelData.IDImunisasi))
 	s.logAudit(ctx, "POST /imunisasi", model.TipeAktivitas_DataInsert, true, "jadwal_imunisasi", idStr, "Berhasil membuat jadwal imunisasi")
 
+	notifPesan := fmt.Sprintf("Jadwal imunisasi %s telah dibuat pada %s.", req.NamaVaksin, req.TanggalJadwal)
 	s.notifRepo.Create(ctx, &model.Notifikasi{
 		IDUser:         req.IDPasien,
 		Judul:          "Jadwal Imunisasi Baru",
-		Pesan:          strPtr(fmt.Sprintf("Jadwal imunisasi %s telah dibuat pada %s.", req.NamaVaksin, req.TanggalJadwal)),
+		Pesan:          &notifPesan,
 		TipeNotifikasi: model.TipeNotifikasi_Imunisasi,
 		StatusBaca:     false,
 		TanggalKirim:   time.Now(),
+	})
+
+	s.notifPublisher.PublishToUser(req.IDPasien, &notificationDomain.Notification{
+		Judul: "Jadwal Imunisasi Baru",
+		Pesan: notifPesan,
+		Tipe:  string(model.TipeNotifikasi_Imunisasi),
 	})
 
 	return &imunisasiDomain.CreateImunisasiResponse{
@@ -280,6 +287,22 @@ func (s *Service) Realisasi(ctx context.Context, idImunisasi int32, req *imunisa
 
 	idStr := strconv.Itoa(int(idImunisasi))
 	s.logAudit(ctx, "PATCH /imunisasi/"+idStr+"/realisasi", model.TipeAktivitas_DataUpdate, true, "jadwal_imunisasi", idStr, "Berhasil mencatat realisasi imunisasi")
+
+	notifPesan := fmt.Sprintf("Imunisasi %s telah dilaksanakan pada %s.", existing.NamaVaksin, req.TanggalRealisasi)
+	s.notifRepo.Create(ctx, &model.Notifikasi{
+		IDUser:         existing.IDPasien,
+		Judul:          "Imunisasi Terlaksana",
+		Pesan:          &notifPesan,
+		TipeNotifikasi: model.TipeNotifikasi_Imunisasi,
+		StatusBaca:     false,
+		TanggalKirim:   time.Now(),
+	})
+
+	s.notifPublisher.PublishToUser(existing.IDPasien, &notificationDomain.Notification{
+		Judul: "Imunisasi Terlaksana",
+		Pesan: notifPesan,
+		Tipe:  string(model.TipeNotifikasi_Imunisasi),
+	})
 
 	return &imunisasiDomain.RealisasiResponse{
 		IDImunisasi:      idImunisasi,
@@ -388,9 +411,3 @@ func (s *Service) isOwnPasien(ctx context.Context, idPasien, idUser int32) (bool
 	return false, nil
 }
 
-func strPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}

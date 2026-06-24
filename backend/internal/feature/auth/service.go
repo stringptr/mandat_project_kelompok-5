@@ -18,6 +18,7 @@ import (
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
 	bannedipDomain "github.com/stringptr/SiGizi/backend/internal/domain/bannedip"
 	jwtblacklistDomain "github.com/stringptr/SiGizi/backend/internal/domain/jwtblacklist"
+	notificationDomain "github.com/stringptr/SiGizi/backend/internal/domain/notification"
 	userAccountDomain "github.com/stringptr/SiGizi/backend/internal/domain/userAccount"
 	userSessionDomain "github.com/stringptr/SiGizi/backend/internal/domain/userSession"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
@@ -39,6 +40,8 @@ type Service struct {
 	blacklistRepo   jwtblacklistDomain.Repo
 	auditRepo       auditlogDomain.Repo
 	mailSender      mail.Sender
+	notifRepo       notificationDomain.Repo
+	notifPublisher  notificationDomain.Publisher
 }
 
 func NewService(
@@ -52,6 +55,8 @@ func NewService(
 	blacklistRepo jwtblacklistDomain.Repo,
 	auditRepo auditlogDomain.Repo,
 	mailSender mail.Sender,
+	notifRepo notificationDomain.Repo,
+	notifPublisher notificationDomain.Publisher,
 ) *Service {
 	return &Service{
 		authRepo:        authRepo,
@@ -64,6 +69,8 @@ func NewService(
 		blacklistRepo:   blacklistRepo,
 		auditRepo:       auditRepo,
 		mailSender:      mailSender,
+		notifRepo:       notifRepo,
+		notifPublisher:  notifPublisher,
 	}
 }
 
@@ -156,6 +163,26 @@ func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequ
 	}
 
 	s.logAudit(ctx, "POST /auth/register", model.TipeAktivitas_Registrasi, true, "user_account", strconv.Itoa(int(idUser)), "Berhasil mendaftarkan akun")
+
+	dinkesIDs, _ := s.authRepo.GetDinkesUserIDs(ctx)
+	for _, dinkesID := range dinkesIDs {
+		notifPesan := fmt.Sprintf("Pendaftar baru: %s - %s menunggu verifikasi.", dataDTO.Nama, dataDTO.Email)
+		s.notifRepo.Create(ctx, &model.Notifikasi{
+			IDUser:         dinkesID,
+			Judul:          "Pendaftaran Akun Baru",
+			Pesan:          &notifPesan,
+			TipeNotifikasi: model.TipeNotifikasi_Edukasi,
+			StatusBaca:     false,
+			TanggalKirim:   time.Now(),
+		})
+
+		s.notifPublisher.PublishToUser(dinkesID, &notificationDomain.Notification{
+			Judul: "Pendaftaran Akun Baru",
+			Pesan: notifPesan,
+			Tipe:  string(model.TipeNotifikasi_Edukasi),
+		})
+	}
+
 	return nil
 }
 

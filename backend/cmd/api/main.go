@@ -124,7 +124,7 @@ func main() {
 	dashboardService := dashboardFeature.NewService(dashboardRepo)
 	dashboardHandler := dashboardFeature.NewHandler(dashboardService)
 
-	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo, auditLogRepo, mail.New(cfg.MailConfig))
+	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo, auditLogRepo, mail.New(cfg.MailConfig), notifRepo, notifPublisher)
 	authHandler := auth.NewHandler(authService, &jwtUtil)
 
 	r := chi.NewMux()

@@ -173,6 +173,12 @@ func (s *Service) Create(ctx context.Context, idPenulis int32, isDinkes bool, re
 		TanggalKirim:   time.Now(),
 	})
 
+	s.notifPublisher.PublishToUser(idPenulis, &notificationDomain.Notification{
+		Judul: notifJudul,
+		Pesan: notifPesan,
+		Tipe:  string(model.TipeNotifikasi_Edukasi),
+	})
+
 	return &artikelDomain.CreateArtikelResponse{
 		IDArtikel:     modelData.IDArtikel,
 		StatusArtikel: string(status),

@@ -151,6 +151,28 @@ func (r *Repo) CreateRoleRecord(ctx context.Context, idUser int32, role string, 
 	}
 }
 
+func (r *Repo) GetDinkesUserIDs(ctx context.Context) ([]int32, error) {
+	var rows []*struct {
+		IDUser int32
+	}
+	sql := `
+		SELECT dk.id_user
+		FROM dinas_kesehatan dk
+		JOIN user_account ua ON ua.id_user = dk.id_user
+		WHERE dk.is_deleted = false AND ua.is_deleted = false
+	`
+
+	err := pgxV5.Query(ctx, RawStatement(sql), r.db, &rows)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int32, len(rows))
+	for i, row := range rows {
+		ids[i] = row.IDUser
+	}
+	return ids, nil
+}
+
 func (r *Repo) DeleteRoleRecords(ctx context.Context, idUser int32) error {
 	bidanStmt := Bidan.UPDATE(Bidan.IsDeleted, Bidan.DeletedAt).
 		SET(Bool(true), RawTimestampz("NOW()")).

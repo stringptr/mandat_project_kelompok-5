@@ -215,6 +215,12 @@ func (s *Service) CreateTindakLanjut(ctx context.Context, idBidan int32, req *ti
 			StatusBaca:     false,
 			TanggalKirim:   time.Now(),
 		})
+
+		s.notifPublisher.PublishToUser(*idPasien, &notificationDomain.Notification{
+			Judul: "Tindak Lanjut & Rujukan",
+			Pesan: notifPesan,
+			Tipe:  string(model.TipeNotifikasi_Rujukan),
+		})
 	}
 
 	return &tindaklanjutDomain.CreateTindakLanjutResponse{
@@ -251,6 +257,25 @@ func (s *Service) UpdateStatusRujukan(ctx context.Context, idRujukan int32, req 
 
 	idStr := strconv.Itoa(int(idRujukan))
 	s.logAudit(ctx, "PATCH /rujukan/"+idStr+"/status", model.TipeAktivitas_DataUpdate, true, "rujukan", idStr, "Berhasil memperbarui status rujukan menjadi: "+req.StatusRujukan)
+
+	idPasien, _ := s.repo.GetPasienIDByRujukanID(ctx, idRujukan)
+	if idPasien != nil {
+		notifPesan := fmt.Sprintf("Status rujukan Anda telah diperbarui menjadi %s.", statusRujukan.String())
+		s.notifRepo.Create(ctx, &model.Notifikasi{
+			IDUser:         *idPasien,
+			Judul:          "Status Rujukan Diperbarui",
+			Pesan:          &notifPesan,
+			TipeNotifikasi: model.TipeNotifikasi_Rujukan,
+			StatusBaca:     false,
+			TanggalKirim:   time.Now(),
+		})
+
+		s.notifPublisher.PublishToUser(*idPasien, &notificationDomain.Notification{
+			Judul: "Status Rujukan Diperbarui",
+			Pesan: notifPesan,
+			Tipe:  string(model.TipeNotifikasi_Rujukan),
+		})
+	}
 
 	return &tindaklanjutDomain.UpdateStatusRujukanResponse{
 		IDRujukan:    idRujukan,

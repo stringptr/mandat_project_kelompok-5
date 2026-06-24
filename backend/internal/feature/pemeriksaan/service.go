@@ -346,7 +346,7 @@ func (s *Service) createNotificationForCreate(ctx context.Context, jadwal *model
 		return nil
 	}
 
-	notif := &model.Notifikasi{
+	notifPetugas := &model.Notifikasi{
 		IDUser:         idPetugas,
 		Judul:          "Pemeriksaan Baru",
 		Pesan:          strPtr(fmt.Sprintf("Data pemeriksaan baru berhasil dibuat oleh %s.", petugas.Nama)),
@@ -354,14 +354,29 @@ func (s *Service) createNotificationForCreate(ctx context.Context, jadwal *model
 		StatusBaca:     false,
 		TanggalKirim:   time.Now(),
 	}
-	errCreate := s.notifRepo.Create(ctx, notif)
-	if errCreate != nil {
+	if err := s.notifRepo.Create(ctx, notifPetugas); err != nil {
 		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Gagal membuat notifikasi."}
 	}
 
 	s.notifPublisher.PublishToUser(idPetugas, &notificationDomain.Notification{
 		Judul: "Pemeriksaan Baru",
 		Pesan: fmt.Sprintf("Data pemeriksaan baru berhasil dibuat oleh %s.", petugas.Nama),
+		Tipe:  string(model.TipeNotifikasi_Pemeriksaan),
+	})
+
+	notifPesan := fmt.Sprintf("Hasil pemeriksaan baru telah dicatat oleh %s.", petugas.Nama)
+	s.notifRepo.Create(ctx, &model.Notifikasi{
+		IDUser:         jadwal.IDPasien,
+		Judul:          "Hasil Pemeriksaan Baru",
+		Pesan:          &notifPesan,
+		TipeNotifikasi: model.TipeNotifikasi_Pemeriksaan,
+		StatusBaca:     false,
+		TanggalKirim:   time.Now(),
+	})
+
+	s.notifPublisher.PublishToUser(jadwal.IDPasien, &notificationDomain.Notification{
+		Judul: "Hasil Pemeriksaan Baru",
+		Pesan: notifPesan,
 		Tipe:  string(model.TipeNotifikasi_Pemeriksaan),
 	})
 

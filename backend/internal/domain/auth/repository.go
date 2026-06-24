@@ -12,4 +12,5 @@ type Repo interface {
 	CreateUser(ctx context.Context, data *model.UserAccount) (int32, error)
 	CreateRoleRecord(ctx context.Context, idUser int32, role string, noStr string, wilayahKerja int32, noSk string, idPosyandu int32) error
 	DeleteRoleRecords(ctx context.Context, idUser int32) error
+	GetDinkesUserIDs(ctx context.Context) ([]int32, error)
 }

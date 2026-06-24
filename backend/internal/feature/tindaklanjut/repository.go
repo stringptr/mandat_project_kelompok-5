@@ -414,6 +414,30 @@ func (r *Repo) GetLaporanTindakLanjut(ctx context.Context) ([]*tindaklanjutDomai
 	return rows, nil
 }
 
+func (r *Repo) GetPasienIDByRujukanID(ctx context.Context, idRujukan int32) (*int32, error) {
+	var rows []*struct {
+		IDPasien int32
+	}
+	sql := `
+		SELECT ji.id_pasien
+		FROM rujukan r
+		JOIN tindak_lanjut tl ON tl.id_tindak_lanjut = r.id_tindak_lanjut
+		JOIN hasil_pemeriksaan hp ON hp.id_hasil_pemeriksaan = tl.id_hasil_pemeriksaan
+		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
+		WHERE r.id_rujukan = #1
+		LIMIT 1
+	`
+
+	err := pgxV5.Query(ctx, RawStatement(sql, RawArgs{"#1": idRujukan}), r.db, &rows)
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	return &rows[0].IDPasien, nil
+}
+
 func (r *Repo) GetPasienIDByHasilPemeriksaanID(ctx context.Context, idHasilPemeriksaan int32) (*int32, error) {
 	var rows []*struct {
 		IDPasien int32

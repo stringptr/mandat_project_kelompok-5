@@ -57,7 +57,7 @@
       <sqlfromfile>N</sqlfromfile>
       <sqlfilename/>
       <setParams>N</setParams>
-      <parallel>N</parallel>
+      <parallel>Y</parallel>
       <xloc>200</xloc>
       <yloc>160</yloc>
       <attributes_hac/>
@@ -325,7 +325,7 @@
       <sendOneStatement>N</sendOneStatement>
       <sql>SELECT public.end_etl_execution_success(
   (SELECT execution_id FROM (
-    SELECT public.get_last_etl_run('RunAll_Workflow') as execution_id
+    SELECT public.get_last_execution_id('RunAll_Workflow') as execution_id
   ) t),
   0,  -- rows_inserted (aggregated at pipeline level)
   0,  -- rows_updated
@@ -349,7 +349,7 @@
       <sendOneStatement>N</sendOneStatement>
       <sql>SELECT public.end_etl_execution_failed(
   (SELECT execution_id FROM (
-    SELECT public.get_last_etl_run('RunAll_Workflow') as execution_id
+    SELECT public.get_last_execution_id('RunAll_Workflow') as execution_id
   ) t),
   'One or more pipelines in RunAll workflow failed'
 )</sql>

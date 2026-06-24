@@ -98,7 +98,7 @@
   END as trimester
 FROM ibu_hamil ih
 WHERE ih.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ
-  AND ih.is_deleted = false</sql>
+</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>

@@ -89,17 +89,17 @@
 SELECT DISTINCT ua.nama AS nama_petugas, 'Bidan'::VARCHAR AS peran
 FROM bidan b
 JOIN user_account ua ON b.id_user = ua.id_user
-WHERE (b.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ OR ua.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ) AND b.is_deleted = false AND ua.is_deleted = false
+WHERE (b.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ OR ua.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ)
 UNION
 SELECT DISTINCT ua.nama, 'Kader'::VARCHAR
 FROM kader_posyandu kp
 JOIN user_account ua ON kp.id_user = ua.id_user
-WHERE (kp.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ OR ua.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ) AND kp.is_deleted = false AND ua.is_deleted = false
+WHERE (kp.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ OR ua.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ)
 UNION
 SELECT DISTINCT ua.nama, 'Dinas Kesehatan'::VARCHAR
 FROM dinas_kesehatan dk
 JOIN user_account ua ON dk.id_user = ua.id_user
-WHERE (dk.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ OR ua.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ) AND dk.is_deleted = false AND ua.is_deleted = false</sql>
+WHERE (dk.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ OR ua.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ)</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>

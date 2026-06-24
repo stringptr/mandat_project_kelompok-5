@@ -104,7 +104,7 @@ FROM jadwal_imunisasi ji
 JOIN pasien p        ON ji.id_pasien = p.id_pasien
 JOIN user_account ua ON p.id_pasien  = ua.id_user
 WHERE ji.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ
-  AND p.is_deleted = false AND ua.is_deleted = false</sql>
+</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>

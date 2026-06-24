@@ -88,11 +88,11 @@
   a.id_pasien,
   a.berat_lahir,
   a.panjang_lahir,
-  a.hubungan_dengan_wali::VARCHAR,
+  a.hubungan_dengan_ibu::VARCHAR,
   a.id_ibu_hamil as id_ibu_hamil_oltp
 FROM anak a
 WHERE a.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ
-  AND a.is_deleted = false</sql>
+</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>

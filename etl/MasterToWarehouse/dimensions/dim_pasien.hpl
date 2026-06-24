@@ -121,8 +121,8 @@ LEFT JOIN pekerjaan         pek  ON ua.id_pekerjaan  = pek.id_pekerjaan
 LEFT JOIN kategori_pendapatan kp ON ua.id_pendapatan = kp.id_pendapatan
 WHERE (p.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ
    OR ua.updated_at &gt;= COALESCE(NULLIF('${LAST_ETL_RUN}', ''), '1900-01-01')::TIMESTAMPTZ)
-  AND p.is_deleted = false
-  AND ua.is_deleted = false</sql>
+
+</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>

@@ -106,7 +106,7 @@ services:
     working_dir: /app
     environment:
       GOOSE_DRIVER: postgres
-      GOOSE_DBSTRING: postgres://${WAREHOUSE_USER:-postgres}:${WAREHOUSE_PASSWORD:-postgres}@${WAREHOUSE_HOST:-warehouse}:${WAREHOUSE_PORT:-5432}/${WAREHOUSE_DB:-imunisasi}
+      GOOSE_DBSTRING: postgres://${WAREHOUSE_USER:-postgres}:${WAREHOUSE_PASSWORD:-postgres}@${WAREHOUSE_HOST:-warehouse}:5432/${WAREHOUSE_DB:-imunisasi}
       GOOSE_MIGRATION_DIR: /app/warehouse
     env_file:
       - .env

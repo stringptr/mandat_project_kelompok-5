@@ -11,16 +11,16 @@ CREATE TABLE IF NOT EXISTS public.etl_log (
     -- ETL Identification
     etl_name VARCHAR(100) NOT NULL,
     pipeline_name VARCHAR(200) NOT NULL,
-    workflow_name VARCHAR(200),
+    workflow_name VARCHAR(200) DEFAULT 'N/A',
     
     -- Execution Tracking
     execution_id VARCHAR(50) NOT NULL UNIQUE,
-    parent_execution_id VARCHAR(50),
+    parent_execution_id VARCHAR(50) DEFAULT 'N/A',
     
     -- Timestamps
     start_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    end_time TIMESTAMPTZ,
-    duration_seconds INTEGER,
+    end_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    duration_seconds INTEGER DEFAULT 0,
     
     -- Status
     status VARCHAR(20) NOT NULL DEFAULT 'RUNNING',
@@ -35,29 +35,29 @@ CREATE TABLE IF NOT EXISTS public.etl_log (
     rows_total BIGINT GENERATED ALWAYS AS (rows_inserted + rows_updated + rows_deleted) STORED,
     
     -- Source & Target
-    source_system VARCHAR(100),
-    source_table VARCHAR(200),
-    target_system VARCHAR(100),
-    target_table VARCHAR(200),
+    source_system VARCHAR(100) DEFAULT 'N/A',
+    source_table VARCHAR(200) DEFAULT 'N/A',
+    target_system VARCHAR(100) DEFAULT 'N/A',
+    target_table VARCHAR(200) DEFAULT 'N/A',
     
     -- Error Handling
-    error_message TEXT,
-    error_code VARCHAR(50),
-    error_line INTEGER,
+    error_message TEXT DEFAULT '-',
+    error_code VARCHAR(50) DEFAULT '-',
+    error_line INTEGER DEFAULT 0,
     
     -- Performance
-    peak_memory_mb NUMERIC(10,2),
-    cpu_time_seconds NUMERIC(10,2),
+    peak_memory_mb NUMERIC(10,2) DEFAULT 0,
+    cpu_time_seconds NUMERIC(10,2) DEFAULT 0,
     
     -- Metadata
-    hop_server VARCHAR(100),
-    hop_version VARCHAR(50),
-    user_name VARCHAR(100),
-    hostname VARCHAR(200),
+    hop_server VARCHAR(100) DEFAULT 'N/A',
+    hop_version VARCHAR(50) DEFAULT 'N/A',
+    user_name VARCHAR(100) DEFAULT 'N/A',
+    hostname VARCHAR(200) DEFAULT 'N/A',
     
     -- Additional Info
-    parameters JSONB,
-    notes TEXT,
+    parameters JSONB DEFAULT '{}'::jsonb,
+    notes TEXT DEFAULT '-',
     
     -- Audit
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -81,13 +81,13 @@ CREATE TABLE IF NOT EXISTS public.etl_log_detail (
     
     -- Step Information
     step_name VARCHAR(200) NOT NULL,
-    step_type VARCHAR(50),
-    step_order INTEGER,
+    step_type VARCHAR(50) DEFAULT 'N/A',
+    step_order INTEGER DEFAULT 0,
     
     -- Timing
     start_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    end_time TIMESTAMPTZ,
-    duration_ms INTEGER,
+    end_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    duration_ms INTEGER DEFAULT 0,
     
     -- Status
     status VARCHAR(20) NOT NULL DEFAULT 'RUNNING',
@@ -98,12 +98,12 @@ CREATE TABLE IF NOT EXISTS public.etl_log_detail (
     rows_error BIGINT DEFAULT 0,
     
     -- Error Details
-    error_message TEXT,
-    error_description TEXT,
+    error_message TEXT DEFAULT '-',
+    error_description TEXT DEFAULT '-',
     
     -- Additional Info
-    sql_executed TEXT,
-    parameters JSONB,
+    sql_executed TEXT DEFAULT '-',
+    parameters JSONB DEFAULT '{}'::jsonb,
     
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -119,30 +119,30 @@ CREATE TABLE IF NOT EXISTS public.etl_metadata (
     id_etl_metadata SERIAL PRIMARY KEY,
     
     etl_name VARCHAR(100) NOT NULL UNIQUE,
-    table_name VARCHAR(200),
+    table_name VARCHAR(200) DEFAULT 'N/A',
     
     -- Incremental Tracking
-    last_successful_run TIMESTAMPTZ,
-    last_watermark TIMESTAMPTZ,
-    high_watermark TIMESTAMPTZ,
+    last_successful_run TIMESTAMPTZ DEFAULT '1970-01-01'::TIMESTAMPTZ,
+    last_watermark TIMESTAMPTZ DEFAULT '1970-01-01'::TIMESTAMPTZ,
+    high_watermark TIMESTAMPTZ DEFAULT '1970-01-01'::TIMESTAMPTZ,
     
     -- Status
     status VARCHAR(20) DEFAULT 'IDLE',
-    last_execution_id VARCHAR(50),
+    last_execution_id VARCHAR(50) DEFAULT 'N/A',
     
     -- Statistics
     total_runs BIGINT DEFAULT 0,
     successful_runs BIGINT DEFAULT 0,
     failed_runs BIGINT DEFAULT 0,
     total_rows_processed BIGINT DEFAULT 0,
-    avg_duration_seconds NUMERIC(10,2),
+    avg_duration_seconds NUMERIC(10,2) DEFAULT 0,
     
     -- Last Run Info
-    last_run_start TIMESTAMPTZ,
-    last_run_end TIMESTAMPTZ,
-    last_run_status VARCHAR(20),
-    last_run_rows BIGINT,
-    last_error_message TEXT,
+    last_run_start TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    last_run_end TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    last_run_status VARCHAR(20) DEFAULT 'N/A',
+    last_run_rows BIGINT DEFAULT 0,
+    last_error_message TEXT DEFAULT '-',
     
     -- Audit
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -160,10 +160,10 @@ CREATE INDEX idx_etl_metadata_status ON public.etl_metadata(status);
 CREATE OR REPLACE FUNCTION public.start_etl_execution(
     p_etl_name VARCHAR,
     p_pipeline_name VARCHAR,
-    p_workflow_name VARCHAR DEFAULT NULL,
-    p_source_table VARCHAR DEFAULT NULL,
-    p_target_table VARCHAR DEFAULT NULL,
-    p_parameters JSONB DEFAULT NULL
+    p_workflow_name VARCHAR DEFAULT 'N/A',
+    p_source_table VARCHAR DEFAULT 'N/A',
+    p_target_table VARCHAR DEFAULT 'N/A',
+    p_parameters JSONB DEFAULT '{}'::jsonb
 )
 RETURNS VARCHAR AS $$
 DECLARE
@@ -177,15 +177,22 @@ BEGIN
     -- Insert log record
     INSERT INTO public.etl_log (
         etl_name, pipeline_name, workflow_name, execution_id,
-        start_time, status, source_table, target_table, parameters
+        start_time, status, source_table, target_table, parameters,
+        source_system, target_system, hop_server, hop_version, user_name, hostname
     ) VALUES (
-        p_etl_name, p_pipeline_name, p_workflow_name, v_execution_id,
-        CURRENT_TIMESTAMP, 'RUNNING', p_source_table, p_target_table, p_parameters
+        p_etl_name, p_pipeline_name, COALESCE(p_workflow_name, 'N/A'), v_execution_id,
+        CURRENT_TIMESTAMP, 'RUNNING', COALESCE(p_source_table, 'N/A'), COALESCE(p_target_table, 'N/A'), COALESCE(p_parameters, '{}'::jsonb),
+        COALESCE(p_parameters->>'SOURCE_SYSTEM', 'OLTP_SiGizi'),
+        COALESCE(p_parameters->>'TARGET_SYSTEM', 'Data_Warehouse'),
+        COALESCE(p_parameters->>'HOP_SERVER', 'Local_Hop'),
+        COALESCE(p_parameters->>'HOP_VERSION', 'Unknown'),
+        CURRENT_USER,
+        COALESCE(inet_client_addr()::TEXT, 'localhost')
     ) RETURNING id_etl_log INTO v_id_etl_log;
     
     -- Update metadata status
     INSERT INTO public.etl_metadata (etl_name, status, last_execution_id, last_run_start, table_name)
-    VALUES (p_etl_name, 'RUNNING', v_execution_id, CURRENT_TIMESTAMP, p_target_table)
+    VALUES (p_etl_name, 'RUNNING', v_execution_id, CURRENT_TIMESTAMP, COALESCE(p_target_table, 'N/A'))
     ON CONFLICT (etl_name) DO UPDATE SET
         status = 'RUNNING',
         last_execution_id = v_execution_id,
@@ -248,7 +255,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION public.end_etl_execution_failed(
     p_execution_id VARCHAR,
     p_error_message TEXT,
-    p_error_code VARCHAR DEFAULT NULL
+    p_error_code VARCHAR DEFAULT '-'
 )
 RETURNS VOID AS $$
 DECLARE
@@ -266,8 +273,8 @@ BEGIN
         end_time = CURRENT_TIMESTAMP,
         duration_seconds = v_duration,
         status = 'FAILED',
-        error_message = p_error_message,
-        error_code = p_error_code,
+        error_message = COALESCE(p_error_message, '-'),
+        error_code = COALESCE(p_error_code, '-'),
         updated_at = CURRENT_TIMESTAMP
     WHERE execution_id = p_execution_id;
     
@@ -276,7 +283,7 @@ BEGIN
         failed_runs = failed_runs + 1,
         last_run_end = CURRENT_TIMESTAMP,
         last_run_status = 'FAILED',
-        last_error_message = p_error_message,
+        last_error_message = COALESCE(p_error_message, '-'),
         updated_at = CURRENT_TIMESTAMP
     WHERE etl_name = v_etl_name;
 END;
@@ -305,11 +312,11 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION public.log_etl_step(
     p_execution_id VARCHAR,
     p_step_name VARCHAR,
-    p_step_type VARCHAR DEFAULT NULL,
+    p_step_type VARCHAR DEFAULT 'N/A',
     p_rows_input BIGINT DEFAULT 0,
     p_rows_output BIGINT DEFAULT 0,
     p_status VARCHAR DEFAULT 'SUCCESS',
-    p_error_message TEXT DEFAULT NULL
+    p_error_message TEXT DEFAULT '-'
 )
 RETURNS VOID AS $$
 DECLARE
@@ -323,8 +330,8 @@ BEGIN
         id_etl_log, step_name, step_type, start_time, end_time,
         status, rows_input, rows_output, error_message
     ) VALUES (
-        v_id_etl_log, p_step_name, p_step_type, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
-        p_status, p_rows_input, p_rows_output, p_error_message
+        v_id_etl_log, p_step_name, COALESCE(p_step_type, 'N/A'), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
+        p_status, p_rows_input, p_rows_output, COALESCE(p_error_message, '-')
     );
 END;
 $$ LANGUAGE plpgsql;

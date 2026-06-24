@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Role } from '../App';
 import { apiPost, apiGet, ApiError, setOnUnauthorized } from '../lib/api';
+import { useNotificationSSE } from '../hooks/useNotificationSSE';
+import type { SSENotification } from '../hooks/useNotificationSSE';
 
 export interface UserProfile {
   idUser: number;
@@ -25,6 +27,8 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   isLoggedIn: boolean;
   loading: boolean;
+  unreadCount: number;
+  liveNotifications: SSENotification[];
   refreshProfile: () => Promise<void>;
 }
 
@@ -82,6 +86,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
     return null;
   });
   const [loading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [liveNotifications, setLiveNotifications] = useState<SSENotification[]>([]);
+
+  useNotificationSSE(
+    user !== null,
+    (notif) => setLiveNotifications((prev) => [notif, ...prev].slice(0, 50)),
+    setUnreadCount
+  );
 
   const clearAuth = useCallback(() => {
     setUser(null);
@@ -219,10 +231,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoggedIn: user !== null, loading, refreshProfile }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoggedIn: user !== null, loading, unreadCount, liveNotifications, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function useNotifications() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useNotifications must be used inside AuthProvider');
+  return { liveNotifications: ctx.liveNotifications, unreadCount: ctx.unreadCount };
 }
 
 export function useAuth(): AuthContextValue {

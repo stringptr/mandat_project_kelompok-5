@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { apiGet, apiPatch } from '../../../lib/api';
+import { useNotifications } from '../../../context/AuthContext';
 import type { NotifGroup, NotifItem, NotifCategory } from './types';
 
 export interface BackendNotifikasi {
@@ -57,6 +58,7 @@ export function useNotifikasi() {
   const [notifikasi, setNotifikasi] = useState<BackendNotifikasi[]>([]);
   const [loading, setLoading] = useState(true);
   const [meta, setMeta] = useState({ current_page: 1, per_page: 15, total: 0, last_page: 1 });
+  const { liveNotifications } = useNotifications();
 
   const fetchNotifikasi = async (page = 1) => {
     setLoading(true);
@@ -75,6 +77,35 @@ export function useNotifikasi() {
   useEffect(() => {
     fetchNotifikasi();
   }, []);
+
+  const prevLiveLength = useRef(0);
+  useEffect(() => {
+    if (liveNotifications.length > prevLiveLength.current) {
+      const newOnes = liveNotifications.slice(prevLiveLength.current);
+      setNotifikasi((prev) => {
+        const existingIds = new Set(prev.map((n) => n.id_notifikasi));
+        const toAdd: BackendNotifikasi[] = [];
+        for (const n of newOnes) {
+          if (!existingIds.has(n.id)) {
+            toAdd.push({
+              id_notifikasi: n.id,
+              judul: n.judul,
+              pesan: n.pesan,
+              tipe_notifikasi: n.tipe,
+              status_baca: false,
+              tanggal_kirim: n.created_at,
+            });
+          }
+        }
+        if (toAdd.length > 0) {
+          setMeta((m) => ({ ...m, total: m.total + toAdd.length }));
+          return [...toAdd, ...prev];
+        }
+        return prev;
+      });
+    }
+    prevLiveLength.current = liveNotifications.length;
+  }, [liveNotifications]);
 
   const markRead = async (id: number) => {
     try {

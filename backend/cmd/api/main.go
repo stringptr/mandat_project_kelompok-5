@@ -182,6 +182,9 @@ func main() {
 		</html>`))
 	})
 
+	sseHandler := notification.NewSSEHandler(natsutil.NewPubSub(natsConn.Conn()), &jwtUtil, notifRepo)
+	r.Get("/v1/sse/notification", sseHandler.ServeHTTP)
+
 	v1Group := huma.NewGroup(api, "/v1")
 	v1.RegisterRoutes(v1Group, r, &v1.Dependency{
 		AuthConfig:          cfg.AuthConfig,

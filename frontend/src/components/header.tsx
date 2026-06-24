@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Bell, LogOut, LogIn, ChevronDown, ArrowRight } from 'lucide-react';
 import type { Role } from '../App';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useNotifications } from '../context/AuthContext';
 import { apiGet, apiPatch } from '../lib/api';
 
 interface HeaderProps {
@@ -64,29 +64,18 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [notifPreviews, setNotifPreviews] = useState<NotifPreview[]>([]);
+  const { liveNotifications, unreadCount } = useNotifications();
 
-  const fetchNotif = () => {
-    if (!isLoggedIn) return;
-    apiGet<{ notifikasi: NotifPreview[] }>('/notifikasi?per_page=4')
-      .then((res) => setNotifPreviews(res.notifikasi ?? []))
-      .catch(() => {});
-  };
-
-  useEffect(() => {
-    fetchNotif();
-    const interval = setInterval(fetchNotif, 15000);
-    return () => clearInterval(interval);
-  }, [isLoggedIn]);
-
-  useEffect(() => {
-    const onFocus = () => fetchNotif();
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, [isLoggedIn]);
+  const notifPreviews: NotifPreview[] = liveNotifications.slice(0, 4).map((n) => ({
+    id_notifikasi: n.id,
+    judul: n.judul,
+    pesan: n.pesan,
+    tipe_notifikasi: n.tipe,
+    status_baca: false,
+    tanggal_kirim: n.created_at,
+  }));
 
   const pageTitle = PAGE_TITLES[location.pathname] || 'SiGizi';
-  const unreadCount = notifPreviews.filter((n) => !n.status_baca).length;
 
   const handleNotifClick = async (id: number, tipe: string) => {
     setShowNotifications(false);
@@ -166,7 +155,6 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
                 onClick={() => {
                   setShowNotifications(!showNotifications);
                   setShowProfileMenu(false);
-                  if (!showNotifications) fetchNotif();
                 }}
                 className="p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg transition-colors relative"
               >

@@ -1,0 +1,244 @@
+services:
+  hop-env:
+    image: docker.io/alpine:3.23.4
+    env_file:
+      - .env.prod
+    volumes:
+      - ./etl:/files/projects/imunisasi:z
+    command: sh -c "/files/projects/imunisasi/init-env.sh" && sh
+    profiles: ["hop", "data_management", "prod"]
+
+  hop:
+    image: docker.io/apache/hop-web:2.17.0
+    depends_on:
+      hop-env:
+        condition: service_completed_successfully
+    ports:
+      - ${HOP_HOST_PORT:-8090}:8080
+    environment:
+      HOP_PROJECT_NAME: imunisasi
+      HOP_PROJECT_FOLDER: /files/projects/imunisasi
+      HOP_ENVIRONMENT_NAME: "env"
+      HOP_ENVIRONMENT_CONFIG_FILE_NAME_PATHS: "/files/projects/imunisasi/.env.prod.json"
+      HOP_CUSTOM_ENTRYPOINT_EXTENSION_SHELL_FILE_PATH: "/files/projects/imunisasi/init-env.sh"
+    env_file:
+      - .env.prod
+    volumes:
+      - ./etl:/files/projects/imunisasi:z
+    profiles: ["hop", "data_management", "prod"]
+
+  warehouse:
+    image: docker.io/postgres:18.3-alpine3.23
+    restart: unless-stopped
+    volumes:
+      - ./storage/warehouse:/var/lib/postgresql
+      - ./migrations:/docker-entrypoint-initdb.d
+    env_file:
+      - .env.prod
+    environment:
+      POSTGRES_DB: ${WAREHOUSE_DB:-imunisasi}
+      POSTGRES_USER: ${WAREHOUSE_USER:-postgres}
+      POSTGRES_PASSWORD: ${WAREHOUSE_PASSWORD:-postgres}
+    ports:
+      - ${WAREHOUSE_HOST_PORT:-5433}:5432
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d
+            ${POSTGRES_DB:-imunisasi}",
+        ]
+      interval: 5s
+      retries: 10
+      timeout: 5s
+    profiles: ["warehouse", "data_management", "prod"]
+
+  master:
+    image: docker.io/postgres:18.3-alpine3.23
+    restart: unless-stopped
+    volumes:
+      - ./storage/master:/var/lib/postgresql
+      - ./migrations:/docker-entrypoint-initdb.d
+      - ./migrations/data:/data-csv:z
+    env_file:
+      - .env.prod
+    environment:
+      POSTGRES_DB: ${MASTER_DB:-imunisasi}
+      POSTGRES_USER: ${MASTER_USER:-postgres}
+      POSTGRES_PASSWORD: ${MASTER_PASSWORD:-postgres}
+    ports:
+      - ${MASTER_HOST_PORT:-5432}:5432
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d
+            ${POSTGRES_DB:-imunisasi}",
+        ]
+      interval: 5s
+      retries: 10
+      timeout: 5s
+    profiles: ["master", "information_system", "data_management", "prod", "server_2"]
+
+  staging:
+    image: mcr.microsoft.com/mssql/server:2025-CU3-ubuntu-22.04
+    restart: unless-stopped
+    volumes:
+      - ./storage/staging:/var/opt/mssql:z
+      - ./migrations/data:/data:z
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: ${STAGING_SA_PASSWORD:-DefaultPassword123!}
+      MSSQL_DB: ${STAGING_DB:-imunisasi}
+    env_file:
+      - .env.prod
+    ports:
+      - ${STAGING_HOST_PORT:-1433}:1433
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P
+        ${STAGING_SA_PASSWORD:-DefaultPassword123!} -C -Q "SELECT 1" || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    profiles: ["staging", "data_management", "prod"]
+
+  migration-warehouse:
+    build:
+      context: ./migrations
+      dockerfile: Containerfile
+    volumes:
+      - ./migrations:/app:z
+    working_dir: /app
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: postgres://${WAREHOUSE_USER:-postgres}:${WAREHOUSE_PASSWORD:-postgres}@warehouse:5432/${WAREHOUSE_DB:-imunisasi}
+      GOOSE_MIGRATION_DIR: /app/warehouse
+    env_file:
+      - .env.prod
+    depends_on:
+      warehouse:
+        condition: service_healthy
+    command: sh -c "goose up && sleep infinity"
+    profiles: ["migration", "warehouse", "data_management", "prod"]
+
+  migration-master:
+    build:
+      context: ./migrations
+      dockerfile: Containerfile
+    volumes:
+      - ./migrations:/app:z
+    working_dir: /app
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: postgres://${MASTER_USER:-postgres}:${MASTER_PASSWORD:-postgres}@master:5432/${MASTER_DB:-imunisasi}
+      GOOSE_MIGRATION_DIR: /app/master
+    env_file:
+      - .env.prod
+    depends_on:
+      master:
+        condition: service_healthy
+    command: sh -c "goose up && sleep infinity"
+    profiles:
+      [
+        "migration",
+        "information_system",
+        "data_management",
+        "master",
+        "prod",
+        "server_2",
+      ]
+
+  migration-staging:
+    build:
+      context: ./migrations
+      dockerfile: Containerfile
+    volumes:
+      - ./migrations:/app:z
+    working_dir: /app
+    environment:
+      GOOSE_DRIVER: mssql
+      GOOSE_DBSTRING: sqlserver://${STAGING_USER:-sa}:${STAGING_SA_PASSWORD:-DefaultPassword123!}@staging:1433?database=${STAGING_DB:-imunisasi}
+      GOOSE_MIGRATION_DIR: /app/staging
+    env_file:
+      - .env.prod
+    depends_on:
+      staging:
+        condition: service_healthy
+    command: sh -c "goose up && sleep infinity"
+    profiles: ["migration", "staging", "data_management", "prod"]
+
+  nats:
+    image: docker.io/nats:2.14.1-alpine3.22
+    restart: unless-stopped
+    ports:
+      - ${NATS_HTTP_MONITOR_HOST_PORT:-8222}:8222
+    volumes:
+      - ./nats/app:/etc/nats:z
+    env_file:
+      - .env.prod
+    # command: ["-c", "/etc/nats/server.conf"]
+    profiles: ["information_system", "prod", "server_2"]
+    command:
+      - -js
+      - -m
+      - "8222"
+
+  nui:
+    image: ghcr.io/nats-nui/nui:0.9.2
+    restart: unless-stopped
+    ports:
+      - ${NUI_HOST_PORT:-31311}:31311
+      - "8000:30"
+    volumes:
+      - ./storage/nats/nui/db:/db:z
+      - ./nats/nui/contexts:/contexts:z
+    environment:
+      - NATS_CLI_CONTEXTS=/contexts
+    env_file:
+      - .env.prod
+    profiles: ["information_system", "prod"]
+
+  webserver:
+    build:
+      context: ./webserver
+      dockerfile: Containerfile
+    restart: unless-stopped
+    ports:
+      - ${WEBSERVER_PROD_HTTP_HOST_PORT:-80}:80
+      - ${WEBSERVER_PROD_HTTPS_HOST_PORT:-443}:443
+      - ${WEBSERVER_PROD_HTTPS_HOST_PORT:-443}:443/udp
+      - ${WEBSERVER_PROD_ADMIN_HOST_PORT:-2019}:2019
+    env_file:
+      - .env.prod
+    volumes:
+      - ./webserver/Caddyfile:/etc/caddy/Caddyfile:ro
+    profiles: ["webserver", "information_system", "prod", "server_1"]
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Containerfile
+      target: production
+    volumes:
+      - ./backend:/app:z
+    working_dir: /app
+    env_file:
+      - .env.prod
+    profiles: ["backend", "information_system", "prod", "server_1"]
+
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+      dockerfile: Containerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-backend:8080}
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app:z
+      - /app/node_modules
+    env_file: .env.prod
+    environment:
+      - NODE_ENV=production
+    profiles: ["frontend", "information_system", "prod", "server_1"]

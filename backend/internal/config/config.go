@@ -48,6 +48,7 @@ type MailConfig struct {
 	Provider     string
 	Host         string
 	Port         int
+	SSL          bool
 	Username     string
 	Password     string
 	FromEmail    string
@@ -78,11 +79,12 @@ func Load() *Config {
 	restrictAuthMaxAttemptInt, _ := strconv.Atoi(restrictAuthMaxAttempt)
 
 	mailProvider := getEnv("MAIL_PROVIDER", "smtp")
-	mailHost := getEnv("MAIL_HOST", "sandbox.smtp.mailtrap.io")
-	mailPortStr := getEnv("MAIL_PORT", "2525")
+	mailHost := getEnv("MAIL_HOST", "smtp.gmail.com")
+	mailPortStr := getEnv("MAIL_PORT", "587")
+	mailSSL := getEnv("MAIL_SSL", "false")
 	mailUser := getEnv("MAIL_USERNAME", "")
 	mailPass := getEnv("MAIL_PASSWORD", "")
-	mailFromEmail := getEnv("MAIL_FROM_EMAIL", "noreply@sigizi.com")
+	mailFromEmail := getEnv("MAIL_FROM_EMAIL", "")
 	mailFromName := getEnv("MAIL_FROM_NAME", "SiGizi")
 	mailPortInt, _ := strconv.Atoi(mailPortStr)
 	resendAPIKey := getEnv("RESEND_API_KEY", "")
@@ -117,6 +119,7 @@ func Load() *Config {
 			Provider:     mailProvider,
 			Host:         mailHost,
 			Port:         mailPortInt,
+			SSL:          mailSSL == "true",
 			Username:     mailUser,
 			Password:     mailPass,
 			FromEmail:    mailFromEmail,

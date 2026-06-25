@@ -1,6 +1,8 @@
 package mail
 
 import (
+	"time"
+
 	"github.com/go-mail/mail/v2"
 	"github.com/stringptr/SiGizi/backend/internal/config"
 )
@@ -24,6 +26,8 @@ type SMTPSender struct {
 
 func NewSMTPSender(cfg config.MailConfig) *SMTPSender {
 	d := mail.NewDialer(cfg.Host, cfg.Port, cfg.Username, cfg.Password)
+	d.SSL = cfg.SSL
+	d.Timeout = 15 * time.Second
 	return &SMTPSender{dialer: d, from: cfg.FromEmail, fromName: cfg.FromName}
 }
 

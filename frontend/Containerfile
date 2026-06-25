@@ -20,6 +20,7 @@ RUN bun run build
 # STAGE 4: Production
 FROM base AS production
 ENV NODE_ENV=production
+COPY --from=build-step /app/vite.config.ts ./
 COPY --from=build-step /app/dist ./dist
 COPY --from=build-step /app/node_modules ./node_modules
-CMD ["bun", "run", "preview"]
+CMD ["bun", "run", "preview", "--host"]

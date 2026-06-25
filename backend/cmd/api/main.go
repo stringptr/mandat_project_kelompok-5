@@ -101,8 +101,6 @@ func main() {
 	lokasiHandler := lokasiFeature.NewHandler(lokasiService)
 
 	pemeriksaanRepo := pemeriksaanFeature.NewRepo(pool)
-	pemeriksaanService := pemeriksaanFeature.NewService(pemeriksaanRepo, auditLogRepo, notifRepo, notifPublisher)
-	pemeriksaanHandler := pemeriksaanFeature.NewHandler(pemeriksaanService)
 
 	imunisasiRepo := imunisasiFeature.NewRepo(pool)
 	imunisasiService := imunisasiFeature.NewService(imunisasiRepo, auditLogRepo, notifRepo, notifPublisher)
@@ -117,12 +115,20 @@ func main() {
 	faskesHandler := faskesFeature.NewHandler(faskesService)
 
 	tindaklanjutRepo := tindaklanjutFeature.NewRepo(pool)
-	tindaklanjutService := tindaklanjutFeature.NewService(tindaklanjutRepo, auditLogRepo, notifRepo, notifPublisher)
-	tindaklanjutHandler := tindaklanjutFeature.NewHandler(tindaklanjutService)
 
+	// dashboardRepo is created early so it can be passed as MVRefresher to
+	// services that write data (pemeriksaan, tindaklanjut), ensuring that
+	// all dashboard materialized views stay fresh after mutations.
 	dashboardRepo := dashboardFeature.NewRepo(pool)
 	dashboardService := dashboardFeature.NewService(dashboardRepo)
 	dashboardHandler := dashboardFeature.NewHandler(dashboardService)
+
+	pemeriksaanService := pemeriksaanFeature.NewService(pemeriksaanRepo, auditLogRepo, notifRepo, notifPublisher, dashboardRepo)
+	pemeriksaanHandler := pemeriksaanFeature.NewHandler(pemeriksaanService)
+
+	tindaklanjutService := tindaklanjutFeature.NewService(tindaklanjutRepo, auditLogRepo, notifRepo, notifPublisher, dashboardRepo)
+	tindaklanjutHandler := tindaklanjutFeature.NewHandler(tindaklanjutService)
+
 
 	authService := auth.NewService(authRepo, userSessionRepo, userAccountRepo, jwtUtil, &cfg.AuthConfig, &cfg.RestrictAuthConfig, banRepo, blacklistRepo, auditLogRepo, mail.New(cfg.MailConfig), notifRepo, notifPublisher)
 	authHandler := auth.NewHandler(authService, &jwtUtil)

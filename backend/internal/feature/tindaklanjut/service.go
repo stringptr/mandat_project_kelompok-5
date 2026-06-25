@@ -3,12 +3,14 @@ package tindaklanjut
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
 
 	tindaklanjutDomain "github.com/stringptr/SiGizi/backend/internal/domain/tindaklanjut"
 	auditlogDomain "github.com/stringptr/SiGizi/backend/internal/domain/auditlog"
+	dashboardDomain "github.com/stringptr/SiGizi/backend/internal/domain/dashboard"
 	notificationDomain "github.com/stringptr/SiGizi/backend/internal/domain/notification"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
 	"github.com/stringptr/SiGizi/backend/internal/infrastructure/jet/imunisasi/public/model"
@@ -26,19 +28,31 @@ func isPetugas(roles []string) bool {
 }
 
 type Service struct {
-	repo          tindaklanjutDomain.Repo
-	auditRepo     auditlogDomain.Repo
-	notifRepo     notificationDomain.Repo
+	repo           tindaklanjutDomain.Repo
+	auditRepo      auditlogDomain.Repo
+	notifRepo      notificationDomain.Repo
 	notifPublisher notificationDomain.Publisher
+	mvRefresher    dashboardDomain.MVRefresher
 }
 
-func NewService(repo tindaklanjutDomain.Repo, auditRepo auditlogDomain.Repo, notifRepo notificationDomain.Repo, notifPublisher notificationDomain.Publisher) *Service {
+func NewService(repo tindaklanjutDomain.Repo, auditRepo auditlogDomain.Repo, notifRepo notificationDomain.Repo, notifPublisher notificationDomain.Publisher, mvRefresher dashboardDomain.MVRefresher) *Service {
 	return &Service{
-		repo:          repo,
-		auditRepo:     auditRepo,
-		notifRepo:     notifRepo,
+		repo:           repo,
+		auditRepo:      auditRepo,
+		notifRepo:      notifRepo,
 		notifPublisher: notifPublisher,
+		mvRefresher:    mvRefresher,
 	}
+}
+
+// refreshAsync triggers a background refresh of all dashboard materialized views
+// without blocking the HTTP response.
+func (s *Service) refreshAsync() {
+	go func() {
+		if err := s.mvRefresher.RefreshMaterializedViews(context.Background()); err != nil {
+			log.Printf("[tindaklanjut] refresh materialized views failed: %v", err)
+		}
+	}()
 }
 
 func (s *Service) logAudit(ctx context.Context, endpoint string, tipeAktivitas model.TipeAktivitas, berhasil bool, tableName string, recordID string, detail string) {
@@ -198,6 +212,7 @@ func (s *Service) CreateTindakLanjut(ctx context.Context, idBidan int32, req *ti
 
 	idStr := strconv.Itoa(int(tindakLanjutData.IDTindakLanjut))
 	s.logAudit(ctx, "POST /tindak-lanjut", model.TipeAktivitas_DataInsert, true, "tindak_lanjut", idStr, "Berhasil membuat tindak lanjut")
+	s.refreshAsync()
 
 	notifPesan := "Tindak lanjut telah dibuat untuk hasil pemeriksaan Anda."
 	if idRujukan != nil {
@@ -257,6 +272,7 @@ func (s *Service) UpdateStatusRujukan(ctx context.Context, idRujukan int32, req 
 
 	idStr := strconv.Itoa(int(idRujukan))
 	s.logAudit(ctx, "PATCH /rujukan/"+idStr+"/status", model.TipeAktivitas_DataUpdate, true, "rujukan", idStr, "Berhasil memperbarui status rujukan menjadi: "+req.StatusRujukan)
+	s.refreshAsync()
 
 	idPasien, _ := s.repo.GetPasienIDByRujukanID(ctx, idRujukan)
 	if idPasien != nil {
@@ -278,7 +294,7 @@ func (s *Service) UpdateStatusRujukan(ctx context.Context, idRujukan int32, req 
 	}
 
 	return &tindaklanjutDomain.UpdateStatusRujukanResponse{
-		IDRujukan:    idRujukan,
+		IDRujukan:     idRujukan,
 		StatusRujukan: req.StatusRujukan,
 	}, nil
 }

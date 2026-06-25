@@ -3,6 +3,7 @@ package pemeriksaan
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	auditlogDomain "github.com/stringptr/SiGizi/backend/internal/domain/auditlog"
+	dashboardDomain "github.com/stringptr/SiGizi/backend/internal/domain/dashboard"
 	notificationDomain "github.com/stringptr/SiGizi/backend/internal/domain/notification"
 	pemeriksaanDomain "github.com/stringptr/SiGizi/backend/internal/domain/pemeriksaan"
 	"github.com/stringptr/SiGizi/backend/internal/errorutils"
@@ -18,19 +20,31 @@ import (
 )
 
 type Service struct {
-	repo         pemeriksaanDomain.Repo
-	auditRepo    auditlogDomain.Repo
-	notifRepo    notificationDomain.Repo
+	repo           pemeriksaanDomain.Repo
+	auditRepo      auditlogDomain.Repo
+	notifRepo      notificationDomain.Repo
 	notifPublisher notificationDomain.Publisher
+	mvRefresher    dashboardDomain.MVRefresher
 }
 
-func NewService(repo pemeriksaanDomain.Repo, auditRepo auditlogDomain.Repo, notifRepo notificationDomain.Repo, notifPublisher notificationDomain.Publisher) *Service {
+func NewService(repo pemeriksaanDomain.Repo, auditRepo auditlogDomain.Repo, notifRepo notificationDomain.Repo, notifPublisher notificationDomain.Publisher, mvRefresher dashboardDomain.MVRefresher) *Service {
 	return &Service{
-		repo:          repo,
-		auditRepo:     auditRepo,
-		notifRepo:     notifRepo,
+		repo:           repo,
+		auditRepo:      auditRepo,
+		notifRepo:      notifRepo,
 		notifPublisher: notifPublisher,
+		mvRefresher:    mvRefresher,
 	}
+}
+
+// refreshAsync triggers a background refresh of all dashboard materialized views
+// without blocking the HTTP response.
+func (s *Service) refreshAsync() {
+	go func() {
+		if err := s.mvRefresher.RefreshMaterializedViews(context.Background()); err != nil {
+			log.Printf("[pemeriksaan] refresh materialized views failed: %v", err)
+		}
+	}()
 }
 
 func (s *Service) GetAll(ctx context.Context, req *pemeriksaanDomain.GetAllPemeriksaanRequest) (*pemeriksaanDomain.PemeriksaanListData, *errorutils.Error) {
@@ -122,6 +136,8 @@ func (s *Service) Create(ctx context.Context, idPetugas int32, req *pemeriksaanD
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Gagal membuat data pemeriksaan."}
 	}
+
+	s.refreshAsync()
 
 	idStr := strconv.Itoa(int(modelData.IDHasilPemeriksaan))
 	s.logAudit(ctx, "POST /monitoring/pemeriksaan", model.TipeAktivitas_DataInsert, true, "hasil_pemeriksaan", idStr, "Berhasil membuat data pemeriksaan")
@@ -225,6 +241,8 @@ func (s *Service) Update(ctx context.Context, req *pemeriksaanDomain.UpdatePemer
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Gagal memperbarui data pemeriksaan."}
 	}
 
+	s.refreshAsync()
+
 	idStr := strconv.Itoa(int(idHasilPemeriksaan))
 	s.logAudit(ctx, "PUT /monitoring/pemeriksaan/"+idStr, model.TipeAktivitas_DataUpdate, true, "hasil_pemeriksaan", idStr, "Berhasil memperbarui data pemeriksaan")
 
@@ -249,6 +267,8 @@ func (s *Service) Delete(ctx context.Context, idHasilPemeriksaan int32) *errorut
 		return &errorutils.Error{Status: http.StatusInternalServerError, Message: "Gagal menghapus data pemeriksaan."}
 	}
 
+	s.refreshAsync()
+
 	idStr := strconv.Itoa(int(idHasilPemeriksaan))
 	s.logAudit(ctx, "DELETE /monitoring/pemeriksaan/"+idStr, model.TipeAktivitas_DataDelete, true, "hasil_pemeriksaan", idStr, "Berhasil menghapus data pemeriksaan")
 
@@ -270,6 +290,8 @@ func (s *Service) Verify(ctx context.Context, idHasilPemeriksaan int32, idBidan 
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Gagal memverifikasi data pemeriksaan."}
 	}
+
+	s.refreshAsync()
 
 	idStr := strconv.Itoa(int(idHasilPemeriksaan))
 	s.logAudit(ctx, "PATCH /monitoring/pemeriksaan/"+idStr+"/verify", model.TipeAktivitas_VerifikasiRegistrasi, true, "hasil_pemeriksaan", idStr, "Berhasil memverifikasi data pemeriksaan oleh bidan")

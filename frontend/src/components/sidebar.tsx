@@ -44,7 +44,7 @@ const getFilteredNavItems = (role: Role) => {
             return ['/', '/monitoring', '/edukasi', '/user-management', '/notifikasi'].includes(item.path);
         }
         if (role === 'Kader Posyandu') {
-            return ['/', '/monitoring', '/tindak-lanjut', '/edukasi', '/notifikasi'].includes(item.path);
+            return ['/', '/monitoring', '/edukasi', '/notifikasi'].includes(item.path);
         }
         // Bidan: semua kecuali user-management
         return item.path !== '/user-management';
@@ -56,7 +56,7 @@ export function Sidebar({ currentRole, onLoginClick }: SidebarProps): JSX.Elemen
     const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
     const { isLoggedIn, user } = useAuth();
 
-    // Logged-in → filtered by role. Guest → only Dashboard & Edukasi
+    // Logged-in -> filtered by role. Guest -> only Dashboard & Edukasi
     const filteredItems = isLoggedIn && user ? getFilteredNavItems(user.role) : NAV_ITEMS.filter(item => ['/', '/edukasi'].includes(item.path));
 
     return (

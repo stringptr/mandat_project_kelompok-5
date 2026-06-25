@@ -251,7 +251,7 @@ export function KaderSection() {
         </div>
       )}
 
-      <ModalTambahPemeriksaan isOpen={modalTambah} onClose={() => setModalTambah(false)} pasienList={pasienOptions} onSubmit={handleTambahSubmit} />
+      <ModalTambahPemeriksaan isOpen={modalTambah} onClose={() => setModalTambah(false)} pasienList={pasienOptions} isKader={true} onSubmit={handleTambahSubmit} />
       <ModalEditPemeriksaan isOpen={modalEdit} onClose={() => setModalEdit(false)} namaAnak={editTarget?.nama ?? ''} data={editTarget?.data ?? null} onSubmit={handleEditSubmit} />
       <ModalHapusPemeriksaan isOpen={modalHapus} onClose={() => { setModalHapus(false); setHapusTarget(null); }} namaAnak={hapusTarget?.nama ?? ''} tanggalPemeriksaan={hapusTarget?.tanggal ?? ''} onConfirm={handleHapusConfirm} isLoading={isDeleting} />
     </div>

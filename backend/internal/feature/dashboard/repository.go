@@ -197,6 +197,34 @@ func (r *Repo) GetIbuHamilPerWilayah(ctx context.Context) ([]dashboardDomain.Ibu
 	return results, rows.Err()
 }
 
+// RefreshMaterializedViews refreshes all dashboard materialized views.
+// Each view is refreshed with CONCURRENTLY to avoid locking out readers.
+// Errors are intentionally ignored so a partial failure doesn't break callers.
+func (r *Repo) RefreshMaterializedViews(ctx context.Context) error {
+	views := []string{
+		"mv_dashboard_stats",
+		"mv_dashboard_distribusi_gizi",
+		"mv_dashboard_tren_stunting",
+		"mv_dashboard_kehadiran_bulanan",
+		"mv_dashboard_stunting_per_wilayah",
+		"mv_public_stats",
+		"mv_riwayat_pemeriksaan",
+		"mv_tumbuh_kembang",
+		"mv_dashboard_jadwal_terdekat",
+		"mv_ibu_hamil_stats",
+		"mv_ibu_hamil_per_wilayah",
+	}
+	for _, v := range views {
+		// CONCURRENTLY requires a unique index on the MV; if it fails, fall back.
+		_, err := r.db.Exec(ctx, "REFRESH MATERIALIZED VIEW CONCURRENTLY "+v)
+		if err != nil {
+			// Fall back to regular refresh (blocks reads for a moment, but safe).
+			r.db.Exec(ctx, "REFRESH MATERIALIZED VIEW "+v) //nolint:errcheck
+		}
+	}
+	return nil
+}
+
 var _ dashboardDomain.Repo = (*Repo)(nil)
 
 func (r *Repo) GetPosyanduByKaderID(ctx context.Context, idKader int32) (int32, error) {
@@ -225,16 +253,15 @@ func (r *Repo) GetSemuaPemeriksaan(ctx context.Context, page, perPage int, idBid
 		argIdx++
 	}
 
-	baseFrom := ` FROM hasil_pemeriksaan hp
+	countFrom := ` FROM hasil_pemeriksaan hp
 		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
-		JOIN pasien p ON p.id_pasien = ji.id_pasien AND p.is_deleted = false
-		JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu
-		JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
-		JOIN user_account petugas ON petugas.id_user = hp.id_petugas_input
-		LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false `
+		JOIN pasien p ON p.id_pasien = ji.id_pasien AND p.is_deleted = false `
+	if idBidan > 0 || idPosyandu > 0 {
+		countFrom += ` JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu `
+	}
 
 	var count struct{ Count int }
-	err := r.db.QueryRow(ctx, `SELECT COUNT(*)`+baseFrom+where, args...).Scan(&count.Count)
+	err := r.db.QueryRow(ctx, `SELECT COUNT(*)`+countFrom+where, args...).Scan(&count.Count)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -245,15 +272,27 @@ func (r *Repo) GetSemuaPemeriksaan(ctx context.Context, page, perPage int, idBid
 	allArgs := append(args, perPage, offset)
 
 	sql := `
+		WITH page_ids AS (
+			SELECT hp.id_hasil_pemeriksaan
+			` + countFrom + where + `
+			ORDER BY hp.created_at DESC
+			LIMIT $` + strconv.Itoa(limitArg) + ` OFFSET $` + strconv.Itoa(offsetArg) + `
+		)
 		SELECT hp.id_hasil_pemeriksaan, ji.id_imunisasi, COALESCE(ji.nama_vaksin, '') AS nama_vaksin,
 		       COALESCE(a.nama_anak, ua.nama) AS nama_pasien,
 		       hp.berat_badan::float8, hp.tinggi_badan::float8,
 		       hp.lingkar_kepala::float8, hp.tekanan_darah,
 		       hp.status_stunting::text, hp.status_gizi::text,
 		       hp.catatan, hp.created_at::text AS tanggal, petugas.nama AS petugas
-	` + baseFrom + where + `
+		FROM hasil_pemeriksaan hp
+		JOIN page_ids f ON f.id_hasil_pemeriksaan = hp.id_hasil_pemeriksaan
+		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
+		JOIN pasien p ON p.id_pasien = ji.id_pasien
+		JOIN user_account ua ON ua.id_user = p.id_pasien
+		JOIN user_account petugas ON petugas.id_user = hp.id_petugas_input
+		LEFT JOIN anak a ON a.id_pasien = p.id_pasien
 		ORDER BY hp.created_at DESC
-		LIMIT $` + strconv.Itoa(limitArg) + ` OFFSET $` + strconv.Itoa(offsetArg)
+	`
 
 	rows, err := r.db.Query(ctx, sql, allArgs...)
 	if err != nil {

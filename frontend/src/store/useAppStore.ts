@@ -57,7 +57,18 @@ type AppStore = DashboardSlice & ArtikelSlice & ImunisasiSlice & TindakLanjutSli
 
 type PersistedState = Omit<
   AppStore,
-  'dashboardLoading' | 'artikelLoading' | 'imunisasiLoading' | 'rujukanLoading'
+  | 'dashboardStats'
+  | 'dashboardLoading'
+  | 'distribusiGizi'
+  | 'trenStunting'
+  | 'stuntingPerWilayah'
+  | 'kehadiranBulanan'
+  | 'jadwalTerdekat'
+  | 'aktivitas'
+  | 'imunisasiPersen'
+  | 'artikelLoading'
+  | 'imunisasiLoading'
+  | 'rujukanLoading'
 >;
 
 export const useAppStore = create<AppStore>()(
@@ -105,9 +116,23 @@ export const useAppStore = create<AppStore>()(
       appInitialized: false,
     }),
     {
-      name: 'sigizi-store',
+      name: 'sigizi-store-v2',
       partialize: (state): PersistedState => {
-        const { dashboardLoading, artikelLoading, imunisasiLoading, rujukanLoading, ...persisted } = state;
+        const {
+          dashboardStats,
+          dashboardLoading,
+          distribusiGizi,
+          trenStunting,
+          stuntingPerWilayah,
+          kehadiranBulanan,
+          jadwalTerdekat,
+          aktivitas,
+          imunisasiPersen,
+          artikelLoading,
+          imunisasiLoading,
+          rujukanLoading,
+          ...persisted
+        } = state;
         return persisted;
       },
     }

@@ -96,6 +96,13 @@ type PemeriksaanRow struct {
 	Petugas            string
 }
 
+// MVRefresher is a minimal interface for asynchronously refreshing materialized views.
+// It is injected into write-heavy services (pemeriksaan, tindaklanjut) so that dashboard
+// statistics stay up-to-date after data mutations without blocking the HTTP response.
+type MVRefresher interface {
+	RefreshMaterializedViews(ctx context.Context) error
+}
+
 type Repo interface {
 	GetDashboardStats(ctx context.Context) (*DashboardStatsRow, error)
 	GetDistribusiGizi(ctx context.Context) ([]DistribusiGiziRow, error)
@@ -110,4 +117,5 @@ type Repo interface {
 	GetIbuHamilPerWilayah(ctx context.Context) ([]IbuHamilWilayahRow, error)
 	GetSemuaPemeriksaan(ctx context.Context, page, perPage int, idBidan, idPosyandu int32) ([]PemeriksaanRow, int, error)
 	GetPosyanduByKaderID(ctx context.Context, idKader int32) (int32, error)
+	MVRefresher
 }

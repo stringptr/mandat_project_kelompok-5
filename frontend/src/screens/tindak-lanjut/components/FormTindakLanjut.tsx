@@ -93,8 +93,8 @@ export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanju
         }
         const timer = setTimeout(async () => {
             try {
-                const res = await apiGet<PasienSearchResult[]>(`/monitoring/pasien/search?q=${encodeURIComponent(searchQuery)}`);
-                setSearchResults(res.map((p) => ({
+                const res = await apiGet<{ pasien: PasienSearchResult[] }>(`/monitoring/pasien/search?q=${encodeURIComponent(searchQuery)}`);
+                setSearchResults((res.pasien ?? []).map((p) => ({
                     id: `PST-${p.id_pasien}`,
                     nama: p.nama,
                     umur: p.umur,

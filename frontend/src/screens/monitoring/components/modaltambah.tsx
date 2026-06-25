@@ -14,7 +14,7 @@ export interface PasienOption {
 }
 
 export interface JadwalOption {
-    id_jadwal_imunisasi: number;
+    id_imunisasi: number;
     nama_vaksin: string;
     tanggal_jadwal: string;
     status_imunisasi: string;
@@ -25,6 +25,7 @@ interface ModalTambahPemeriksaanProps {
     onClose: () => void;
     /** Daftar pasien/balita yang bisa dipilih */
     pasienList: PasienOption[];
+    isKader?: boolean;
     onSubmit: (pasienId: string, namaAnak: string, idJadwalImunisasi: number, data: FormDataTambah) => void;
 }
 
@@ -81,6 +82,7 @@ export default function ModalTambahPemeriksaan({
     isOpen,
     onClose,
     pasienList,
+    isKader = false,
     onSubmit,
 }: ModalTambahPemeriksaanProps) {
     const notify = useNotification();
@@ -120,7 +122,7 @@ export default function ModalTambahPemeriksaan({
                     const list = (res.riwayat_imunisasi ?? []);
                     setJadwalList(list);
                     if (list.length > 0) {
-                        setForm(prev => ({ ...prev, idJadwalImunisasi: String(list[0].id_jadwal_imunisasi) }));
+                        setForm(prev => ({ ...prev, idJadwalImunisasi: String(list[0].id_imunisasi) }));
                     }
                 })
                 .catch(() => setJadwalList([]))
@@ -345,9 +347,9 @@ export default function ModalTambahPemeriksaan({
                                         onChange={e => setField('idJadwalImunisasi', e.target.value)}
                                         className="w-full px-3 py-2 text-sm rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
                                     >
-                                        <option value="">Pilih jadwal...</option>
+                                        <option key="default" value="">Pilih jadwal...</option>
                                         {jadwalList.map(j => (
-                                            <option key={j.id_jadwal_imunisasi} value={String(j.id_jadwal_imunisasi)}>
+                                            <option key={j.id_imunisasi} value={String(j.id_imunisasi)}>
                                                 {j.nama_vaksin} — {j.tanggal_jadwal}
                                             </option>
                                         ))}
@@ -400,6 +402,7 @@ export default function ModalTambahPemeriksaan({
                                         />
                                         <p className="text-[11px] text-neutral-400 text-right">{form.catatanMedis.length}/1000</p>
                                     </div>
+                                    {!isKader && (
                                     <div>
                                         <label className="block text-xs text-neutral-500 mb-1.5">Rekomendasi Gizi</label>
                                         <textarea
@@ -410,7 +413,9 @@ export default function ModalTambahPemeriksaan({
                                         />
                                         <p className="text-[11px] text-neutral-400 text-right">{form.rekomendasiGizi.length}/1000</p>
                                     </div>
+                                    )}
                                 </div>
+                                {!isKader && (
                                 <div className="grid grid-cols-2 gap-3 mt-3">
                                     <div>
                                         <label className="block text-xs text-neutral-500 mb-1.5">Jadwal Kontrol Berikutnya</label>
@@ -427,10 +432,11 @@ export default function ModalTambahPemeriksaan({
                                             onChange={e => setField('statusPasien', e.target.value)}
                                             className="w-full px-3 py-2 text-sm rounded-xl border border-neutral-200 bg-neutral-50 text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
                                         >
-                                            {STATUS_OPTIONS.map(opt => <option key={opt}>{opt}</option>)}
+                                            {STATUS_OPTIONS.map(opt => <option key={`status-${opt}`} value={opt}>{opt}</option>)}
                                         </select>
                                     </div>
                                 </div>
+                                )}
                             </div>
                         </div>
 

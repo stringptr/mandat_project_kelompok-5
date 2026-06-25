@@ -60,26 +60,6 @@ export function IbuWaliSection(): JSX.Element {
           </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-neutral-100">
-          <div className="flex items-center gap-2 mb-1">
-            <p className="text-sm font-bold text-neutral-800 font-headline">Tren Berat Badan</p>
-          </div>
-          <p className="text-sm text-neutral-400 text-center py-8">
-            Data tersedia saat pemeriksaan pertama dilakukan
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 border border-neutral-100">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-bold text-neutral-800 font-headline">Riwayat Pemeriksaan</p>
-            </div>
-          </div>
-          <p className="text-sm text-neutral-400 text-center py-8">Belum ada riwayat pemeriksaan</p>
-        </div>
-      </div>
     </div>
   );
 }

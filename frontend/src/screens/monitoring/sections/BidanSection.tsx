@@ -72,7 +72,7 @@ export function BidanSection() {
         setPemLastPage(res.meta?.last_page ?? 1);
       })
       .catch(() => {});
-  }, []);
+  }, [user?.idUser]);
 
   // Fetch pending count
   useEffect(() => {

@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-    Calendar, ChevronDown, Send, User, Activity, Search, MapPin, FileEdit,
+    Calendar, ChevronDown, Send, User, Activity, Search, FileEdit,
     X, CheckCircle2, AlertTriangle, Stethoscope
 } from 'lucide-react';
 import { useNotification } from '../../../context/NotificationContext';
 import { apiGet, apiPost } from '../../../lib/api';
+import type { FaskesItem } from '../../../types/entities';
 
 // ─── Types ───────────────────────────────────────────────────────────
 export interface Pasien {
@@ -72,7 +73,8 @@ export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanju
     const [searchQuery, setSearchQuery] = useState('');
     const [showDropdown, setShowDropdown] = useState(false);
     const [selectedPatient, setSelectedPatient] = useState<Pasien | null>(null);
-    const [lokasiFaskes, setLokasiFaskes] = useState('');
+    const [selectedFaskesId, setSelectedFaskesId] = useState<number | string>('');
+    const [faskesList, setFaskesList] = useState<FaskesItem[]>([]);
     const [jenisTindakan, setJenisTindakan] = useState('Rujukan');
     const [tanggalTarget, setTanggalTarget] = useState('');
     const [catatanMedis, setCatatanMedis] = useState('');
@@ -110,6 +112,13 @@ export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanju
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
+    // Fetch faskes list
+    useEffect(() => {
+        apiGet<FaskesItem[]>('/faskes')
+            .then((data) => setFaskesList(Array.isArray(data) ? data : []))
+            .catch(() => setFaskesList([]));
+    }, []);
+
     const filteredPatients = searchQuery.trim() ? searchResults : searchResults;
 
     // Close dropdown on click outside
@@ -141,7 +150,7 @@ export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanju
         const newErrors: { [key: string]: string } = {};
         if (!selectedPatient) newErrors['selectedPatient'] = 'ERR-VAL-05'; // Nama pasien harus dipilih
         if (!jenisTindakan) newErrors['jenisTindakan'] = 'ERR-VAL-07';
-        if (jenisTindakan === 'Rujukan' && !lokasiFaskes.trim()) newErrors['lokasiFaskes'] = 'ERR-VAL-07';
+        if (jenisTindakan === 'Rujukan' && !selectedFaskesId) newErrors['lokasiFaskes'] = 'ERR-VAL-07';
         if (!tanggalTarget) newErrors['tanggalTarget'] = 'ERR-VAL-06';
         if (!catatanMedis.trim() || catatanMedis.trim().length < 10) newErrors['catatanMedis'] = 'ERR-VAL-03';
         setErrors(newErrors);
@@ -159,6 +168,7 @@ export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanju
                 catatan_medis: catatanMedis,
                 alasan_rujukan: jenisTindakan === 'Rujukan' ? catatanMedis : undefined,
                 rekomendasi: jenisTindakan !== 'Rujukan' ? catatanMedis : undefined,
+                id_faskes: selectedFaskesId ? Number(selectedFaskesId) : undefined,
             });
             onSubmit?.();
             setIsSubmitting(false);
@@ -166,7 +176,7 @@ export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanju
             // Reset form
             setSelectedPatient(null);
             setSearchQuery('');
-            setLokasiFaskes('');
+            setSelectedFaskesId('');
             setTanggalTarget('');
             setCatatanMedis('');
         } catch {
@@ -364,19 +374,22 @@ export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanju
                 </div>
 
                 {jenisTindakan === 'Rujukan' && (
-                    <div className="mb-6">
+                    <div>
                         <label className="block text-sm font-semibold text-slate-800 mb-2">Lokasi Faskes</label>
                         <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <MapPin className="w-4 h-4 text-slate-400" />
-                            </div>
-                            <input
-  type="text"
-  value={lokasiFaskes}
-  onChange={(e) => setLokasiFaskes(e.target.value)}
-  placeholder="Masukkan nama fasilitas rujukan..."
-  className={`w-full bg-slate-50 border ${errors['lokasiFaskes'] ? 'border-red-500' : 'border-slate-200'} focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-100 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-700 outline-none transition-all placeholder:text-slate-400`}
-/>
+                            <select
+                                value={selectedFaskesId}
+                                onChange={(e) => setSelectedFaskesId(e.target.value)}
+                                className={`w-full bg-slate-50 border ${errors['lokasiFaskes'] ? 'border-red-500' : 'border-slate-200'} focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-100 rounded-xl px-4 py-3 text-sm text-slate-700 outline-none transition-all appearance-none cursor-pointer`}
+                            >
+                                <option value="">-- Pilih Fasilitas Kesehatan --</option>
+                                {faskesList.map((f) => (
+                                    <option key={f.id_faskes} value={f.id_faskes}>
+                                        {f.nama_faskes} ({f.tipe_faskes})
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="w-4 h-4 text-slate-500 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                         </div>
                         {errors['lokasiFaskes'] && (
                             <p className="text-xs text-red-600 mt-1">{errors['lokasiFaskes']}</p>
@@ -411,9 +424,9 @@ export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanju
   rows={4}
   value={catatanMedis}
   onChange={(e) => setCatatanMedis(e.target.value)}
-  placeholder={selectedPatient
-    ? `Contoh: ${selectedPatient.nama} membutuhkan ${jenisTindakan === 'Rujukan' ? 'rujukan' : 'rekomendasi'} ke ${lokasiFaskes || 'fasilitas'} karena ${selectedPatient.statusGizi.toLowerCase()}...`
-    : 'Tuliskan catatan medik...'}
+                           placeholder={selectedPatient
+                                ? `Contoh: ${selectedPatient.nama} membutuhkan ${jenisTindakan === 'Rujukan' ? 'rujukan' : 'rekomendasi'} ke fasilitas karena ${selectedPatient.statusGizi.toLowerCase()}...`
+                                : 'Tuliskan catatan medik...'}
   className={`w-full bg-slate-50 border ${errors['catatanMedis'] ? 'border-red-500' : 'border-slate-200'} focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-100 rounded-xl px-4 py-3 text-sm text-slate-700 outline-none transition-all resize-none placeholder:text-slate-400`}
 />
                         {errors['catatanMedis'] && (

@@ -2,3 +2,13 @@
 .env.*
 !.env.example
 storage
+
+# Data dummy besar
+data/*.csv
+migrations/data/*.csv
+
+# File zip
+*.zip
+
+# Temporary files
+tmp_*.json

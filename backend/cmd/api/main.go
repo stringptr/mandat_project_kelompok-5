@@ -16,6 +16,7 @@ import (
 	"github.com/stringptr/SiGizi/backend/internal/feature/auth"
 	"github.com/stringptr/SiGizi/backend/internal/feature/bannedip"
 	dashboardFeature "github.com/stringptr/SiGizi/backend/internal/feature/dashboard"
+	faskesFeature "github.com/stringptr/SiGizi/backend/internal/feature/faskes"
 	imunisasiFeature "github.com/stringptr/SiGizi/backend/internal/feature/imunisasi"
 	"github.com/stringptr/SiGizi/backend/internal/feature/jwtblacklist"
 	lokasiFeature "github.com/stringptr/SiGizi/backend/internal/feature/lokasi"
@@ -111,6 +112,10 @@ func main() {
 	artikelService := artikelFeature.NewService(artikelRepo, auditLogRepo, notifRepo, notifPublisher)
 	artikelHandler := artikelFeature.NewHandler(artikelService)
 
+	faskesRepo := faskesFeature.NewRepo(pool)
+	faskesService := faskesFeature.NewService(faskesRepo)
+	faskesHandler := faskesFeature.NewHandler(faskesService)
+
 	tindaklanjutRepo := tindaklanjutFeature.NewRepo(pool)
 	tindaklanjutService := tindaklanjutFeature.NewService(tindaklanjutRepo, auditLogRepo, notifRepo, notifPublisher)
 	tindaklanjutHandler := tindaklanjutFeature.NewHandler(tindaklanjutService)
@@ -188,6 +193,7 @@ func main() {
 		NotifHandler:        notifHandler,
 		PasienHandler:       pasienHandler,
 		LokasiHandler:       lokasiHandler,
+		FaskesHandler:       faskesHandler,
 		PemeriksaanHandler:  pemeriksaanHandler,
 		ImunisasiHandler:    imunisasiHandler,
 		ArtikelHandler:      artikelHandler,

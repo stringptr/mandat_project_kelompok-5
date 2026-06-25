@@ -87,6 +87,15 @@ export function useNotifikasi() {
     }
   };
 
+  const handleCardMarkRead = (cardId: string) => {
+    const idNum = parseInt(cardId.replace('n-', ''), 10);
+    if (!isNaN(idNum)) {
+      setNotifikasi((prev) =>
+        prev.map((n) => (n.id_notifikasi === idNum ? { ...n, status_baca: true } : n)),
+      );
+    }
+  };
+
   const markAllRead = async () => {
     try {
       await apiPatch('/notifikasi/read-all');
@@ -141,6 +150,7 @@ export function useNotifikasi() {
     fetchNotifikasi,
     markRead,
     markAllRead,
+    handleCardMarkRead,
     toNotifItems,
     toNotifGroups,
   };

@@ -123,6 +123,10 @@ func (s *Service) Register(ctx context.Context, dataDTO *authDomain.RegisterRequ
 	copier.Copy(&dataModel, &dataDTO)
 	dataModel.Password = hashedPassword
 
+	if dataDTO.Role == "Kader" {
+		dataModel.StatusVerifikasi = model.StatusVerifikasi_Aktif
+	}
+
 	idUser, err := s.authRepo.CreateUser(ctx, &dataModel)
 	if err != nil {
 		if isDBConnectionError(err) {

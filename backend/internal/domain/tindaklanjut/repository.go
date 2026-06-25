@@ -45,11 +45,16 @@ type RiwayatPemeriksaanJoinRow struct {
 }
 
 type StatusTindakLanjutJoinRow struct {
-	IDPasien       int32
-	NamaPasien     string
-	StatusPasien   string
-	StatusRujukan  string
-	TanggalRujukan string
+	IDPasien        int32
+	NamaPasien      string
+	StatusPasien    string
+	StatusRujukan   string
+	TanggalRujukan  string
+	TanggalDeadline string
+	StatusDeadline  string
+	Faskes          string
+	AlasanRujukan   string
+	JenisTindakan   string
 }
 
 type LaporanTindakLanjutJoinRow struct {

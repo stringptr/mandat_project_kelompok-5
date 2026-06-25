@@ -210,23 +210,31 @@ func (r *Repo) GetSemuaPemeriksaan(ctx context.Context, page, perPage int, idBid
 	args := []interface{}{}
 	argIdx := 1
 
-	if idBidan > 0 {
-		where = " WHERE id_bidan = $" + strconv.Itoa(argIdx)
-		args = append(args, idBidan)
-		argIdx++
-	}
 	if idPosyandu > 0 {
-		if where == "" {
-			where = " WHERE id_posyandu = $" + strconv.Itoa(argIdx)
-		} else {
-			where += " AND id_posyandu = $" + strconv.Itoa(argIdx)
-		}
+		where = " WHERE p.id_posyandu = $" + strconv.Itoa(argIdx)
 		args = append(args, idPosyandu)
 		argIdx++
 	}
+	if idBidan > 0 {
+		if where == "" {
+			where = " WHERE pos.id_bidan = $" + strconv.Itoa(argIdx)
+		} else {
+			where += " AND pos.id_bidan = $" + strconv.Itoa(argIdx)
+		}
+		args = append(args, idBidan)
+		argIdx++
+	}
+
+	baseFrom := ` FROM hasil_pemeriksaan hp
+		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
+		JOIN pasien p ON p.id_pasien = ji.id_pasien AND p.is_deleted = false
+		JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu
+		JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
+		JOIN user_account petugas ON petugas.id_user = hp.id_petugas_input
+		LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false `
 
 	var count struct{ Count int }
-	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM mv_riwayat_pemeriksaan`+where, args...).Scan(&count.Count)
+	err := r.db.QueryRow(ctx, `SELECT COUNT(*)`+baseFrom+where, args...).Scan(&count.Count)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -236,16 +244,18 @@ func (r *Repo) GetSemuaPemeriksaan(ctx context.Context, page, perPage int, idBid
 	offsetArg := argIdx + 1
 	allArgs := append(args, perPage, offset)
 
-	rows, err := r.db.Query(ctx, `
-		SELECT id_hasil_pemeriksaan, id_jadwal_imunisasi, nama_vaksin,
-		       nama_pasien, berat_badan, tinggi_badan,
-		       lingkar_kepala, tekanan_darah, status_stunting, status_gizi,
-		       catatan, tanggal, petugas
-		FROM mv_riwayat_pemeriksaan
-		`+where+`
-		ORDER BY tanggal DESC
-		LIMIT $`+strconv.Itoa(limitArg)+` OFFSET $`+strconv.Itoa(offsetArg),
-		allArgs...)
+	sql := `
+		SELECT hp.id_hasil_pemeriksaan, ji.id_imunisasi, COALESCE(ji.nama_vaksin, '') AS nama_vaksin,
+		       COALESCE(a.nama_anak, ua.nama) AS nama_pasien,
+		       hp.berat_badan::float8, hp.tinggi_badan::float8,
+		       hp.lingkar_kepala::float8, hp.tekanan_darah,
+		       hp.status_stunting::text, hp.status_gizi::text,
+		       hp.catatan, hp.created_at::text AS tanggal, petugas.nama AS petugas
+	` + baseFrom + where + `
+		ORDER BY hp.created_at DESC
+		LIMIT $` + strconv.Itoa(limitArg) + ` OFFSET $` + strconv.Itoa(offsetArg)
+
+	rows, err := r.db.Query(ctx, sql, allArgs...)
 	if err != nil {
 		return nil, 0, err
 	}

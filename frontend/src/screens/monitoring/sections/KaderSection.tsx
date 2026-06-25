@@ -68,7 +68,7 @@ export function KaderSection() {
         setPemLastPage(res.meta?.last_page ?? 1);
       })
       .catch(() => {});
-  }, []);
+  }, [user?.idUser]);
 
   useEffect(() => { fetchPemeriksaan(pemPage); }, [pemPage, fetchPemeriksaan]);
 

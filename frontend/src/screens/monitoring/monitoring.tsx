@@ -48,17 +48,19 @@ export default function Monitoring({ currentRole }: MonitoringProps): JSX.Elemen
 
     return (
         <div className="space-y-6 font-body text-neutral-800">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <div>
-                    <h2 className="text-xl font-bold text-neutral-800 font-headline">
-                        Selamat Datang, {user?.name || 'Pengguna'}
-                    </h2>
-                    <p className="text-sm text-neutral-500 mt-0.5">{description}</p>
+            {currentRole !== 'Dinas Kesehatan' && (
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div>
+                        <h2 className="text-xl font-bold text-neutral-800 font-headline">
+                            Selamat Datang, {user?.name || 'Pengguna'}
+                        </h2>
+                        <p className="text-sm text-neutral-500 mt-0.5">{description}</p>
+                    </div>
+                    <span className="text-xs text-neutral-400 bg-white border border-neutral-100 px-4 py-2 rounded-xl font-medium">
+                        {today}
+                    </span>
                 </div>
-                <span className="text-xs text-neutral-400 bg-white border border-neutral-100 px-4 py-2 rounded-xl font-medium">
-                    {today}
-                </span>
-            </div>
+            )}
 
             <SectionComponent />
         </div>

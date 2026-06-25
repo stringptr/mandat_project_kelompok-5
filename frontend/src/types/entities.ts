@@ -344,6 +344,8 @@ export interface StatusTindakLanjutItem {
   status_pasien: string;
   status_rujukan: string;
   tanggal_rujukan: string;
+  tanggal_deadline: string;
+  status_deadline: string;
 }
 
 export interface StatusTindakLanjutData {
@@ -447,4 +449,12 @@ export interface AktivitasItem {
 export interface AktivitasResponse {
   hari_ini: AktivitasItem[];
   kemarin: AktivitasItem[];
+}
+
+// ── Faskes ─────────────────────────────────────────────────────────────────────
+
+export interface FaskesItem {
+  id_faskes: number;
+  nama_faskes: string;
+  tipe_faskes: string;
 }

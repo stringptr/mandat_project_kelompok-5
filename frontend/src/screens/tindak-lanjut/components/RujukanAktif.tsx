@@ -1,5 +1,5 @@
 
-import { User, Clock, CheckCircle, ArrowRight, ClipboardList, Calendar } from 'lucide-react';
+import { User, Clock, CheckCircle, ArrowRight, Calendar, AlertTriangle, MapPin, Stethoscope } from 'lucide-react';
 
 export interface Rujukan {
     id: string;
@@ -13,6 +13,10 @@ export interface Rujukan {
     lastWeight: number;
     lastHeight: number;
     timeLabel?: string;
+    tanggalDeadline: string;
+    statusDeadline: string;
+    tanggalRujukan: string;
+    alasanRujukan: string;
 }
 
 interface RujukanAktifProps {
@@ -33,32 +37,6 @@ export default function RujukanAktif({ data, onDetailClick, onUpdateClick }: Ruj
                 return 'bg-[#e0e7ff] text-[#4f46e5]';
             default:
                 return 'bg-neutral-100 text-neutral-600';
-        }
-    };
-
-    const getUrgencyIcon = (urgency: string) => {
-        switch (urgency) {
-            case 'Mendesak':
-                return <ClipboardList className="w-3.5 h-3.5" />;
-            case 'Berjalan':
-                return <Clock className="w-3.5 h-3.5" />;
-            case 'Review':
-                return <ClipboardList className="w-3.5 h-3.5" />;
-            default:
-                return <ClipboardList className="w-3.5 h-3.5" />;
-        }
-    };
-
-    const getStatusIcon = (urgency: string) => {
-        switch (urgency) {
-            case 'Mendesak':
-                return <Clock className="w-3.5 h-3.5" />;
-            case 'Berjalan':
-                return <Calendar className="w-3.5 h-3.5" />;
-            case 'Review':
-                return <CheckCircle className="w-3.5 h-3.5" />;
-            default:
-                return <Clock className="w-3.5 h-3.5" />;
         }
     };
 
@@ -94,13 +72,44 @@ export default function RujukanAktif({ data, onDetailClick, onUpdateClick }: Ruj
                         </div>
                         <div className="space-y-2 mb-4 mt-2">
                             <div className="flex items-center gap-2 text-xs text-neutral-600">
-                                <div className="w-4 flex justify-center">{getUrgencyIcon(item.urgency)}</div>
-                                <span>{item.faskes}</span>
+                                <div className="w-4 flex justify-center">
+                                    {item.jenisTindakan === 'Rujukan' ? <MapPin className="w-3.5 h-3.5 text-blue-500" /> : <Stethoscope className="w-3.5 h-3.5 text-emerald-500" />}
+                                </div>
+                                <span>{item.faskes || item.jenisTindakan}</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-neutral-600">
-                                <div className="w-4 flex justify-center">{getStatusIcon(item.urgency)}</div>
+                                <div className="w-4 flex justify-center">
+                                    {item.status === 'Diterima' ? <CheckCircle className="w-3.5 h-3.5 text-green-500" /> :
+                                     item.status === 'Ditolak' ? <AlertTriangle className="w-3.5 h-3.5 text-red-500" /> :
+                                     item.status === 'Diproses' ? <Clock className="w-3.5 h-3.5 text-purple-500" /> :
+                                     item.status === 'Selesai' ? <CheckCircle className="w-3.5 h-3.5 text-blue-500" /> :
+                                     <Clock className="w-3.5 h-3.5 text-amber-500" />}
+                                </div>
                                 <span>{item.status}</span>
                             </div>
+                            {item.tanggalDeadline && (
+                                <div className="flex items-center gap-2 text-xs">
+                                    <div className="w-4 flex justify-center">
+                                        {item.statusDeadline === 'terlambat' ? (
+                                            <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                                        ) : item.statusDeadline === 'mendekati' ? (
+                                            <Clock className="w-3.5 h-3.5 text-amber-500" />
+                                        ) : (
+                                            <Calendar className="w-3.5 h-3.5 text-green-500" />
+                                        )}
+                                    </div>
+                                    <span className={item.statusDeadline === 'terlambat' ? 'text-red-600 font-semibold' : item.statusDeadline === 'mendekati' ? 'text-amber-600 font-semibold' : 'text-green-600'}>
+                                        Deadline: {new Date(item.tanggalDeadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </span>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                                        item.statusDeadline === 'terlambat' ? 'bg-red-100 text-red-700' :
+                                        item.statusDeadline === 'mendekati' ? 'bg-amber-100 text-amber-700' :
+                                        'bg-green-100 text-green-700'
+                                    }`}>
+                                        {item.statusDeadline === 'terlambat' ? 'Terlambat' : item.statusDeadline === 'mendekati' ? 'Mendekati' : 'Aman'}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                         <div className="flex gap-2">
                             <button

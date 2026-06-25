@@ -6,6 +6,7 @@ import (
 	artikelDomain "github.com/stringptr/SiGizi/backend/internal/domain/artikel"
 	authDomain "github.com/stringptr/SiGizi/backend/internal/domain/auth"
 	dashboardDomain "github.com/stringptr/SiGizi/backend/internal/domain/dashboard"
+	faskesDomain "github.com/stringptr/SiGizi/backend/internal/domain/faskes"
 	imunisasiDomain "github.com/stringptr/SiGizi/backend/internal/domain/imunisasi"
 	tindaklanjutDomain "github.com/stringptr/SiGizi/backend/internal/domain/tindaklanjut"
 	jwtblacklistDomain "github.com/stringptr/SiGizi/backend/internal/domain/jwtblacklist"
@@ -30,6 +31,7 @@ type Dependency struct {
 	NotifHandler        notificationDomain.Handler
 	PasienHandler       pasienDomain.Handler
 	LokasiHandler       lokasiDomain.Handler
+	FaskesHandler       faskesDomain.Handler
 	PemeriksaanHandler  pemeriksaanDomain.Handler
 	ImunisasiHandler    imunisasiDomain.Handler
 	ArtikelHandler      artikelDomain.Handler
@@ -65,6 +67,8 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Post(nonAuthenticatedOnlyGroup, "/auth/login", d.AuthHandler.Login)
 
 	huma.Get(publicGroup, "/lokasi", d.LokasiHandler.GetLokasi)
+
+	huma.Get(userGroup, "/faskes", d.FaskesHandler.GetFaskes)
 
 	huma.Post(authRefresh, "/auth/refresh", d.AuthHandler.Refresh)
 	huma.Post(publicGroup, "/auth/logout", d.AuthHandler.Logout)

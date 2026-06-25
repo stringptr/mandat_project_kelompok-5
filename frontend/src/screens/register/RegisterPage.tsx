@@ -97,21 +97,6 @@ function Field({ label, icon, children }: { label: string; icon: React.ReactNode
 const inputCls = "w-full px-4 py-2.5 bg-white border border-neutral-200 rounded-xl text-sm font-body text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary transition-colors";
 const selectCls = `${inputCls} appearance-none`;
 
-function FileInput({ label, icon }: { label: string; icon: React.ReactNode }): JSX.Element {
-  const [name, setName] = useState('');
-  return (
-    <Field label={label} icon={icon}>
-      <div className="flex items-center gap-2 w-full px-4 py-2.5 bg-white border border-neutral-200 rounded-xl">
-        <span className="flex-1 text-sm text-neutral-400 font-body truncate">{name || 'Unggah Foto'}</span>
-        <label className="text-xs font-semibold text-primary cursor-pointer hover:text-primary-600 transition-colors">
-          Pilih File
-          <input type="file" accept="image/*" className="hidden" onChange={(e) => setName(e.target.files?.[0]?.name ?? '')} />
-        </label>
-      </div>
-    </Field>
-  );
-}
-
 function VerifNotice(): JSX.Element {
   return (
     <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700 font-body leading-relaxed">
@@ -181,7 +166,7 @@ export default function RegisterPage(): JSX.Element {
   // ── Step: Pilih Role ───────────────────────────────────────────────────
   if (step === 'role') {
     return (
-      <div className="min-h-screen flex font-body">
+      <div className="h-dvh flex font-body">
         <LeftPanel />
         <div className="flex-1 bg-white overflow-y-auto">
           <FormWrap onLogin={goLogin}>
@@ -222,7 +207,7 @@ export default function RegisterPage(): JSX.Element {
   // ── Step: Isi Berkas Hal. 1 ────────────────────────────────────────────
   if (step === 'berkas') {
     return (
-      <div className="min-h-screen flex font-body">
+      <div className="h-dvh flex font-body">
         <LeftPanel />
         <div className="flex-1 bg-white overflow-y-auto">
           <FormWrap onLogin={goLogin}>
@@ -230,8 +215,6 @@ export default function RegisterPage(): JSX.Element {
             <p className="text-sm text-neutral-500 mb-6">Lengkapi berkas untuk melanjutkan pendaftaran.</p>
 
             <div className="space-y-4">
-              <FileInput label="Kartu Tanda Penduduk (KTP)" icon={<span>🪪</span>} />
-              {isPendingRole && <FileInput label="Surat Keterangan Aktif Kerja" icon={<span>📄</span>} />}
 
               <Field label="NIK (16 digit)" icon={<CreditCard size={13} />}>
                 <input type="text" value={form1.nik} onChange={(e) => setForm1({ ...form1, nik: e.target.value })}
@@ -304,7 +287,7 @@ export default function RegisterPage(): JSX.Element {
   // ── Step: Isi Berkas Hal. 2 (Ibu/Wali only) ───────────────────────────
   if (step === 'berkas2') {
     return (
-      <div className="min-h-screen flex font-body">
+      <div className="h-dvh flex font-body">
         <LeftPanel />
         <div className="flex-1 bg-white overflow-y-auto">
           <FormWrap onLogin={goLogin}>
@@ -362,7 +345,7 @@ export default function RegisterPage(): JSX.Element {
   // ── Step: Isi Berkas Hal. 3 (Ibu/Wali only) ───────────────────────────
   if (step === 'berkas3') {
     return (
-      <div className="min-h-screen flex font-body">
+      <div className="h-dvh flex font-body">
         <LeftPanel />
         <div className="flex-1 bg-white overflow-y-auto">
           <FormWrap onLogin={goLogin}>
@@ -414,7 +397,7 @@ export default function RegisterPage(): JSX.Element {
   // ── Step: Done Pending (Bidan/Kader) ──────────────────────────────────
   if (step === 'done-pending') {
     return (
-      <div className="min-h-screen flex font-body">
+      <div className="h-dvh flex font-body">
         <LeftPanel />
         <div className="flex-1 bg-white overflow-y-auto">
           <FormWrap onLogin={goLogin}>
@@ -439,7 +422,7 @@ export default function RegisterPage(): JSX.Element {
 
   // ── Step: Done (Ibu/Wali) ──────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex font-body">
+    <div className="h-dvh flex font-body">
       <LeftPanel />
       <div className="flex-1 bg-white overflow-y-auto">
         <FormWrap onLogin={goLogin}>

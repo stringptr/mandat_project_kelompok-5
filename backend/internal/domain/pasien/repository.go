@@ -17,7 +17,7 @@ type Repo interface {
 	CreateIbuHamil(ctx context.Context, data *model.IbuHamil) error
 	CreateAnak(ctx context.Context, data *model.Anak) error
 
-	GetAllPaginated(ctx context.Context, page int, perPage int, q string) ([]*PasienJoinRow, int, error)
+	GetAllPaginated(ctx context.Context, page int, perPage int, q string, idPosyandu int32) ([]*PasienJoinRow, int, error)
 	GetAllPaginatedByUser(ctx context.Context, page int, perPage int, q string, idUser int32) ([]*PasienJoinRow, int, error)
 	Search(ctx context.Context, q string, page int, perPage int) ([]*PasienJoinRow, int, error)
 	GetDetailByID(ctx context.Context, idPasien int32) (*PasienDetailJoinRow, error)

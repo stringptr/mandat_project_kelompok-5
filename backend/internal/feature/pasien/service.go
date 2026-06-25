@@ -231,7 +231,7 @@ func (s *Service) GetAll(ctx context.Context, req *pasienDomain.GetAllPasienRequ
 	page := pagination.ValidatePage(req.Page)
 	perPage := pagination.ValidatePerPage(req.PerPage)
 
-	rows, total, err := s.repo.GetAllPaginated(ctx, page, perPage, req.Q)
+	rows, total, err := s.repo.GetAllPaginated(ctx, page, perPage, req.Q, req.IDPosyandu)
 	if err != nil {
 		return nil, &errorutils.Error{Status: http.StatusInternalServerError, Message: "Terjadi kesalahan. Silahkan dicoba kembali."}
 	}

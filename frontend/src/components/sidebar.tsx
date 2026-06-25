@@ -44,7 +44,7 @@ const getFilteredNavItems = (role: Role) => {
             return ['/', '/monitoring', '/edukasi', '/user-management', '/notifikasi'].includes(item.path);
         }
         if (role === 'Kader Posyandu') {
-            return ['/', '/monitoring', '/edukasi', '/notifikasi'].includes(item.path);
+            return ['/', '/monitoring', '/jadwal-imunisasi', '/edukasi', '/notifikasi'].includes(item.path);
         }
         // Bidan: semua kecuali user-management
         return item.path !== '/user-management';

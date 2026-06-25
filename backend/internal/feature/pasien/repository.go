@@ -2,6 +2,7 @@ package pasien
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -126,7 +127,7 @@ func (r *Repo) CheckPasienOwnership(ctx context.Context, idPasien int32, idUser 
 	return result.Owned, nil
 }
 
-func (r *Repo) GetAllPaginated(ctx context.Context, page int, perPage int, q string) ([]*pasienDomain.PasienJoinRow, int, error) {
+func (r *Repo) GetAllPaginated(ctx context.Context, page int, perPage int, q string, idPosyandu int32) ([]*pasienDomain.PasienJoinRow, int, error) {
 	offset := int64((page - 1) * perPage)
 
 	fromJoin := `
@@ -135,6 +136,9 @@ func (r *Repo) GetAllPaginated(ctx context.Context, page int, perPage int, q str
 		INNER JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu AND pos.is_deleted = false
 	`
 	baseWhere := "WHERE p.is_deleted = false"
+	if idPosyandu > 0 {
+		baseWhere += fmt.Sprintf(" AND p.id_posyandu = %d", idPosyandu)
+	}
 
 	countSQL := "SELECT COUNT(*)" + fromJoin + baseWhere
 	var count int64

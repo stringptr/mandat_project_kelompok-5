@@ -71,7 +71,7 @@ func RegisterRoutes(api huma.API, r chi.Router, d *Dependency) {
 	huma.Get(userGroup, "/faskes", d.FaskesHandler.GetFaskes)
 
 	huma.Post(authRefresh, "/auth/refresh", d.AuthHandler.Refresh)
-	huma.Post(publicGroup, "/auth/logout", d.AuthHandler.Logout)
+	huma.Post(nonAuthenticatedOnlyGroup, "/auth/logout", d.AuthHandler.Logout)
 
 	huma.Get(userGroup, "/auth/me", d.AuthHandler.Me)
 

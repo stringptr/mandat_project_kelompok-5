@@ -234,34 +234,38 @@ func (r *Repo) GetPosyanduByKaderID(ctx context.Context, idKader int32) (int32, 
 }
 
 func (r *Repo) GetSemuaPemeriksaan(ctx context.Context, page, perPage int, idBidan, idPosyandu int32) ([]dashboardDomain.PemeriksaanRow, int, error) {
-	where := ""
+	// Build a pasien filter subquery; this is very selective (small result set),
+	// which keeps COUNT and the paginated SELECT fast even with 2M rows in hasil_pemeriksaan.
+	pasienSubq := ""
 	args := []interface{}{}
 	argIdx := 1
 
 	if idPosyandu > 0 {
-		where = " WHERE p.id_posyandu = $" + strconv.Itoa(argIdx)
+		pasienSubq = `AND ji.id_pasien IN (
+			SELECT p.id_pasien FROM pasien p WHERE p.id_posyandu = $` + strconv.Itoa(argIdx) + ` AND p.is_deleted = false
+		)`
 		args = append(args, idPosyandu)
 		argIdx++
-	}
-	if idBidan > 0 {
-		if where == "" {
-			where = " WHERE pos.id_bidan = $" + strconv.Itoa(argIdx)
-		} else {
-			where += " AND pos.id_bidan = $" + strconv.Itoa(argIdx)
-		}
+	} else if idBidan > 0 {
+		pasienSubq = `AND ji.id_pasien IN (
+			SELECT p.id_pasien FROM pasien p
+			JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu
+			WHERE pos.id_bidan = $` + strconv.Itoa(argIdx) + ` AND p.is_deleted = false
+		)`
 		args = append(args, idBidan)
 		argIdx++
 	}
 
-	countFrom := ` FROM hasil_pemeriksaan hp
-		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
-		JOIN pasien p ON p.id_pasien = ji.id_pasien AND p.is_deleted = false `
-	if idBidan > 0 || idPosyandu > 0 {
-		countFrom += ` JOIN posyandu pos ON pos.id_posyandu = p.id_posyandu `
-	}
+	baseWhere := `WHERE 1=1 ` + pasienSubq
 
-	var count struct{ Count int }
-	err := r.db.QueryRow(ctx, `SELECT COUNT(*)`+countFrom+where, args...).Scan(&count.Count)
+	countSQL := `
+		SELECT COUNT(*)
+		FROM hasil_pemeriksaan hp
+		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
+	` + baseWhere
+
+	var total int
+	err := r.db.QueryRow(ctx, countSQL, args...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -271,13 +275,7 @@ func (r *Repo) GetSemuaPemeriksaan(ctx context.Context, page, perPage int, idBid
 	offsetArg := argIdx + 1
 	allArgs := append(args, perPage, offset)
 
-	sql := `
-		WITH page_ids AS (
-			SELECT hp.id_hasil_pemeriksaan
-			` + countFrom + where + `
-			ORDER BY hp.created_at DESC
-			LIMIT $` + strconv.Itoa(limitArg) + ` OFFSET $` + strconv.Itoa(offsetArg) + `
-		)
+	selectSQL := `
 		SELECT hp.id_hasil_pemeriksaan, ji.id_imunisasi, COALESCE(ji.nama_vaksin, '') AS nama_vaksin,
 		       COALESCE(a.nama_anak, ua.nama) AS nama_pasien,
 		       hp.berat_badan::float8, hp.tinggi_badan::float8,
@@ -285,16 +283,16 @@ func (r *Repo) GetSemuaPemeriksaan(ctx context.Context, page, perPage int, idBid
 		       hp.status_stunting::text, hp.status_gizi::text,
 		       hp.catatan, hp.created_at::text AS tanggal, petugas.nama AS petugas
 		FROM hasil_pemeriksaan hp
-		JOIN page_ids f ON f.id_hasil_pemeriksaan = hp.id_hasil_pemeriksaan
 		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
 		JOIN pasien p ON p.id_pasien = ji.id_pasien
 		JOIN user_account ua ON ua.id_user = p.id_pasien
 		JOIN user_account petugas ON petugas.id_user = hp.id_petugas_input
 		LEFT JOIN anak a ON a.id_pasien = p.id_pasien
+	` + baseWhere + `
 		ORDER BY hp.created_at DESC
-	`
+		LIMIT $` + strconv.Itoa(limitArg) + ` OFFSET $` + strconv.Itoa(offsetArg)
 
-	rows, err := r.db.Query(ctx, sql, allArgs...)
+	rows, err := r.db.Query(ctx, selectSQL, allArgs...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -311,5 +309,5 @@ func (r *Repo) GetSemuaPemeriksaan(ctx context.Context, page, perPage int, idBid
 		}
 		results = append(results, row)
 	}
-	return results, count.Count, rows.Err()
+	return results, total, rows.Err()
 }

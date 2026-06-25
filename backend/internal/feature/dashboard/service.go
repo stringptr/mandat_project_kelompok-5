@@ -229,6 +229,10 @@ func (s *Service) GetSemuaPemeriksaan(ctx context.Context, req *dashboardDomain.
 	if page < 1 { page = 1 }
 	if perPage < 1 || perPage > 50 { perPage = 20 }
 
+	if req.IDKader <= 0 && req.IDBidan <= 0 && req.IDPosyandu <= 0 {
+		return nil, &errorutils.Error{Status: http.StatusBadRequest, Message: "Filter tidak boleh kosong. Sertakan id_kader, id_bidan, atau id_posyandu."}
+	}
+
 	idBidan := req.IDBidan
 	idPosyandu := req.IDPosyandu
 

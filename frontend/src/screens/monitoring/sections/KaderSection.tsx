@@ -70,7 +70,7 @@ export function KaderSection() {
       .catch(() => {});
   }, [user?.idUser]);
 
-  useEffect(() => { fetchPemeriksaan(pemPage); }, [pemPage, fetchPemeriksaan]);
+  useEffect(() => { if (!user) return; fetchPemeriksaan(pemPage); }, [pemPage, fetchPemeriksaan, user]);
 
   const filtered = pemeriksaan.filter((row) => !search || row.nama_pasien.toLowerCase().includes(search.toLowerCase()));
 

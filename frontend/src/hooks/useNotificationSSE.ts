@@ -15,7 +15,7 @@ export function useNotificationSSE(
   onUnreadCount: (count: number) => void
 ) {
   const esRef = useRef<EventSource | null>(null);
-  const retryRef = useRef<ReturnType<typeof setTimeout>>();
+  const retryRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const onNotifRef = useRef(onNotification);
   const onCountRef = useRef(onUnreadCount);
   onNotifRef.current = onNotification;

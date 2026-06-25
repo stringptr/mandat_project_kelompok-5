@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Bell, LogOut, LogIn, ChevronDown, ArrowRight } from 'lucide-react';
 import type { Role } from '../App';
 import { useAuth, useNotifications } from '../context/AuthContext';
-import { apiGet, apiPatch } from '../lib/api';
+import { apiPatch } from '../lib/api';
 
 interface HeaderProps {
   currentRole?: Role;
@@ -81,9 +81,6 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
     setShowNotifications(false);
     try {
       await apiPatch(`/notifikasi/${id}/read`);
-      setNotifPreviews((prev) =>
-        prev.map((n) => (n.id_notifikasi === id ? { ...n, status_baca: true } : n)),
-      );
       const route = TIPE_ROUTE[tipe] ?? '/notifikasi';
       navigate(route);
     } catch {

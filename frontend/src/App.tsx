@@ -75,7 +75,7 @@ function AppShell(): JSX.Element {
                     element={
                       isLoggedIn
                         ? <Dashboard currentRole={currentRole} />
-                        : <GuestDashboard onLoginClick={goLogin} />
+                        : <GuestDashboard />
                     }
                   />
                   <Route

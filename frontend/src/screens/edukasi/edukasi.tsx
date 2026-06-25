@@ -259,7 +259,7 @@ export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
         <ModalDetailArtikel artikel={modalDetail} onClose={() => setModalDetail(null)} />
       )}
 
-      {modalTambah && (
+      {modalTambah && currentRole && (
         <ModalTambahArtikel
           currentRole={currentRole}
           onClose={() => setModalTambah(false)}

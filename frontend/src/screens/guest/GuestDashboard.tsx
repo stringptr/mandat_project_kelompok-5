@@ -5,10 +5,9 @@ import { apiGet } from '../../lib/api';
 import type { PublicStatsResponse, PublicArtikelItem, PublicArtikelResponse } from '../../types/api';
 
 interface GuestDashboardProps {
-  onLoginClick: () => void;
 }
 
-export function GuestDashboard({ onLoginClick }: GuestDashboardProps): JSX.Element {
+export function GuestDashboard(_props: GuestDashboardProps): JSX.Element {
   const navigate = useNavigate();
   const [stats, setStats] = useState<PublicStatsResponse | null>(null);
   const [artikel, setArtikel] = useState<PublicArtikelItem[]>([]);

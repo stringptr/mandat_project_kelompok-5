@@ -88,7 +88,7 @@ function AppShell(): JSX.Element {
                   />
                   <Route
                     path="/edukasi"
-                    element={<Edukasi currentRole={currentRole} />}
+                    element={<Edukasi currentRole={isLoggedIn ? currentRole : undefined} />}
                   />
                   <Route
                     path="/user-management"

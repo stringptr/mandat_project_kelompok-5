@@ -34,7 +34,7 @@ import { ModalHapusArtikel } from './components/ModalHapusArtikel';
 import { ModalVerifikasiArtikel } from './components/ModalVerifikasiArtikel';
 
 interface EdukasiProps {
-  currentRole: Role;
+  currentRole?: Role;
 }
 
 const PAGE_SIZE = 12;
@@ -232,6 +232,9 @@ export default function Edukasi({ currentRole }: EdukasiProps): JSX.Element {
           canEdit={canEditArtikel}
         />
       )}
+
+      {/* Guest / unauthenticated — read-only article grid */}
+      {!currentRole && <IbuWaliSection {...commonProps} />}
 
       {/* Empty state */}
       {filteredArtikel.length === 0 && (

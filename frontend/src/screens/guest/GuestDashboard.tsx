@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Users, Baby, TrendingDown, BookOpen, ChevronRight, Clock, User, Target, AlertTriangle } from 'lucide-react';
 import { apiGet } from '../../lib/api';
 import type { PublicStatsResponse, PublicArtikelItem, PublicArtikelResponse } from '../../types/api';
@@ -8,6 +9,7 @@ interface GuestDashboardProps {
 }
 
 export function GuestDashboard({ onLoginClick }: GuestDashboardProps): JSX.Element {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<PublicStatsResponse | null>(null);
   const [artikel, setArtikel] = useState<PublicArtikelItem[]>([]);
 
@@ -161,7 +163,7 @@ export function GuestDashboard({ onLoginClick }: GuestDashboardProps): JSX.Eleme
             <p className="text-xs text-neutral-500 font-body mt-0.5">Informasi gizi untuk keluarga Indonesia</p>
           </div>
           <button
-            onClick={onLoginClick}
+            onClick={() => navigate('/edukasi')}
             className="text-xs text-primary font-semibold hover:text-primary-600 font-body flex items-center gap-1"
           >
             Lihat Semua <ChevronRight size={12} />
@@ -169,7 +171,7 @@ export function GuestDashboard({ onLoginClick }: GuestDashboardProps): JSX.Eleme
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {artikel.map((a) => (
-            <div key={a.id_artikel} className="bg-white rounded-2xl overflow-hidden border border-neutral-100 hover:shadow-md transition-shadow group cursor-pointer" onClick={onLoginClick}>
+            <div key={a.id_artikel} className="bg-white rounded-2xl overflow-hidden border border-neutral-100 hover:shadow-md transition-shadow group cursor-pointer" onClick={() => navigate('/edukasi')}>
               <div className="relative h-40 overflow-hidden bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">
                 <BookOpen size={48} className="text-primary/40" />
                 <span className="absolute bottom-3 left-3 text-[10px] font-bold uppercase tracking-wide bg-primary text-white px-2.5 py-1 rounded-full">

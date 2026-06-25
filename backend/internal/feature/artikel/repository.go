@@ -155,7 +155,7 @@ func (r *Repo) GetDetailJoinByID(ctx context.Context, idArtikel int32) (*artikel
 		FROM artikel a
 		JOIN user_account penulis ON penulis.id_user = a.id_penulis
 		LEFT JOIN user_account verifikator ON verifikator.id_user = a.id_verifikator
-		WHERE a.id_artikel = $1
+		WHERE a.id_artikel = $1 AND a.status_artikel = 'Dipublikasikan'
 		LIMIT 1
 	`
 

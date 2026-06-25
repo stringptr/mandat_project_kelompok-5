@@ -225,7 +225,7 @@ services:
       target: production
       dockerfile: Containerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-backend:8080}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
     restart: unless-stopped
     volumes:
       - ./frontend:/app:z

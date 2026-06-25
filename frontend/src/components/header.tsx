@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, Bell, LogOut, LogIn, ChevronDown, ArrowRight } from 'lucide-react';
 import type { Role } from '../App';
 import { useAuth } from '../context/AuthContext';
-import { apiGet } from '../lib/api';
+import { apiGet, apiPatch } from '../lib/api';
 
 interface HeaderProps {
   currentRole?: Role;
@@ -38,6 +38,14 @@ const TIPE_DOT: Record<string, string> = {
   Pengingat: 'bg-yellow-500',
 };
 
+const TIPE_ROUTE: Record<string, string> = {
+  Pemeriksaan: '/monitoring',
+  Imunisasi: '/jadwal-imunisasi',
+  Rujukan: '/tindak-lanjut',
+  Edukasi: '/edukasi',
+  Pengingat: '/notifikasi',
+};
+
 function getInitials(name?: string): string {
   if (!name) return '?';
   return name
@@ -58,16 +66,41 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [notifPreviews, setNotifPreviews] = useState<NotifPreview[]>([]);
 
+  const fetchNotif = () => {
+    if (!isLoggedIn) return;
+    apiGet<{ notifikasi: NotifPreview[] }>('/notifikasi?per_page=4')
+      .then((res) => setNotifPreviews(res.notifikasi ?? []))
+      .catch(() => {});
+  };
+
   useEffect(() => {
-    if (isLoggedIn) {
-      apiGet<{ notifikasi: NotifPreview[] }>('/notifikasi?per_page=4')
-        .then((res) => setNotifPreviews(res.notifikasi))
-        .catch(() => console.error('Gagal memuat notifikasi'));
-    }
+    fetchNotif();
+    const interval = setInterval(fetchNotif, 15000);
+    return () => clearInterval(interval);
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    const onFocus = () => fetchNotif();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, [isLoggedIn]);
 
   const pageTitle = PAGE_TITLES[location.pathname] || 'SiGizi';
   const unreadCount = notifPreviews.filter((n) => !n.status_baca).length;
+
+  const handleNotifClick = async (id: number, tipe: string) => {
+    setShowNotifications(false);
+    try {
+      await apiPatch(`/notifikasi/${id}/read`);
+      setNotifPreviews((prev) =>
+        prev.map((n) => (n.id_notifikasi === id ? { ...n, status_baca: true } : n)),
+      );
+      const route = TIPE_ROUTE[tipe] ?? '/notifikasi';
+      navigate(route);
+    } catch {
+      navigate('/notifikasi');
+    }
+  };
 
 
   const handleLogout = async () => {
@@ -130,7 +163,11 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
             {/* Notification bell — preview dropdown */}
             <div className="relative">
               <button
-                onClick={() => { setShowNotifications(!showNotifications); setShowProfileMenu(false); }}
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  setShowProfileMenu(false);
+                  if (!showNotifications) fetchNotif();
+                }}
                 className="p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg transition-colors relative"
               >
                 <Bell size={20} />
@@ -172,7 +209,7 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
                       notifPreviews.map((item) => (
                         <div
                           key={item.id_notifikasi}
-                          onClick={() => { navigate('/notifikasi'); setShowNotifications(false); }}
+                          onClick={() => handleNotifClick(item.id_notifikasi, item.tipe_notifikasi)}
                           className="flex items-start gap-3 px-5 py-3.5 hover:bg-neutral-50 cursor-pointer transition-colors"
                         >
                           {/* Category dot */}
@@ -235,6 +272,16 @@ export function Header({ currentRole, onLoginClick, onChangeRole }: HeaderProps)
                     <p className="text-xs text-neutral-500 font-body mt-0.5">{user?.email}</p>
                     <p className="text-xs text-neutral-400 font-body mt-0.5">{user?.role}</p>
                   </div>
+                  {/* Edit Profil */}
+                  <button
+                    onClick={() => { navigate('/profile'); setShowProfileMenu(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors font-body"
+                  >
+                    <svg className="w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Edit Profil
+                  </button>
                   {/* Logout */}
                   <button
                     onClick={handleLogout}

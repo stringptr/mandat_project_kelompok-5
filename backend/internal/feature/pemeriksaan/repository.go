@@ -227,7 +227,7 @@ func (r *Repo) GetPendingVerification(ctx context.Context, page int, perPage int
 	`
 
 	var countResult struct{ Count int64 }
-	err := pgxV5.Query(ctx, RawStatement("SELECT COUNT(*)"+selectFrom), r.db, &countResult)
+	err := pgxV5.Query(ctx, RawStatement("SELECT COUNT(*)"+selectFrom, RawArgs{}), r.db, &countResult)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -240,13 +240,23 @@ func (r *Repo) GetPendingVerification(ctx context.Context, page int, perPage int
 			hp.created_at AS tanggal_input
 	` + selectFrom + `
 		ORDER BY hp.created_at DESC
-		OFFSET #1 LIMIT #2
+		LIMIT $1 OFFSET $2
 	`
 
-	var rows []*pemeriksaanDomain.PendingJoinRow
-	err = pgxV5.Query(ctx, RawStatement(dataSQL, RawArgs{"#1": offset, "#2": perPage}), r.db, &rows)
+	pgxRows, err := r.db.Query(ctx, dataSQL, perPage, offset)
 	if err != nil {
 		return nil, 0, err
+	}
+	defer pgxRows.Close()
+
+	var rows []*pemeriksaanDomain.PendingJoinRow
+	for pgxRows.Next() {
+		var row pemeriksaanDomain.PendingJoinRow
+		err := pgxRows.Scan(&row.IDHasilPemeriksaan, &row.NamaPasien, &row.DiinputOleh, &row.TanggalInput)
+		if err != nil {
+			return nil, 0, err
+		}
+		rows = append(rows, &row)
 	}
 
 	return rows, int(countResult.Count), nil

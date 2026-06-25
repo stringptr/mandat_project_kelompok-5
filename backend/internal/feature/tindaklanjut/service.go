@@ -201,7 +201,9 @@ func (s *Service) CreateTindakLanjut(ctx context.Context, idBidan int32, req *ti
 
 	notifPesan := "Tindak lanjut telah dibuat untuk hasil pemeriksaan Anda."
 	if idRujukan != nil {
-		notifPesan = "Tindak lanjut dan rujukan telah dibuat untuk hasil pemeriksaan Anda."
+		deadline := now.Add(7 * 24 * time.Hour)
+		deadlineStr := deadline.Format("02 Jan 2006")
+		notifPesan = fmt.Sprintf("Rujukan telah dibuat. Harap segera ditindaklanjuti ke fasilitas kesehatan sebelum %s.", deadlineStr)
 	}
 	idPasien, _ := s.repo.GetPasienIDByHasilPemeriksaanID(ctx, req.IDHasilPemeriksaan)
 	if idPasien != nil {
@@ -271,11 +273,16 @@ func (s *Service) GetStatusTindakLanjut(ctx context.Context, req *tindaklanjutDo
 	items := make([]tindaklanjutDomain.StatusTindakLanjutItem, len(rows))
 	for i, r := range rows {
 		items[i] = tindaklanjutDomain.StatusTindakLanjutItem{
-			IDPasien:       r.IDPasien,
-			NamaPasien:     r.NamaPasien,
-			StatusPasien:   r.StatusPasien,
-			StatusRujukan:  r.StatusRujukan,
-			TanggalRujukan: r.TanggalRujukan,
+			IDPasien:        r.IDPasien,
+			NamaPasien:      r.NamaPasien,
+			StatusPasien:    r.StatusPasien,
+			StatusRujukan:   r.StatusRujukan,
+			TanggalRujukan:  r.TanggalRujukan,
+			TanggalDeadline: r.TanggalDeadline,
+			StatusDeadline:  r.StatusDeadline,
+			Faskes:          r.Faskes,
+			AlasanRujukan:   r.AlasanRujukan,
+			JenisTindakan:   r.JenisTindakan,
 		}
 	}
 

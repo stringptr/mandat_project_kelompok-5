@@ -24,7 +24,7 @@ type GetAllUsersRequest struct {
 	Page             int     `query:"page"             minimum:"1" default:"1"`
 	PerPage          int     `query:"per_page"          minimum:"1" maximum:"100" default:"20"`
 	Q                string  `query:"q"                 maxLength:"255"`
-	Role             string  `query:"role"              enum:"Bidan,Kader,Dinkes,Pasien"`
+	Role             string  `query:"role"              enum:"Bidan,Kader,Dinkes,Pasien,Ibu Hamil,Anak"`
 	StatusVerifikasi string  `query:"status_verifikasi" enum:"Pending,Aktif,Ditolak"`
 }
 

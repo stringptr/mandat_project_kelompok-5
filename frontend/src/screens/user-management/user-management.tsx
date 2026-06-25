@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Pencil, Trash2, MoreHorizontal, MapPin, ChevronLeft, ChevronRight, X, Check, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Pencil, Trash2, MoreHorizontal, MapPin, ChevronLeft, ChevronRight, X, Check, Loader2, Eye } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
 import { StatusBadge } from '../monitoring/components/statusbadge';
 import { apiGet, apiPatch, apiDelete } from '../../lib/api';
@@ -17,6 +17,7 @@ interface UserData {
   avatarColor: string;
   role: string;
   roleBackend: string;
+  roles: string[];
   wilayah: string;
   status: UserStatus;
 }
@@ -83,6 +84,32 @@ function mapBackendRole(roles: string[]): string {
   return roles[0] || 'Unknown';
 }
 
+const DISPLAY_ROLES = ['SUPER_ADMIN', 'DINKES', 'BIDAN', 'KADER', 'IBU_HAMIL', 'ANAK', 'PASIEN'];
+
+const ROLE_LABEL: Record<string, string> = {
+  SUPER_ADMIN: 'Super Admin',
+  DINKES: 'Dinkes',
+  BIDAN: 'Bidan',
+  KADER: 'Kader',
+  IBU_HAMIL: 'Ibu Hamil',
+  ANAK: 'Anak',
+  PASIEN: 'Pasien',
+};
+
+const ROLE_BADGE: Record<string, string> = {
+  SUPER_ADMIN: 'bg-purple-100 text-purple-700',
+  DINKES: 'bg-indigo-100 text-indigo-700',
+  BIDAN: 'bg-emerald-100 text-emerald-700',
+  KADER: 'bg-amber-100 text-amber-700',
+  IBU_HAMIL: 'bg-pink-100 text-pink-700',
+  ANAK: 'bg-sky-100 text-sky-700',
+  PASIEN: 'bg-blue-100 text-blue-700',
+};
+
+function getUserRoleBadges(roles: string[]): string[] {
+  return roles.filter((r) => DISPLAY_ROLES.includes(r));
+}
+
 function mapStatus(status: string): UserStatus {
   if (status === 'Aktif') return 'verified';
   if (status === 'Ditolak') return 'rejected';
@@ -99,6 +126,7 @@ function mapUser(b: BackendUser, idx: number): UserData {
     avatarColor: AVATAR_COLORS[idx % AVATAR_COLORS.length],
     role: mapBackendRole(b.roles),
     roleBackend: b.roles[0] || '',
+    roles: b.roles,
     wilayah: b.nama_lokasi || '',
     status: mapStatus(b.status_verifikasi),
   };
@@ -193,6 +221,147 @@ function EditModal({ user, onSave, onClose }: EditModalProps): JSX.Element {
   );
 }
 
+// ─── Detail Modal ──────────────────────────────────────────────────────────────
+
+interface UserDetail {
+  id_user: number;
+  email: string;
+  no_hp: string;
+  nama: string;
+  nik: string;
+  jenis_kelamin: string;
+  tanggal_lahir: string;
+  status_verifikasi: string;
+  id_lokasi: number;
+  roles: string[];
+  created_at: string;
+}
+
+interface PasienDetailData {
+  id_pasien: number;
+  nama: string;
+  nik: string;
+  email: string;
+  no_hp: string;
+  jenis_kelamin: string;
+  tanggal_lahir: string;
+  nama_posyandu: string;
+  jenis_pasien: string;
+  data_ibu_hamil?: { id_ibu_hamil: number; hamil_ke: number; bulan_mulai_hamil: string; hpht: string; status_kehamilan: string } | null;
+  data_anak?: { nama_anak: string; berat_lahir: number; panjang_lahir: number; hubungan_dengan_wali: string; nama_wali: string } | null;
+}
+
+interface DetailModalProps {
+  userId: number;
+  userName: string;
+  userRoles: string[];
+  onClose: () => void;
+}
+
+function DetailModal({ userId, userName, userRoles, onClose }: DetailModalProps): JSX.Element {
+  const [loading, setLoading] = useState(true);
+  const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
+  const [pasienDetail, setPasienDetail] = useState<PasienDetailData | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    const isPasien = userRoles.some((r) => ['PASIEN', 'IBU_HAMIL', 'ANAK'].includes(r));
+
+    Promise.all([
+      apiGet<UserDetail>(`/users/${userId}`).catch(() => null),
+      isPasien ? apiGet<PasienDetailData>(`/monitoring/pasien/${userId}`).catch(() => null) : Promise.resolve(null),
+    ]).then(([u, p]) => {
+      setUserDetail(u);
+      setPasienDetail(p);
+    }).finally(() => setLoading(false));
+  }, [userId, userRoles]);
+
+  const initials = userName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100 sticky top-0 bg-white z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary-100 text-primary text-sm font-bold flex items-center justify-center shrink-0">{initials}</div>
+            <div>
+              <p className="font-bold text-neutral-800 text-sm">{userName}</p>
+              <p className="text-xs text-neutral-400">{userDetail?.email || '-'}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-100 text-neutral-400"><X size={16} /></button>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12"><Loader2 size={24} className="animate-spin text-primary" /></div>
+        ) : (
+          <div className="px-6 py-5 space-y-4">
+            {/* Basic Info */}
+            <div>
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Informasi Dasar</p>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-neutral-400">NIK</span><p className="font-medium text-neutral-800">{userDetail?.nik || '-'}</p></div>
+                <div><span className="text-neutral-400">No. HP</span><p className="font-medium text-neutral-800">{userDetail?.no_hp || '-'}</p></div>
+                <div><span className="text-neutral-400">Jenis Kelamin</span><p className="font-medium text-neutral-800">{userDetail?.jenis_kelamin || '-'}</p></div>
+                <div><span className="text-neutral-400">Tgl Lahir</span><p className="font-medium text-neutral-800">{userDetail?.tanggal_lahir ? new Date(userDetail.tanggal_lahir).toLocaleDateString('id-ID') : '-'}</p></div>
+                <div><span className="text-neutral-400">Status</span><span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full ml-1 ${userDetail?.status_verifikasi === 'Aktif' ? 'bg-emerald-100 text-emerald-700' : userDetail?.status_verifikasi === 'Ditolak' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{userDetail?.status_verifikasi || '-'}</span></div>
+                <div><span className="text-neutral-400">Terdaftar</span><p className="font-medium text-neutral-800">{userDetail?.created_at ? new Date(userDetail.created_at).toLocaleDateString('id-ID') : '-'}</p></div>
+              </div>
+            </div>
+
+            {/* Roles */}
+            <div>
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Role</p>
+              <div className="flex flex-wrap gap-1">
+                {userRoles.map((r) => (
+                  <span key={r} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ROLE_BADGE[r] ?? 'bg-neutral-100 text-neutral-600'}`}>{ROLE_LABEL[r] ?? r}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Pasien Info */}
+            {pasienDetail && (
+              <div>
+                <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">Detail Pasien</p>
+                <div className="bg-neutral-50 rounded-xl p-4 space-y-3 text-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><span className="text-neutral-400">Posyandu</span><p className="font-medium text-neutral-800">{pasienDetail.nama_posyandu || '-'}</p></div>
+                    <div><span className="text-neutral-400">Jenis Pasien</span><span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full ml-1 ${ROLE_BADGE[pasienDetail.jenis_pasien] ?? 'bg-neutral-100 text-neutral-600'}`}>{pasienDetail.jenis_pasien || '-'}</span></div>
+                  </div>
+
+                  {pasienDetail.data_ibu_hamil && (
+                    <div className="border-t border-neutral-200 pt-3 mt-3">
+                      <p className="text-xs font-semibold text-pink-600 mb-2">Ibu Hamil</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><span className="text-neutral-400">Hamil Ke</span><p className="font-medium text-neutral-800">{pasienDetail.data_ibu_hamil.hamil_ke}</p></div>
+                        <div><span className="text-neutral-400">Status</span><span className="inline-block text-xs font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 ml-1">{pasienDetail.data_ibu_hamil.status_kehamilan}</span></div>
+                        <div><span className="text-neutral-400">HPHT</span><p className="font-medium text-neutral-800">{pasienDetail.data_ibu_hamil.hpht ? new Date(pasienDetail.data_ibu_hamil.hpht).toLocaleDateString('id-ID') : '-'}</p></div>
+                        <div><span className="text-neutral-400">Mulai Hamil</span><p className="font-medium text-neutral-800">{pasienDetail.data_ibu_hamil.bulan_mulai_hamil ? new Date(pasienDetail.data_ibu_hamil.bulan_mulai_hamil).toLocaleDateString('id-ID') : '-'}</p></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {pasienDetail.data_anak && (
+                    <div className="border-t border-neutral-200 pt-3 mt-3">
+                      <p className="text-xs font-semibold text-sky-600 mb-2">Anak</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><span className="text-neutral-400">Nama Anak</span><p className="font-medium text-neutral-800">{pasienDetail.data_anak.nama_anak}</p></div>
+                        <div><span className="text-neutral-400">Wali</span><p className="font-medium text-neutral-800">{pasienDetail.data_anak.nama_wali || '-'}</p></div>
+                        <div><span className="text-neutral-400">BB Lahir</span><p className="font-medium text-neutral-800">{pasienDetail.data_anak.berat_lahir} kg</p></div>
+                        <div><span className="text-neutral-400">PB Lahir</span><p className="font-medium text-neutral-800">{pasienDetail.data_anak.panjang_lahir} cm</p></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function UserManagement(): JSX.Element {
@@ -204,12 +373,16 @@ export default function UserManagement(): JSX.Element {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [totalData, setTotalData] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [detailUser, setDetailUser] = useState<{ id: number; name: string; roles: string[] } | null>(null);
+  const [roleFilter, setRoleFilter] = useState('');
 
   useEffect(() => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        const res = await apiGet<UsersResponse>(`/users?page=${page}&per_page=${PAGE_SIZE}`);
+        const params = new URLSearchParams({ page: String(page), per_page: String(PAGE_SIZE) });
+        if (roleFilter) params.set('role', roleFilter);
+        const res = await apiGet<UsersResponse>(`/users?${params.toString()}`);
         setUsers(res.users.map((u, i) => mapUser(u, i)));
         setTotalData(res.meta.total);
       } catch {
@@ -219,12 +392,20 @@ export default function UserManagement(): JSX.Element {
       }
     };
     fetchUsers();
-  }, [page]);
-
-  const filtered = useMemo(() => users, [users]);
+  }, [page, roleFilter]);
 
   const totalPages = Math.max(1, Math.ceil(totalData / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
+
+  const ROLE_FILTERS = [
+    { value: '', label: 'Semua' },
+    { value: 'Bidan', label: 'Bidan', color: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+    { value: 'Kader', label: 'Kader', color: 'bg-amber-100 text-amber-700 border-amber-300' },
+    { value: 'Dinkes', label: 'Dinkes', color: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
+    { value: 'Ibu Hamil', label: 'Ibu Hamil', color: 'bg-pink-100 text-pink-700 border-pink-300' },
+    { value: 'Anak', label: 'Anak', color: 'bg-sky-100 text-sky-700 border-sky-300' },
+    { value: 'Pasien', label: 'Pasien', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+  ];
 
   const openEdit = (user: UserData) => {
     setMenuOpen(null);
@@ -290,6 +471,15 @@ export default function UserManagement(): JSX.Element {
           <h2 className="text-base font-bold text-neutral-800 font-headline">Daftar Pengguna Aktif</h2>
         </div>
 
+        <div className="px-6 pb-4 flex flex-wrap gap-2">
+          {ROLE_FILTERS.map((f) => (
+            <button key={f.value} onClick={() => { setRoleFilter(f.value); setPage(1); }}
+              className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-colors ${roleFilter === f.value ? f.color + ' border' : 'border-neutral-200 text-neutral-500 hover:bg-neutral-100'}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -303,12 +493,12 @@ export default function UserManagement(): JSX.Element {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
-                {filtered.length === 0 && !loading ? (
+                {users.length === 0 && !loading ? (
                   <tr>
                     <td colSpan={6} className="py-16 text-center text-neutral-400 text-sm">Tidak ada pengguna.</td>
                   </tr>
                 ) : (
-                  filtered.map((user) => (
+                  users.map((user) => (
                     <tr key={user.id} className="hover:bg-neutral-50 transition-colors" onClick={() => setMenuOpen(null)}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -325,7 +515,13 @@ export default function UserManagement(): JSX.Element {
                         <span className="text-neutral-700 text-sm font-mono">{user.nik}</span>
                       </td>
                       <td className="px-4 py-4">
-                        <span className="text-primary font-semibold text-sm">{user.role}</span>
+                        <div className="flex flex-wrap gap-1">
+                          {getUserRoleBadges(user.roles).map((r) => (
+                            <span key={r} className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${ROLE_BADGE[r] ?? 'bg-neutral-100 text-neutral-600'}`}>
+                              {ROLE_LABEL[r] ?? r}
+                            </span>
+                          ))}
+                        </div>
                       </td>
                       <td className="px-4 py-4">
                         <span className="flex items-center gap-1 text-neutral-600 text-sm">
@@ -357,12 +553,16 @@ export default function UserManagement(): JSX.Element {
                                     onClick={(e) => { e.stopPropagation(); handleDelete(user.id); }}>
                                     <Trash2 className="w-3.5 h-3.5" /> Hapus
                                   </button>
-                                </div>
+        </div>
                               )}
                             </div>
                           </>
                         ) : (
                           <>
+                            <button onClick={(e) => { e.stopPropagation(); setDetailUser({ id: user.id, name: user.name, roles: user.roles }); }}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 transition-colors text-neutral-400 hover:text-blue-500">
+                              <Eye size={15} />
+                            </button>
                             <button onClick={(e) => { e.stopPropagation(); openEdit(user); }}
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-100 transition-colors text-neutral-400 hover:text-primary">
                               <Pencil className="w-4 h-4" />
@@ -425,6 +625,9 @@ export default function UserManagement(): JSX.Element {
 
       {editingUser && (
         <EditModal user={editingUser} onSave={handleSave} onClose={() => setEditingUser(null)} />
+      )}
+      {detailUser && (
+        <DetailModal userId={detailUser.id} userName={detailUser.name} userRoles={detailUser.roles} onClose={() => setDetailUser(null)} />
       )}
     </div>
   );

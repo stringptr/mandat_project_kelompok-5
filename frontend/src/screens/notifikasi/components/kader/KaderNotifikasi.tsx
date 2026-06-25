@@ -6,9 +6,10 @@ interface KaderNotifikasiProps {
   notifikasi: BackendNotifikasi[];
   markAllRead: () => Promise<void>;
   toNotifGroups: (list: BackendNotifikasi[]) => NotifGroup[];
+  onMarkRead?: (id: string) => void;
 }
 
-export default function KaderNotifikasi({ notifikasi, markAllRead, toNotifGroups }: KaderNotifikasiProps): JSX.Element {
+export default function KaderNotifikasi({ notifikasi, markAllRead, toNotifGroups, onMarkRead }: KaderNotifikasiProps): JSX.Element {
   const groups = toNotifGroups(notifikasi);
   const unreadCount = notifikasi.filter((n) => !n.status_baca).length;
 
@@ -39,7 +40,7 @@ export default function KaderNotifikasi({ notifikasi, markAllRead, toNotifGroups
         {groups.length === 0 ? (
           <div className="text-center py-12 text-neutral-400 text-sm">Belum ada notifikasi</div>
         ) : (
-          <NotifTimeline groups={groups} />
+          <NotifTimeline groups={groups} onMarkRead={onMarkRead} />
         )}
       </div>
     </div>

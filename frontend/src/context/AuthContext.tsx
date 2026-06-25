@@ -25,6 +25,7 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   isLoggedIn: boolean;
   loading: boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 export interface AuthResponse {
@@ -190,8 +191,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
     }
   }, []);
 
+  const refreshProfile = useCallback(async () => {
+    try {
+      const me = await apiGet<{
+        id_user: number;
+        nama: string;
+        roles: string[];
+        email: string;
+        nik: string;
+      }>('/auth/me');
+
+      const profile: UserProfile = {
+        idUser: me.id_user,
+        name: me.nama,
+        email: me.email,
+        nik: me.nik,
+        role: mapRolesToFrontendRole(me.roles),
+        roles: me.roles,
+        avatarUrl: getAvatarUrl(me.nama),
+      };
+
+      localStorage.setItem('sigizi_user', JSON.stringify(profile));
+      setUser(profile);
+    } catch {
+      // session invalid
+    }
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoggedIn: user !== null, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoggedIn: user !== null, loading, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

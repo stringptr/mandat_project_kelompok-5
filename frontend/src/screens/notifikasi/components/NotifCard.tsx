@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { Bell, AlertTriangle, CalendarClock, CheckCircle2, FileText, FlaskConical } from 'lucide-react';
+import { apiPatch } from '../../../lib/api';
 import type { NotifItem } from './types';
 
 interface NotifCardProps {
   item: NotifItem;
+  onMarkRead?: (id: string) => void;
 }
 
 const CATEGORY_STYLES: Record<string, { dot: string; color: string; Icon: React.FC<{ className?: string }> }> = {
@@ -16,20 +18,30 @@ const CATEGORY_STYLES: Record<string, { dot: string; color: string; Icon: React.
   warning:  { dot: 'bg-amber-400', color: 'text-amber-500', Icon: ({ className }) => <AlertTriangle className={className} /> },
 };
 
-export default function NotifCard({ item }: NotifCardProps): JSX.Element {
+export default function NotifCard({ item, onMarkRead }: NotifCardProps): JSX.Element {
   const navigate = useNavigate();
   const style = CATEGORY_STYLES[item.category] ?? CATEGORY_STYLES.info;
   const { Icon } = style;
-  const clickable = !!item.actionUrl;
+
+  const handleClick = async () => {
+    const idNotifikasi = parseInt(item.id.replace('n-', ''), 10);
+    if (!isNaN(idNotifikasi)) {
+      apiPatch(`/notifikasi/${idNotifikasi}/read`).catch(() => {});
+      onMarkRead?.(item.id);
+    }
+    if (item.actionUrl) {
+      navigate(item.actionUrl);
+    }
+  };
 
   const card = (
-    <div className={`flex items-start gap-3 px-4 py-3 rounded-xl transition-colors ${item.read ? '' : 'bg-blue-50/50'} ${clickable ? 'cursor-pointer hover:bg-neutral-100' : ''}`}>
+    <div className={`flex items-start gap-3 px-4 py-3 rounded-xl transition-colors ${item.read ? '' : 'bg-blue-50/50'} cursor-pointer hover:bg-neutral-100`}>
       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${item.read ? 'bg-neutral-100' : 'bg-white shadow-sm'}`}>
         <Icon className={`w-4 h-4 ${style.color}`} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <p className={`text-sm leading-snug ${item.read ? 'font-medium text-neutral-600' : 'font-semibold text-neutral-800'} ${clickable ? 'group-hover:text-primary' : ''}`}>
+          <p className={`text-sm leading-snug ${item.read ? 'font-medium text-neutral-600' : 'font-semibold text-neutral-800'}`}>
             {item.title}
           </p>
           <span className="text-[11px] text-neutral-400 shrink-0 whitespace-nowrap mt-0.5">{item.time}</span>
@@ -49,23 +61,15 @@ export default function NotifCard({ item }: NotifCardProps): JSX.Element {
               {tag.label}
             </span>
           ))}
-          {clickable && (
-            <span className="text-[10px] text-primary font-medium ml-auto">
-              Lihat →
-            </span>
-          )}
+          <span className="text-[10px] text-primary font-medium ml-auto">Lihat →</span>
         </div>
       </div>
     </div>
   );
 
-  if (clickable) {
-    return (
-      <div onClick={() => navigate(item.actionUrl!)} className="group">
-        {card}
-      </div>
-    );
-  }
-
-  return card;
+  return (
+    <div onClick={handleClick} className="group">
+      {card}
+    </div>
+  );
 }

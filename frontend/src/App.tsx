@@ -18,6 +18,7 @@ import Edukasi from "./screens/edukasi/edukasi";
 import UserManagement from "./screens/user-management/user-management";
 import Notifikasi from "./screens/notifikasi/notifikasi";
 import JadwalImunisasi from "./screens/jadwal-imunisasi/jadwal-imunisasi";
+import ProfilePage from "./screens/profile/ProfilePage";
 
 export type Role =
   | "Ibu/Wali"
@@ -100,6 +101,10 @@ function AppShell(): JSX.Element {
                   <Route
                     path="/jadwal-imunisasi"
                     element={<JadwalImunisasi currentRole={currentRole} />}
+                  />
+                  <Route
+                    path="/profile"
+                    element={<ProfilePage />}
                   />
                 </Routes>
               </main>

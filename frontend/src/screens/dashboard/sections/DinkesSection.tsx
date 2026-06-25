@@ -1,11 +1,35 @@
-import { useEffect } from 'react';
-import { Users, AlertTriangle, Target, Calendar } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Users, AlertTriangle, Target, Calendar, Bell, FileText } from 'lucide-react';
 import { apiGet } from '../../../lib/api';
 import { useNotification } from '../../../context/NotificationContext';
 import { useAppStore } from '../../../store/useAppStore';
 import { TrendChart } from '../components/TrendChart';
 import { PrevalensiMap } from '../components/PrevalensiMap';
 import type { DashboardStats, DistribusiGiziItem, TrenStuntingItem, StuntingWilayahItem } from '../../../types/api';
+
+interface NotifItem {
+  id_notifikasi: number;
+  judul: string;
+  pesan: string | null;
+  tipe_notifikasi: string;
+  status_baca: boolean;
+  tanggal_kirim: string;
+}
+
+interface LaporanItem {
+  wilayah: string;
+  jumlah_pasien_dirujuk: number;
+  jumlah_pasien_diterima: number;
+  jumlah_pasien_diproses: number;
+}
+
+const TIPE_DOT: Record<string, string> = {
+  Pemeriksaan: 'bg-blue-500',
+  Imunisasi: 'bg-green-500',
+  Rujukan: 'bg-orange-500',
+  Edukasi: 'bg-purple-500',
+  Pengingat: 'bg-yellow-500',
+};
 
 export function DinkesSection(): JSX.Element {
   const notify = useNotification();
@@ -53,6 +77,18 @@ export function DinkesSection(): JSX.Element {
   const kehadiranChartData = kehadiranBulanan.map((t) => ({ bulan: t.bulan, nilai: t.jumlah }));
 
   const totalDistribusi = distribusiGizi.reduce((s, d) => s + d.jumlah, 0) || 1;
+
+  const [notifikasi, setNotifikasi] = useState<NotifItem[]>([]);
+  const [laporan, setLaporan] = useState<LaporanItem[]>([]);
+
+  useEffect(() => {
+    apiGet<{ notifikasi: NotifItem[] }>('/notifikasi?per_page=5')
+      .then((res) => setNotifikasi(res.notifikasi ?? []))
+      .catch(() => {});
+    apiGet<{ laporan: LaporanItem[] }>('/laporan/tindak-lanjut')
+      .then((res) => setLaporan(res.laporan ?? []))
+      .catch(() => {});
+  }, []);
 
   const levelColor = (level: string) => {
     if (level === 'tinggi') return 'text-red-600 bg-red-50';
@@ -179,6 +215,58 @@ export function DinkesSection(): JSX.Element {
                   <span className={`text-xs font-bold px-2 py-1 rounded-full ${levelColor(w.level)}`}>
                     {w.prevalensi.toFixed(1)}%
                   </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl p-5 border border-neutral-100">
+          <div className="flex items-center gap-2 mb-3">
+            <Bell size={16} className="text-amber-500" />
+            <h4 className="text-sm font-bold text-neutral-800 font-headline">Notifikasi Terbaru</h4>
+          </div>
+          {notifikasi.length === 0 ? (
+            <p className="text-sm text-neutral-400 text-center py-6">Belum ada notifikasi</p>
+          ) : (
+            <div className="space-y-2 max-h-52 overflow-y-auto">
+              {notifikasi.map((n) => (
+                <div key={n.id_notifikasi} className="flex items-start gap-3 py-2.5 border-b border-neutral-50 last:border-0">
+                  <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${TIPE_DOT[n.tipe_notifikasi] ?? 'bg-neutral-300'}`} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-neutral-800 truncate">{n.judul}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5 line-clamp-1">{n.pesan || ''}</p>
+                  </div>
+                  <span className="text-[10px] text-neutral-400 flex-shrink-0">{new Date(n.tanggal_kirim).toLocaleDateString('id-ID')}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 border border-neutral-100">
+          <div className="flex items-center gap-2 mb-3">
+            <FileText size={16} className="text-emerald-500" />
+            <h4 className="text-sm font-bold text-neutral-800 font-headline">Laporan Tindak Lanjut</h4>
+          </div>
+          {laporan.length === 0 ? (
+            <p className="text-sm text-neutral-400 text-center py-6">Belum ada data laporan</p>
+          ) : (
+            <div className="space-y-1 max-h-52 overflow-y-auto">
+              <div className="grid grid-cols-4 text-[10px] font-bold text-neutral-400 uppercase tracking-wide px-1 pb-2 border-b border-neutral-100">
+                <span>Wilayah</span>
+                <span className="text-center">Dirujuk</span>
+                <span className="text-center">Diterima</span>
+                <span className="text-center">Diproses</span>
+              </div>
+              {laporan.map((l) => (
+                <div key={l.wilayah} className="grid grid-cols-4 text-xs py-2 border-b border-neutral-50 last:border-0 items-center hover:bg-neutral-50 rounded px-1">
+                  <span className="font-medium text-neutral-800 truncate">{l.wilayah}</span>
+                  <span className="text-center text-amber-600 font-medium">{l.jumlah_pasien_dirujuk}</span>
+                  <span className="text-center text-emerald-600 font-medium">{l.jumlah_pasien_diterima}</span>
+                  <span className="text-center text-blue-600 font-medium">{l.jumlah_pasien_diproses}</span>
                 </div>
               ))}
             </div>

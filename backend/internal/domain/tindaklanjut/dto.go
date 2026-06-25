@@ -71,11 +71,16 @@ type UpdateStatusRujukanResponse struct {
 }
 
 type StatusTindakLanjutItem struct {
-	IDPasien       int32  `json:"id_pasien"`
-	NamaPasien     string `json:"nama_pasien"`
-	StatusPasien   string `json:"status_pasien"`
-	StatusRujukan  string `json:"status_rujukan"`
-	TanggalRujukan string `json:"tanggal_rujukan"`
+	IDPasien        int32  `json:"id_pasien"`
+	NamaPasien      string `json:"nama_pasien"`
+	StatusPasien    string `json:"status_pasien"`
+	StatusRujukan   string `json:"status_rujukan"`
+	TanggalRujukan  string `json:"tanggal_rujukan"`
+	TanggalDeadline string `json:"tanggal_deadline"`
+	StatusDeadline  string `json:"status_deadline"`
+	Faskes          string `json:"faskes"`
+	AlasanRujukan   string `json:"alasan_rujukan"`
+	JenisTindakan   string `json:"jenis_tindakan"`
 }
 
 type StatusTindakLanjutData struct {

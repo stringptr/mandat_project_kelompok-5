@@ -1,16 +1,10 @@
-// UpdateRujukanModal with autocomplete for faskes
+// UpdateRujukanModal with dropdown for faskes from API
 import { X, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNotification } from '../../../context/NotificationContext';
-import { apiPatch } from '../../../lib/api';
+import { apiGet, apiPatch } from '../../../lib/api';
 import type { Rujukan } from './RujukanAktif';
-
-// Static list of facilities (could be fetched later)
-const FACILITIES = [
-  'RSUD Kota - Spesialis Anak',
-  'Puskesmas Melati',
-  'Posyandu Melati',
-];
+import type { FaskesItem } from '../../../types/entities';
 
 interface UpdateRujukanModalProps {
   isOpen: boolean;
@@ -29,22 +23,28 @@ export default function UpdateRujukanModal({
 
   const notify = useNotification();
   const [status, setStatus] = useState(rujukan.status);
-  const [faskes, setFaskes] = useState(rujukan.faskes);
-  const [query, setQuery] = useState('');
+  const [faskesList, setFaskesList] = useState<FaskesItem[]>([]);
+  const [selectedFaskesId, setSelectedFaskesId] = useState<number | string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Filter suggestions based on query (case‑insensitive)
-  const suggestions = query
-    ? FACILITIES.filter((f) => f.toLowerCase().startsWith(query.toLowerCase()))
-    : [];
+  useEffect(() => {
+    apiGet<FaskesItem[]>('/faskes')
+      .then((data) => {
+        setFaskesList(data);
+        const match = data.find((f) => f.nama_faskes === rujukan.faskes);
+        if (match) setSelectedFaskesId(match.id_faskes);
+      })
+      .catch(() => setFaskesList([]));
+  }, [rujukan.faskes]);
 
   const handleSave = async () => {
-    if (!faskes.trim()) {
-      notify.warn('Mohon lengkapi semua data form yang wajib diisi sebelum mengirim.');
+    if (!selectedFaskesId) {
+      notify.warn('Mohon pilih fasilitas kesehatan.');
       return;
     }
     setIsSubmitting(true);
-    const updated: Rujukan = { ...rujukan, status, faskes };
+    const selectedFaskes = faskesList.find((f) => f.id_faskes === Number(selectedFaskesId));
+    const updated: Rujukan = { ...rujukan, status, faskes: selectedFaskes?.nama_faskes ?? rujukan.faskes };
     try {
       const idNum = parseInt(String(rujukan.id).replace(/[^0-9]/g, ''), 10) || 0;
       await apiPatch('/rujukan/' + idNum + '/status', { status_rujukan: status });
@@ -91,36 +91,22 @@ export default function UpdateRujukanModal({
               <option value="Ditolak">Ditolak</option>
             </select>
           </div>
-          <div className="relative">
+          <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1">
               Fasilitas Tujuan (Faskes)
             </label>
-            <input
-              type="text"
-              value={faskes}
-              onChange={(e) => {
-                setFaskes(e.target.value);
-                setQuery(e.target.value);
-              }}
+            <select
+              value={selectedFaskesId}
+              onChange={(e) => setSelectedFaskesId(e.target.value)}
               className="w-full bg-gray-100 border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-            {/* Autocomplete dropdown */}
-            {suggestions.length > 0 && (
-              <ul className="absolute left-0 right-0 z-10 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                {suggestions.map((s) => (
-                  <li
-                    key={s}
-                    onClick={() => {
-                      setFaskes(s);
-                      setQuery('');
-                    }}
-                    className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100"
-                  >
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            )}
+            >
+              <option value="">-- Pilih Faskes --</option>
+              {faskesList.map((f) => (
+                <option key={f.id_faskes} value={f.id_faskes}>
+                  {f.nama_faskes} ({f.tipe_faskes})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
         {/* Footer */}

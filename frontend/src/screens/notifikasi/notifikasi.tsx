@@ -11,7 +11,7 @@ interface NotifikasiProps {
 }
 
 export default function Notifikasi({ role }: NotifikasiProps): JSX.Element {
-  const { notifikasi, meta, fetchNotifikasi, markAllRead, toNotifGroups } = useNotifikasi();
+  const { notifikasi, meta, fetchNotifikasi, markAllRead, handleCardMarkRead, toNotifGroups } = useNotifikasi();
 
   return (
     <div className="w-full max-w-5xl mx-auto pb-12 font-body text-neutral-800">
@@ -20,6 +20,7 @@ export default function Notifikasi({ role }: NotifikasiProps): JSX.Element {
           notifikasi={notifikasi}
           markAllRead={markAllRead}
           toNotifGroups={toNotifGroups}
+          onMarkRead={handleCardMarkRead}
         />
       )}
       {role === 'Bidan' && (

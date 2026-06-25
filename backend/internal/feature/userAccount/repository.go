@@ -103,7 +103,9 @@ func (r *Repo) GetAllPaginated(ctx context.Context, page int, perPage int, q str
 		LEFT_JOIN(DinasKesehatan, DinasKesehatan.IDUser.EQ(UserAccount.IDUser)).
 		LEFT_JOIN(Bidan, Bidan.IDUser.EQ(UserAccount.IDUser)).
 		LEFT_JOIN(KaderPosyandu, KaderPosyandu.IDUser.EQ(UserAccount.IDUser)).
-		LEFT_JOIN(Pasien, Pasien.IDPasien.EQ(UserAccount.IDUser))
+		LEFT_JOIN(Pasien, Pasien.IDPasien.EQ(UserAccount.IDUser)).
+		LEFT_JOIN(IbuHamil, IbuHamil.IDPasien.EQ(UserAccount.IDUser).AND(IbuHamil.IsDeleted.EQ(Bool(false)))).
+		LEFT_JOIN(Anak, Anak.IDPasien.EQ(UserAccount.IDUser).AND(Anak.IsDeleted.EQ(Bool(false))))
 
 	conditions := []BoolExpression{UserAccount.IsDeleted.EQ(Bool(false))}
 
@@ -124,6 +126,10 @@ func (r *Repo) GetAllPaginated(ctx context.Context, page int, perPage int, q str
 			conditions = append(conditions, KaderPosyandu.IDUser.IS_NOT_NULL())
 		case "Pasien":
 			conditions = append(conditions, Pasien.IDPasien.IS_NOT_NULL())
+		case "Ibu Hamil":
+			conditions = append(conditions, IbuHamil.IDPasien.IS_NOT_NULL())
+		case "Anak":
+			conditions = append(conditions, Anak.IDPasien.IS_NOT_NULL())
 		}
 	}
 

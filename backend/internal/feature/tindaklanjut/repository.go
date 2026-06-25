@@ -289,6 +289,7 @@ func (r *Repo) GetStatusTindakLanjut(ctx context.Context, page int, perPage int)
 		LEFT JOIN pasien p ON p.id_pasien = ji.id_pasien AND p.is_deleted = false
 		LEFT JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
 		LEFT JOIN rujukan r ON r.id_tindak_lanjut = tl.id_tindak_lanjut
+		LEFT JOIN fasilitas_kesehatan fk ON fk.id_faskes = r.id_faskes
 	`
 
 	var countResult struct{ Count int64 }
@@ -303,7 +304,17 @@ func (r *Repo) GetStatusTindakLanjut(ctx context.Context, page int, perPage int)
 			COALESCE(ua.nama, '') AS nama_pasien,
 			tl.status_pasien::text AS status_pasien,
 			COALESCE(r.status_rujukan::text, '') AS status_rujukan,
-			COALESCE(r.tanggal_rujukan::text, '') AS tanggal_rujukan
+			COALESCE(r.tanggal_rujukan::text, '') AS tanggal_rujukan,
+			COALESCE((r.tanggal_rujukan + interval '7 days')::text, '') AS tanggal_deadline,
+			CASE
+				WHEN r.tanggal_rujukan IS NULL THEN ''
+				WHEN NOW() > (r.tanggal_rujukan + interval '7 days') THEN 'terlambat'
+				WHEN NOW() + interval '3 days' >= (r.tanggal_rujukan + interval '7 days') THEN 'mendekati'
+				ELSE 'aman'
+			END AS status_deadline,
+			COALESCE(fk.nama_faskes, '') AS faskes,
+			COALESCE(r.alasan_rujukan, '') AS alasan_rujukan,
+			CASE WHEN r.id_rujukan IS NOT NULL THEN 'Rujukan' ELSE 'Tindak Lanjut' END AS jenis_tindakan
 	` + fromWhere + `
 		ORDER BY tl.created_at DESC
 		OFFSET $1 LIMIT $2
@@ -318,7 +329,7 @@ func (r *Repo) GetStatusTindakLanjut(ctx context.Context, page int, perPage int)
 	var rows []*tindaklanjutDomain.StatusTindakLanjutJoinRow
 	for pgxRows.Next() {
 		var row tindaklanjutDomain.StatusTindakLanjutJoinRow
-		err := pgxRows.Scan(&row.IDPasien, &row.NamaPasien, &row.StatusPasien, &row.StatusRujukan, &row.TanggalRujukan)
+		err := pgxRows.Scan(&row.IDPasien, &row.NamaPasien, &row.StatusPasien, &row.StatusRujukan, &row.TanggalRujukan, &row.TanggalDeadline, &row.StatusDeadline, &row.Faskes, &row.AlasanRujukan, &row.JenisTindakan)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -335,7 +346,17 @@ func (r *Repo) GetStatusTindakLanjutByUserID(ctx context.Context, idUser int32) 
 			COALESCE(a.nama_anak, ua.nama) AS nama_pasien,
 			tl.status_pasien::text,
 			COALESCE(r.status_rujukan::text, '') AS status_rujukan,
-			COALESCE(r.tanggal_rujukan::text, '') AS tanggal_rujukan
+			COALESCE(r.tanggal_rujukan::text, '') AS tanggal_rujukan,
+			COALESCE((r.tanggal_rujukan + interval '7 days')::text, '') AS tanggal_deadline,
+			CASE
+				WHEN r.tanggal_rujukan IS NULL THEN ''
+				WHEN NOW() > (r.tanggal_rujukan + interval '7 days') THEN 'terlambat'
+				WHEN NOW() + interval '3 days' >= (r.tanggal_rujukan + interval '7 days') THEN 'mendekati'
+				ELSE 'aman'
+			END AS status_deadline,
+			COALESCE(fk.nama_faskes, '') AS faskes,
+			COALESCE(r.alasan_rujukan, '') AS alasan_rujukan,
+			CASE WHEN r.id_rujukan IS NOT NULL THEN 'Rujukan' ELSE 'Tindak Lanjut' END AS jenis_tindakan
 		FROM tindak_lanjut tl
 		JOIN hasil_pemeriksaan hp ON hp.id_hasil_pemeriksaan = tl.id_hasil_pemeriksaan
 		JOIN jadwal_imunisasi ji ON ji.id_imunisasi = hp.id_jadwal_imunisasi
@@ -343,6 +364,7 @@ func (r *Repo) GetStatusTindakLanjutByUserID(ctx context.Context, idUser int32) 
 		JOIN user_account ua ON ua.id_user = p.id_pasien AND ua.is_deleted = false
 		LEFT JOIN anak a ON a.id_pasien = p.id_pasien AND a.is_deleted = false
 		LEFT JOIN rujukan r ON r.id_tindak_lanjut = tl.id_tindak_lanjut
+		LEFT JOIN fasilitas_kesehatan fk ON fk.id_faskes = r.id_faskes
 		WHERE (a.id_wali = #1 OR p.id_pasien = #1)
 		ORDER BY tl.created_at DESC
 	`

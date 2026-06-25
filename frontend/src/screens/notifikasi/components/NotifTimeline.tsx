@@ -3,9 +3,10 @@ import NotifCard from './NotifCard';
 
 interface NotifTimelineProps {
   groups: NotifGroup[];
+  onMarkRead?: (id: string) => void;
 }
 
-export default function NotifTimeline({ groups }: NotifTimelineProps): JSX.Element {
+export default function NotifTimeline({ groups, onMarkRead }: NotifTimelineProps): JSX.Element {
   if (groups.length === 0) {
     return (
       <div className="py-16 text-center text-neutral-400 text-sm">
@@ -26,7 +27,7 @@ export default function NotifTimeline({ groups }: NotifTimelineProps): JSX.Eleme
           </div>
           <div className="space-y-1">
             {group.items.map((item) => (
-              <NotifCard key={item.id} item={item} />
+              <NotifCard key={item.id} item={item} onMarkRead={onMarkRead} />
             ))}
           </div>
         </section>

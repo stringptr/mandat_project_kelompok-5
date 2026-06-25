@@ -34,7 +34,11 @@ export default function UpdateRujukanModal({
         const match = data.find((f) => f.nama_faskes === rujukan.faskes);
         if (match) setSelectedFaskesId(match.id_faskes);
       })
-      .catch(() => setFaskesList([]));
+      .catch((err) => {
+          console.error('Gagal memuat daftar faskes:', err);
+          notify.error('Gagal memuat daftar fasilitas kesehatan.');
+          setFaskesList([]);
+      });
   }, [rujukan.faskes]);
 
   const handleSave = async () => {

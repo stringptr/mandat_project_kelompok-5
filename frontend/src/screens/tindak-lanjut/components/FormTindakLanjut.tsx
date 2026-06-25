@@ -112,11 +112,14 @@ export default function FormTindakLanjut({ onSubmit, onCancel }: FormTindakLanju
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    // Fetch faskes list
     useEffect(() => {
         apiGet<FaskesItem[]>('/faskes')
             .then((data) => setFaskesList(Array.isArray(data) ? data : []))
-            .catch(() => setFaskesList([]));
+            .catch((err) => {
+                console.error('Gagal memuat daftar faskes:', err);
+                notify.error('Gagal memuat daftar fasilitas kesehatan.');
+                setFaskesList([]);
+            });
     }, []);
 
     const filteredPatients = searchQuery.trim() ? searchResults : searchResults;
